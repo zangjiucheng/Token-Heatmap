@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llm-token-heatmap.venuiti.com/schemas/activation-diff.schema.json",
+  "title": "LLM Token Heatmap Activation Diff",
+  "description": "On-disk payload produced by `compare_activations(trace_a, trace_b, ...)`. Carries per-step `delta` records, one per (step, layer, submodule), plus alignment metadata describing how the two source traces were matched up (`token_id` vs `position`). Consumed by the CLI `diff` subcommand and the diff-mode UI. One file == one (trace_a, trace_b) pair.",
+  "type": "object",
+  "required": ["schema_version", "alignment", "steps"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Semver of this schema. Bumped independently of the main trace and activation schemas. Consumers must hard-fail on unknown major.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "examples": ["1.0.0"]
+    },
+    "alignment": {
+      "$ref": "#/$defs/Alignment",
+      "description": "How the two source traces were aligned, including any per-step mismatches that the comparator flagged."
+    },
+    "steps": {
+      "type": "array",
+      "description": "Per-step diff records, ordered by the aligned `step` index. Length equals the number of successfully aligned steps; unmatched steps from either side are listed in `alignment.mismatches` instead.",
+      "items": { "$ref": "#/$defs/DiffStep" }
+    }
+  },
+  "$defs": {
+    "Alignment": {
+      "type": "object",
+      "description": "Records the alignment mode applied by `compare_activations`, the tokenizer fingerprints of the two source traces, and any positions the comparator could not align.",
+      "required": [
+        "mode",
+        "tokenizer_a_fingerprint",
+        "tokenizer_b_fingerprint",
+        "mismatches"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["token_id", "position", "auto"],
+          "description": "Alignment strategy used. `token_id` zips traces on step index, requiring identical token ids; `position` zips on `decoded_text_offset`, tolerating different tokenizers; `auto` picks `token_id` when the fingerprints match, else `position`."
+        },
+        "tokenizer_a_fingerprint": {
+          "type": "string",
+          "description": "`activation_metadata.tokenizer_fingerprint` of trace A. Equal to `tokenizer_b_fingerprint` whenever `mode == \"token_id\"` (or when `mode == \"auto\"` resolved to id-based alignment)."
+        },
+        "tokenizer_b_fingerprint": {
+          "type": "string",
+          "description": "`activation_metadata.tokenizer_fingerprint` of trace B."
+        },
+        "mismatches": {
+          "type": "array",
+          "description": "Steps that could not be aligned (e.g. divergent token ids under `token_id` mode, or non-overlapping decoded-text offsets under `position` mode). Empty array when the two traces aligned cleanly.",
+          "items": { "$ref": "#/$defs/AlignmentMismatch" }
+        }
+      }
+    },
+    "AlignmentMismatch": {
+      "type": "object",
+      "description": "A single step where alignment failed. At least one of `step_a` or `step_b` is present, allowing the consumer to render the unmatched step on the correct side of the diff UI.",
+      "required": ["reason"],
+      "additionalProperties": false,
+      "properties": {
+        "step_a": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Zero-indexed step in trace A that could not be aligned, or null if the unmatched step is on the B side."
+        },
+        "step_b": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Zero-indexed step in trace B that could not be aligned, or null if the unmatched step is on the A side."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Human-readable explanation (e.g. `\"token_id_divergence\"`, `\"offset_gap\"`, `\"trailing_steps_in_a\"`)."
+        }
+      }
+    },
+    "DiffStep": {
+      "type": "object",
+      "description": "Diff record for a single aligned step. Carries the cross-tokenizer alignment fields from both source traces so consumers can re-render the corresponding token on either side without revisiting the originals.",
+      "required": [
+        "step",
+        "token_id_a",
+        "token_id_b",
+        "decoded_text_offset_a",
+        "decoded_text_offset_b",
+        "delta"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "step": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-indexed step in the aligned output."
+        },
+        "token_id_a": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Selected `token_id` from trace A at this step."
+        },
+        "token_id_b": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Selected `token_id` from trace B at this step. Equal to `token_id_a` under `token_id` alignment; may differ under `position` alignment."
+        },
+        "decoded_text_offset_a": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Character offset of this step's decoded token in trace A's decoded text."
+        },
+        "decoded_text_offset_b": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Character offset of this step's decoded token in trace B's decoded text."
+        },
+        "delta": {
+          "type": "array",
+          "description": "Per (layer, submodule) deltas. Ordering matches the producer's iteration over the captured submodules of trace A.",
+          "items": { "$ref": "#/$defs/LayerDelta" }
+        }
+      }
+    },
+    "LayerDelta": {
+      "type": "object",
+      "description": "Difference between trace A and trace B for one (layer, submodule) at one aligned step.",
+      "required": ["layer", "submodule", "l2", "cosine", "top_changed_neurons"],
+      "additionalProperties": false,
+      "properties": {
+        "layer": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-indexed decoder layer index."
+        },
+        "submodule": {
+          "type": "string",
+          "description": "Submodule name (e.g. `resid_pre`, `mlp.down_proj`). MUST appear in both source traces' `activation_metadata.captured_submodules`."
+        },
+        "l2": {
+          "type": "number",
+          "minimum": 0,
+          "description": "L2 norm of the activation difference vector `(a - b)` at this (layer, submodule)."
+        },
+        "cosine": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1,
+          "description": "Cosine similarity between trace A's and trace B's activation vectors. `1.0` means identical direction; `-1.0` means opposite."
+        },
+        "top_changed_neurons": {
+          "type": "array",
+          "description": "Neurons with the largest absolute delta at this (layer, submodule), sorted by descending `|delta|`.",
+          "items": { "$ref": "#/$defs/TopChangedNeuron" }
+        }
+      }
+    },
+    "TopChangedNeuron": {
+      "type": "object",
+      "required": ["index", "delta"],
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-indexed neuron position within the layer's hidden dimension."
+        },
+        "delta": {
+          "type": "number",
+          "description": "Signed delta `(a_value - b_value)` at this neuron index."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.vite/
+coverage/
+
+# TypeScript build artifacts
+*.tsbuildinfo
+vite.config.d.ts
+vitest.config.d.ts
+
+# Editor / OS
+.DS_Store
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Env
+.env
+.env.local
+.env.*.local

@@ -1,0 +1,125 @@
+.empty-state {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 40px 24px;
+}
+
+.empty-state__content {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(280px, 0.72fr);
+  gap: 16px;
+  max-width: 960px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.empty-state__dropzone {
+  border: 2px dashed var(--color-border-strong);
+  border-radius: 8px;
+  padding: 28px;
+  background: var(--color-bg-elevated);
+  transition: background 120ms ease;
+}
+
+.empty-state__dropzone--primary {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.empty-state__dropzone[data-dragging='true'] {
+  background: var(--color-status-info-bg);
+  border-color: var(--color-focus-ring);
+}
+
+.empty-state__copy {
+  max-width: 560px;
+}
+
+.empty-state__eyebrow {
+  margin: 0 0 6px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.empty-state__title {
+  margin: 0 0 8px;
+  font-size: 24px;
+  color: var(--color-text);
+}
+
+.empty-state__description {
+  margin: 0 0 20px;
+  color: var(--color-text-muted);
+}
+
+.empty-state__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.empty-state__primary,
+.empty-state__secondary {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.empty-state__primary {
+  background: var(--color-categorical-1);
+  color: var(--color-text-inverse);
+  border-color: var(--color-categorical-1);
+}
+
+.empty-state__secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.empty-state__primary:hover,
+.empty-state__secondary:hover {
+  filter: brightness(0.95);
+}
+
+.empty-state__file-input {
+  display: none;
+}
+
+.empty-state__subtitle {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.empty-state__dropzone--diff {
+  border-style: dashed;
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+@media (max-width: 760px) {
+  .empty-state {
+    padding: 24px 16px;
+  }
+
+  .empty-state__content {
+    grid-template-columns: 1fr;
+  }
+
+  .empty-state__dropzone--primary {
+    min-height: 240px;
+  }
+}

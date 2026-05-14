@@ -1,0 +1,102 @@
+.keymap-help-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.keymap-help-dialog {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  width: min(560px, 90vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.keymap-help-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.keymap-help-dialog__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.keymap-help-dialog__close {
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.keymap-help-dialog__close:hover {
+  background: var(--color-bg-muted);
+}
+
+.keymap-help-dialog__body {
+  padding: 12px 16px 16px;
+  overflow-y: auto;
+}
+
+.keymap-help-dialog__section {
+  margin-bottom: 14px;
+}
+
+.keymap-help-dialog__section:last-child {
+  margin-bottom: 0;
+}
+
+.keymap-help-dialog__section-title {
+  margin: 8px 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.keymap-help-dialog__list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 16px;
+  row-gap: 4px;
+}
+
+.keymap-help-dialog__row {
+  display: contents;
+}
+
+.keymap-help-dialog__key {
+  margin: 0;
+}
+
+.keymap-help-dialog__key kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  background: var(--color-bg-muted);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+
+.keymap-help-dialog__description {
+  margin: 0;
+}

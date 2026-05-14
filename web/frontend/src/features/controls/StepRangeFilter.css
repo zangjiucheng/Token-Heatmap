@@ -1,0 +1,53 @@
+.step-range-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.step-range-filter__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.step-range-filter__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.step-range-filter__readout {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.step-range-filter__inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.step-range-filter__thumb {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.step-range-filter__thumb-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.step-range-filter__thumb input[type='range'] {
+  width: 100%;
+}
+
+.step-range-filter__thumb input[type='range']:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}

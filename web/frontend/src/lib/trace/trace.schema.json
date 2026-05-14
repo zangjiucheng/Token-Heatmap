@@ -1,0 +1,497 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llm-token-heatmap.venuiti.com/schemas/trace.schema.json",
+  "title": "LLM Token Heatmap Trace",
+  "description": "Canonical JSON payload for a single adaptive-probe generation trace. Produced by `llm_token_heatmap.generate_with_adaptive_probe` after lightweight serialization, and consumed by the CLI exporter, FastAPI backend, and web frontend. One file == one prompt == one generation.",
+  "type": "object",
+  "required": ["schema_version", "metadata", "tokens", "steps"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Semver of this schema. Bump major on breaking changes; consumers must hard-fail on unknown major.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "examples": ["2.0.0"]
+    },
+    "attention_metadata": {
+      "$ref": "#/$defs/AttentionMetadata",
+      "description": "Architecture metadata describing the attention captures referenced by per-step `attention` blocks. Present whenever any step carries an `attention` array; absent for traces produced without an AttentionProbe."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Per-trace metadata: model identity, sampling parameters, and prompt.",
+      "required": [
+        "model",
+        "prompt",
+        "generated_text",
+        "generated_at",
+        "generation_params",
+        "probe_config"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "HuggingFace model id or local path used for generation.",
+          "examples": ["Qwen/Qwen2.5-0.5B-Instruct"]
+        },
+        "prompt": {
+          "type": "string",
+          "description": "The user prompt before any chat-template wrapping."
+        },
+        "system_prompt": {
+          "type": ["string", "null"],
+          "description": "Optional system message used when use_chat_template=true."
+        },
+        "use_chat_template": {
+          "type": "boolean",
+          "description": "Whether tokenizer.apply_chat_template was applied to the prompt."
+        },
+        "generated_text": {
+          "type": "string",
+          "description": "Full decoded text including the prompt, with special tokens skipped."
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "RFC 3339 timestamp at which the trace finished generating."
+        },
+        "device": {
+          "type": "string",
+          "enum": ["cpu", "cuda", "mps"],
+          "description": "Device that ran inference."
+        },
+        "dtype": {
+          "type": "string",
+          "description": "PyTorch dtype used for the forward pass.",
+          "examples": ["float16", "float32", "bfloat16"]
+        },
+        "vocab_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Tokenizer vocabulary size; used by the UI to compute rank as a percentile if requested."
+        },
+        "generation_params": {
+          "type": "object",
+          "required": [
+            "max_new_tokens",
+            "temperature",
+            "top_p",
+            "sample_top_k"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "max_new_tokens": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "temperature": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "top_p": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "sample_top_k": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "0 disables top-k filtering during sampling."
+            }
+          }
+        },
+        "probe_config": {
+          "type": "object",
+          "required": ["min_k", "max_k", "mass_threshold"],
+          "additionalProperties": false,
+          "properties": {
+            "min_k": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_k": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "mass_threshold": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            },
+            "eps": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Numerical stability constant used inside the probe."
+            }
+          }
+        }
+      }
+    },
+    "tokens": {
+      "type": "object",
+      "description": "Prompt tokens, surfaced separately so the UI can render the prompt with the same hover affordances as generated tokens. These are the tokens fed into the model before step 0 (after chat-template wrapping, if any).",
+      "required": ["prompt_token_ids", "prompt_tokens"],
+      "additionalProperties": false,
+      "properties": {
+        "prompt_token_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "prompt_tokens": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Decoded prompt tokens; same length as prompt_token_ids."
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "description": "Per-generation-step records. `steps[i].step` MUST equal `i`. Iteration ends early on EOS, so length <= generation_params.max_new_tokens.",
+      "items": {
+        "$ref": "#/$defs/Step"
+      }
+    }
+  },
+  "$defs": {
+    "Step": {
+      "type": "object",
+      "required": ["step", "selected", "raw", "processed"],
+      "additionalProperties": false,
+      "properties": {
+        "step": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-indexed position in the generation loop."
+        },
+        "selected": {
+          "$ref": "#/$defs/SelectedToken",
+          "description": "The token actually appended to the generation at this step. Shared between raw and processed sources."
+        },
+        "raw": {
+          "$ref": "#/$defs/Distribution",
+          "description": "Adaptive probe applied to the raw temperature-scaled logits (pre top-p / top-k)."
+        },
+        "processed": {
+          "$ref": "#/$defs/Distribution",
+          "description": "Adaptive probe applied to the post-sampling-filter logits (after top-p / top-k / repetition penalty)."
+        },
+        "logit_lens": {
+          "type": "array",
+          "description": "Optional per-layer logit-lens projections for this step. Present when a LogitLens probe was attached during generation. Ordered by layer_idx ascending.",
+          "items": {
+            "$ref": "#/$defs/LogitLensLayer"
+          }
+        },
+        "attention": {
+          "type": "array",
+          "description": "Tier 1 inline attention summary, one entry per captured decoder layer. Absent for traces produced without an AttentionProbe.",
+          "items": {
+            "$ref": "#/$defs/AttentionLayerEntry"
+          }
+        },
+        "attention_sidecar_ref": {
+          "type": ["string", "null"],
+          "description": "URI pointer to a Tier 2 sidecar payload (full attention distribution and/or raw Q/K/V tensors) for this step, or null when no sidecar was written. Sidecar files follow `docs/web/attention-sidecar.schema.json`."
+        }
+      }
+    },
+    "AttentionMetadata": {
+      "type": "object",
+      "description": "Per-trace metadata describing the AttentionProbe captures. Present whenever any step carries an `attention` array.",
+      "required": [
+        "num_layers",
+        "num_attention_heads",
+        "num_key_value_heads",
+        "head_dim",
+        "captured_layers"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "num_layers": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Total number of decoder layers in the model (regardless of how many were captured)."
+        },
+        "num_attention_heads": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of query attention heads per layer."
+        },
+        "num_key_value_heads": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of key/value heads per layer (equals num_attention_heads for MHA; smaller under Grouped Query Attention)."
+        },
+        "head_dim": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Per-head hidden dimension."
+        },
+        "captured_layers": {
+          "type": "array",
+          "description": "Zero-indexed decoder layer indices that the probe captured (ascending; duplicate-free).",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "AttentionLayerEntry": {
+      "type": "object",
+      "description": "Tier 1 attention summary for a single (step, layer). Head-level aggregation lives in a downstream ticket; the per-layer scalars here are the mean across heads.",
+      "required": [
+        "layer",
+        "entropy",
+        "self_weight",
+        "bos_weight",
+        "top_positions",
+        "q_norm",
+        "k_norm",
+        "v_norm",
+        "qk_alignment_angle"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "layer": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-indexed decoder layer index; must appear in attention_metadata.captured_layers."
+        },
+        "entropy": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Mean Shannon entropy (nats) of the per-head attention distribution over previous positions, averaged across heads."
+        },
+        "self_weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Mean attention weight on the current (last) position, averaged across heads."
+        },
+        "bos_weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Mean attention weight on position 0 (typically the BOS / sink token), averaged across heads."
+        },
+        "top_positions": {
+          "type": "array",
+          "description": "Most-attended source positions for this layer, aggregated across heads, sorted by descending weight.",
+          "items": {
+            "$ref": "#/$defs/AttentionTopPosition"
+          }
+        },
+        "q_norm": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Mean L2 norm of the current-token Q vector across heads."
+        },
+        "k_norm": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Mean L2 norm of the current-token K vector across heads."
+        },
+        "v_norm": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Mean L2 norm of the current-token V vector across heads."
+        },
+        "qk_alignment_angle": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 180,
+          "description": "Mean angle in degrees between the head's Q vector and the K vector of its top-attended source position, averaged across heads."
+        }
+      }
+    },
+    "AttentionTopPosition": {
+      "type": "object",
+      "required": ["position", "weight"],
+      "additionalProperties": false,
+      "properties": {
+        "position": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-indexed source position in the key sequence."
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Aggregate attention weight on this position (mean across heads)."
+        }
+      }
+    },
+    "SelectedToken": {
+      "type": "object",
+      "required": ["token_id", "token"],
+      "additionalProperties": false,
+      "properties": {
+        "token_id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "token": {
+          "type": "string",
+          "description": "Decoded text of the selected token (special tokens NOT skipped)."
+        }
+      }
+    },
+    "Distribution": {
+      "type": "object",
+      "description": "Outcome of one AdaptiveTokenProbe forward pass for one (step, source) pair.",
+      "required": [
+        "k_used",
+        "entropy",
+        "top_mass_used",
+        "selected_prob",
+        "selected_logprob",
+        "selected_rank",
+        "candidates"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "k_used": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of candidates kept by the adaptive rule (clamped to [min_k, max_k])."
+        },
+        "entropy": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Shannon entropy of the full next-token distribution, in nats."
+        },
+        "top_mass_used": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Cumulative probability mass covered by the kept candidates."
+        },
+        "selected_prob": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "selected_logprob": {
+          "type": "number",
+          "description": "log(selected_prob + eps); may be -inf-ish but always finite under the probe's eps clamp."
+        },
+        "selected_rank": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-indexed rank of the selected token across the FULL vocabulary."
+        },
+        "candidates": {
+          "type": "array",
+          "description": "Kept candidates, length == k_used, sorted by descending prob.",
+          "items": {
+            "$ref": "#/$defs/Candidate"
+          }
+        }
+      }
+    },
+    "Candidate": {
+      "type": "object",
+      "required": ["rank", "token_id", "token", "prob", "logprob"],
+      "additionalProperties": false,
+      "properties": {
+        "rank": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-indexed position within the kept candidates."
+        },
+        "token_id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "token": {
+          "type": "string"
+        },
+        "prob": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "logprob": {
+          "type": "number"
+        }
+      }
+    },
+    "LogitLensLayer": {
+      "type": "object",
+      "description": "Logit-lens projection of one decoder layer's residual stream for one generation step.",
+      "required": [
+        "layer_idx",
+        "top_k",
+        "entropy",
+        "selected_token_rank",
+        "selected_token_prob"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "layer_idx": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-indexed decoder layer position."
+        },
+        "top_k": {
+          "type": "array",
+          "description": "Highest-probability candidates after projecting this layer's hidden state through (optionally) the final LayerNorm and the lm_head.",
+          "items": {
+            "$ref": "#/$defs/LogitLensCandidate"
+          }
+        },
+        "entropy": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Shannon entropy (nats) of this layer's full next-token distribution."
+        },
+        "selected_token_rank": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-indexed rank of the step's selected token within this layer's distribution."
+        },
+        "selected_token_prob": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Probability assigned to the step's selected token by this layer's distribution."
+        }
+      }
+    },
+    "LogitLensCandidate": {
+      "type": "object",
+      "required": ["rank", "token_id", "token", "prob", "logprob"],
+      "additionalProperties": false,
+      "properties": {
+        "rank": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-indexed rank within the top_k candidates."
+        },
+        "token_id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "token": {
+          "type": "string"
+        },
+        "prob": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "logprob": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

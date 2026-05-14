@@ -1,0 +1,37 @@
+.attention-head-pattern {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.attention-head-pattern--empty,
+.attention-head-pattern--error {
+  padding: 12px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.attention-head-pattern--error {
+  color: var(--color-status-error-fg);
+  font-style: normal;
+}
+
+.attention-head-pattern__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.attention-head-pattern__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+
+.attention-head-pattern__empty {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}

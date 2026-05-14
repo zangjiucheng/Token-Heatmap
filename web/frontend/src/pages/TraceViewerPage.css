@@ -1,0 +1,166 @@
+.trace-viewer-center {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(360px, 1fr) auto;
+  /* Fill the pane vertically when content is short, but allow the stack
+     to overflow into the parent pane's existing scrollbar when content
+     is taller than the viewport. */
+  min-height: 100%;
+  background: var(--color-bg);
+}
+
+.trace-viewer-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.trace-viewer-center__context {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+}
+
+.trace-viewer-center__context-main {
+  min-width: 0;
+}
+
+.trace-viewer-center__eyebrow {
+  margin-bottom: 2px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.trace-viewer-center__title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.trace-viewer-center__prompt {
+  max-width: 68ch;
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trace-viewer-center__meta {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 10px 16px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.trace-viewer-center__meta div {
+  display: grid;
+  gap: 2px;
+}
+
+.trace-viewer-center__meta dt {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.trace-viewer-center__meta dd {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.trace-viewer-center__tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.trace-viewer-center__tab {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  color: var(--color-text);
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+
+.trace-viewer-center__tab:hover:not(:disabled) {
+  background: var(--color-bg-muted);
+}
+
+.trace-viewer-center__tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.trace-viewer-center__tab--active {
+  background: var(--color-bg, #fff);
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-bg, #fff);
+}
+
+.trace-viewer-center__heatmap {
+  /* Definite (px / vh) height — load-bearing. TokenHeatmap measures its
+     parent with ResizeObserver and writes the result into the axis
+     canvas's style.height. Inside, `height: 100%` chains through
+     .token-heatmap → .token-heatmap__plot → axis canvas. If this
+     container's height is indefinite (auto, or 1fr of an auto-sized
+     parent), `height: 100%` collapses to max-content, which now
+     includes the canvas's just-set style.height, and the row grows on
+     every ResizeObserver tick. A definite height breaks the chain. */
+  height: clamp(360px, calc(100dvh - 290px), 900px);
+  overflow-x: auto;
+}
+
+.trace-viewer-center__overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  gap: 12px;
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+}
+
+.trace-viewer-center__overview .timeline-chart {
+  min-width: 0;
+  min-height: 154px;
+}
+
+.trace-viewer-right__attention-pattern {
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+}
+
+@media (max-width: 860px) {
+  .trace-viewer-center__context {
+    flex-direction: column;
+  }
+
+  .trace-viewer-center__meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .trace-viewer-center__overview {
+    grid-template-columns: 1fr;
+  }
+}

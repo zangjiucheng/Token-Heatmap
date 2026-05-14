@@ -1,0 +1,28 @@
+site_name: LLM Token Heatmap
+site_description: Documentation for the LLM Token Heatmap Python library, CLI, and web app.
+repo_url: https://github.com/zangjiucheng/Token-Heatmap
+docs_dir: docs
+site_dir: site
+use_directory_urls: false
+theme:
+  name: mkdocs
+nav:
+  - Home: README.md
+  - Installation: installation.md
+  - CLI: cli.md
+  - Python API: python-api.md
+  - Web App: web-app.md
+  - Trace Schema: schema.md
+  - Interpreting Outputs: interpreting.md
+  - Troubleshooting: troubleshooting.md
+  - JSON Schemas:
+      - Trace: web/trace.schema.json
+      - Attention Sidecar: web/attention-sidecar.schema.json
+      - Activation: web/activation.schema.json
+      - Activation Sidecar: web/activation-sidecar.schema.json
+      - Activation Diff: web/activation-diff.schema.json
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true

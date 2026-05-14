@@ -1,0 +1,45 @@
+.split-heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 360px;
+}
+
+.split-heatmap__legend {
+  padding: 0 8px;
+}
+
+.split-heatmap__panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.split-heatmap__pane {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.split-heatmap__pane-title {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+}
+
+.split-heatmap__pane > .token-heatmap {
+  flex: 1 1 auto;
+  min-height: 0;
+}

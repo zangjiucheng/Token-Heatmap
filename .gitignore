@@ -1,0 +1,47 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Build
+build/
+dist/
+site/
+*.egg-info/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+*.env
+
+# Project outputs (keep directory, ignore generated artifacts)
+outputs/*
+!outputs/.gitkeep
+
+# Workspace
+vai-work/
+.claude/
+
+# Frontend source assets should be tracked even when a global gitignore has `lib/`.
+!web/frontend/src/lib/
+!web/frontend/src/lib/**

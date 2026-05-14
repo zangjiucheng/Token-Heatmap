@@ -1,0 +1,47 @@
+.activation-heatmap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: inherit;
+  color: var(--color-text);
+}
+
+.activation-heatmap--empty {
+  padding: 16px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.activation-heatmap__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  overflow: visible;
+}
+
+.activation-heatmap__axis-label {
+  font-size: 10px;
+  fill: currentColor;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.activation-heatmap__legend-label {
+  font-size: 10px;
+  fill: currentColor;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.activation-heatmap__tooltip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  pointer-events: none;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}

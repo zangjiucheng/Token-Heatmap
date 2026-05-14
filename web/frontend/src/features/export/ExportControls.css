@@ -1,0 +1,49 @@
+.export-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.export-controls__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.export-controls__buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.export-controls__button {
+  flex: 1 1 0;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.export-controls__button:hover:not(:disabled) {
+  background: var(--color-bg-muted);
+}
+
+.export-controls__button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.export-controls__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.export-controls__error {
+  color: var(--color-error, #d33);
+  font-size: 12px;
+  margin: 0;
+}

@@ -1,0 +1,682 @@
+{
+  "schema_version": "2.0.0",
+  "metadata": {
+    "model": "fixtures/e2e-tiny-a",
+    "prompt": "The quick brown fox",
+    "system_prompt": null,
+    "use_chat_template": false,
+    "generated_text": "The quick brown fox jumps over the",
+    "generated_at": "2026-05-13T12:00:00Z",
+    "device": "cpu",
+    "dtype": "float32",
+    "vocab_size": 32000,
+    "generation_params": {
+      "max_new_tokens": 3,
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "sample_top_k": 0
+    },
+    "probe_config": {
+      "min_k": 1,
+      "max_k": 4,
+      "mass_threshold": 0.95
+    }
+  },
+  "tokens": {
+    "prompt_token_ids": [
+      101,
+      102,
+      103,
+      104
+    ],
+    "prompt_tokens": [
+      "The",
+      " quick",
+      " brown",
+      " fox"
+    ]
+  },
+  "activation_metadata": {
+    "captured_submodules": [
+      "resid_post",
+      "mlp_out"
+    ],
+    "num_layers": 3,
+    "hidden_dim": 4,
+    "tokenizer_fingerprint": "sha256:e2e-shared-tokenizer-fingerprint",
+    "captured_layers": [
+      0,
+      1,
+      2
+    ]
+  },
+  "steps": [
+    {
+      "step": 0,
+      "selected": {
+        "token_id": 200,
+        "token": " jumps"
+      },
+      "raw": {
+        "k_used": 2,
+        "entropy": 0.4,
+        "top_mass_used": 0.95,
+        "selected_prob": 0.85,
+        "selected_logprob": -0.1625,
+        "selected_rank": 1,
+        "candidates": [
+          {
+            "rank": 1,
+            "token_id": 200,
+            "token": " jumps",
+            "prob": 0.85,
+            "logprob": -0.1625
+          },
+          {
+            "rank": 2,
+            "token_id": 201,
+            "token": " other",
+            "prob": 0.1,
+            "logprob": -2.3026
+          }
+        ]
+      },
+      "processed": {
+        "k_used": 2,
+        "entropy": 0.4,
+        "top_mass_used": 0.95,
+        "selected_prob": 0.85,
+        "selected_logprob": -0.1625,
+        "selected_rank": 1,
+        "candidates": [
+          {
+            "rank": 1,
+            "token_id": 200,
+            "token": " jumps",
+            "prob": 0.85,
+            "logprob": -0.1625
+          },
+          {
+            "rank": 2,
+            "token_id": 201,
+            "token": " other",
+            "prob": 0.1,
+            "logprob": -2.3026
+          }
+        ]
+      },
+      "token_id": 200,
+      "decoded_text_offset": 19,
+      "activations": [
+        {
+          "layer": 0,
+          "submodule": "resid_post",
+          "l2_norm": 0.576628,
+          "mean_abs": 0.2125,
+          "sparsity": 0.0,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 0.55
+            },
+            {
+              "index": 1,
+              "value": -0.1
+            },
+            {
+              "index": 2,
+              "value": 0.1
+            },
+            {
+              "index": 3,
+              "value": 0.1
+            }
+          ]
+        },
+        {
+          "layer": 0,
+          "submodule": "mlp_out",
+          "l2_norm": 0.616441,
+          "mean_abs": 0.2,
+          "sparsity": 0.25,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 0.6
+            },
+            {
+              "index": 1,
+              "value": -0.1
+            },
+            {
+              "index": 2,
+              "value": 0.0
+            },
+            {
+              "index": 3,
+              "value": 0.1
+            }
+          ]
+        },
+        {
+          "layer": 1,
+          "submodule": "resid_post",
+          "l2_norm": 0.724569,
+          "mean_abs": 0.275,
+          "sparsity": 0.0,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 0.65
+            },
+            {
+              "index": 1,
+              "value": 0.1
+            },
+            {
+              "index": 2,
+              "value": 0.3
+            },
+            {
+              "index": 3,
+              "value": 0.05
+            }
+          ]
+        },
+        {
+          "layer": 1,
+          "submodule": "mlp_out",
+          "l2_norm": 0.736546,
+          "mean_abs": 0.2625,
+          "sparsity": 0.0,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 0.7
+            },
+            {
+              "index": 1,
+              "value": 0.1
+            },
+            {
+              "index": 2,
+              "value": 0.2
+            },
+            {
+              "index": 3,
+              "value": 0.05
+            }
+          ]
+        },
+        {
+          "layer": 2,
+          "submodule": "resid_post",
+          "l2_norm": 0.95,
+          "mean_abs": 0.3875,
+          "sparsity": 0.25,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 0.75
+            },
+            {
+              "index": 1,
+              "value": 0.3
+            },
+            {
+              "index": 2,
+              "value": 0.5
+            },
+            {
+              "index": 3,
+              "value": -0.0
+            }
+          ]
+        },
+        {
+          "layer": 2,
+          "submodule": "mlp_out",
+          "l2_norm": 0.943398,
+          "mean_abs": 0.375,
+          "sparsity": 0.25,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 0.8
+            },
+            {
+              "index": 1,
+              "value": 0.3
+            },
+            {
+              "index": 2,
+              "value": 0.4
+            },
+            {
+              "index": 3,
+              "value": -0.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "selected": {
+        "token_id": 210,
+        "token": " over"
+      },
+      "raw": {
+        "k_used": 2,
+        "entropy": 0.4,
+        "top_mass_used": 0.95,
+        "selected_prob": 0.85,
+        "selected_logprob": -0.1625,
+        "selected_rank": 1,
+        "candidates": [
+          {
+            "rank": 1,
+            "token_id": 210,
+            "token": " over",
+            "prob": 0.85,
+            "logprob": -0.1625
+          },
+          {
+            "rank": 2,
+            "token_id": 211,
+            "token": " other",
+            "prob": 0.1,
+            "logprob": -2.3026
+          }
+        ]
+      },
+      "processed": {
+        "k_used": 2,
+        "entropy": 0.4,
+        "top_mass_used": 0.95,
+        "selected_prob": 0.85,
+        "selected_logprob": -0.1625,
+        "selected_rank": 1,
+        "candidates": [
+          {
+            "rank": 1,
+            "token_id": 210,
+            "token": " over",
+            "prob": 0.85,
+            "logprob": -0.1625
+          },
+          {
+            "rank": 2,
+            "token_id": 211,
+            "token": " other",
+            "prob": 0.1,
+            "logprob": -2.3026
+          }
+        ]
+      },
+      "token_id": 210,
+      "decoded_text_offset": 25,
+      "activations": [
+        {
+          "layer": 0,
+          "submodule": "resid_post",
+          "l2_norm": 1.065364,
+          "mean_abs": 0.425,
+          "sparsity": 0.0,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 0.95
+            },
+            {
+              "index": 1,
+              "value": -0.4
+            },
+            {
+              "index": 2,
+              "value": 0.1
+            },
+            {
+              "index": 3,
+              "value": 0.25
+            }
+          ]
+        },
+        {
+          "layer": 0,
+          "submodule": "mlp_out",
+          "l2_norm": 1.105667,
+          "mean_abs": 0.4125,
+          "sparsity": 0.25,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 1.0
+            },
+            {
+              "index": 1,
+              "value": -0.4
+            },
+            {
+              "index": 2,
+              "value": 0.0
+            },
+            {
+              "index": 3,
+              "value": 0.25
+            }
+          ]
+        },
+        {
+          "layer": 1,
+          "submodule": "resid_post",
+          "l2_norm": 1.128051,
+          "mean_abs": 0.4375,
+          "sparsity": 0.0,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 1.05
+            },
+            {
+              "index": 1,
+              "value": -0.2
+            },
+            {
+              "index": 2,
+              "value": 0.3
+            },
+            {
+              "index": 3,
+              "value": 0.2
+            }
+          ]
+        },
+        {
+          "layer": 1,
+          "submodule": "mlp_out",
+          "l2_norm": 1.153256,
+          "mean_abs": 0.425,
+          "sparsity": 0.0,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 1.1
+            },
+            {
+              "index": 1,
+              "value": -0.2
+            },
+            {
+              "index": 2,
+              "value": 0.2
+            },
+            {
+              "index": 3,
+              "value": 0.2
+            }
+          ]
+        },
+        {
+          "layer": 2,
+          "submodule": "resid_post",
+          "l2_norm": 1.262933,
+          "mean_abs": 0.45,
+          "sparsity": 0.25,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 1.15
+            },
+            {
+              "index": 1,
+              "value": 0.0
+            },
+            {
+              "index": 2,
+              "value": 0.5
+            },
+            {
+              "index": 3,
+              "value": 0.15
+            }
+          ]
+        },
+        {
+          "layer": 2,
+          "submodule": "mlp_out",
+          "l2_norm": 1.273774,
+          "mean_abs": 0.4375,
+          "sparsity": 0.25,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 1.2
+            },
+            {
+              "index": 1,
+              "value": 0.0
+            },
+            {
+              "index": 2,
+              "value": 0.4
+            },
+            {
+              "index": 3,
+              "value": 0.15
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "selected": {
+        "token_id": 220,
+        "token": " the"
+      },
+      "raw": {
+        "k_used": 2,
+        "entropy": 0.4,
+        "top_mass_used": 0.95,
+        "selected_prob": 0.85,
+        "selected_logprob": -0.1625,
+        "selected_rank": 1,
+        "candidates": [
+          {
+            "rank": 1,
+            "token_id": 220,
+            "token": " the",
+            "prob": 0.85,
+            "logprob": -0.1625
+          },
+          {
+            "rank": 2,
+            "token_id": 221,
+            "token": " other",
+            "prob": 0.1,
+            "logprob": -2.3026
+          }
+        ]
+      },
+      "processed": {
+        "k_used": 2,
+        "entropy": 0.4,
+        "top_mass_used": 0.95,
+        "selected_prob": 0.85,
+        "selected_logprob": -0.1625,
+        "selected_rank": 1,
+        "candidates": [
+          {
+            "rank": 1,
+            "token_id": 220,
+            "token": " the",
+            "prob": 0.85,
+            "logprob": -0.1625
+          },
+          {
+            "rank": 2,
+            "token_id": 221,
+            "token": " other",
+            "prob": 0.1,
+            "logprob": -2.3026
+          }
+        ]
+      },
+      "token_id": 220,
+      "decoded_text_offset": 30,
+      "activations": [
+        {
+          "layer": 0,
+          "submodule": "resid_post",
+          "l2_norm": 1.575595,
+          "mean_abs": 0.6375,
+          "sparsity": 0.0,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 1.35
+            },
+            {
+              "index": 1,
+              "value": -0.7
+            },
+            {
+              "index": 2,
+              "value": 0.1
+            },
+            {
+              "index": 3,
+              "value": 0.4
+            }
+          ]
+        },
+        {
+          "layer": 0,
+          "submodule": "mlp_out",
+          "l2_norm": 1.615549,
+          "mean_abs": 0.625,
+          "sparsity": 0.25,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 1.4
+            },
+            {
+              "index": 1,
+              "value": -0.7
+            },
+            {
+              "index": 2,
+              "value": 0.0
+            },
+            {
+              "index": 3,
+              "value": 0.4
+            }
+          ]
+        },
+        {
+          "layer": 1,
+          "submodule": "resid_post",
+          "l2_norm": 1.601562,
+          "mean_abs": 0.65,
+          "sparsity": 0.0,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 1.45
+            },
+            {
+              "index": 1,
+              "value": -0.5
+            },
+            {
+              "index": 2,
+              "value": 0.3
+            },
+            {
+              "index": 3,
+              "value": 0.35
+            }
+          ]
+        },
+        {
+          "layer": 1,
+          "submodule": "mlp_out",
+          "l2_norm": 1.631717,
+          "mean_abs": 0.6375,
+          "sparsity": 0.0,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 1.5
+            },
+            {
+              "index": 1,
+              "value": -0.5
+            },
+            {
+              "index": 2,
+              "value": 0.2
+            },
+            {
+              "index": 3,
+              "value": 0.35
+            }
+          ]
+        },
+        {
+          "layer": 2,
+          "submodule": "resid_post",
+          "l2_norm": 1.683003,
+          "mean_abs": 0.6625,
+          "sparsity": 0.0,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 1.55
+            },
+            {
+              "index": 1,
+              "value": -0.3
+            },
+            {
+              "index": 2,
+              "value": 0.5
+            },
+            {
+              "index": 3,
+              "value": 0.3
+            }
+          ]
+        },
+        {
+          "layer": 2,
+          "submodule": "mlp_out",
+          "l2_norm": 1.702939,
+          "mean_abs": 0.65,
+          "sparsity": 0.0,
+          "top_neurons": [
+            {
+              "index": 0,
+              "value": 1.6
+            },
+            {
+              "index": 1,
+              "value": -0.3
+            },
+            {
+              "index": 2,
+              "value": 0.4
+            },
+            {
+              "index": 3,
+              "value": 0.3
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

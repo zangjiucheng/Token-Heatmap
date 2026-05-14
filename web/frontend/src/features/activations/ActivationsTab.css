@@ -1,0 +1,106 @@
+.activations-tab {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'controls'
+    'heatmap'
+    'detail';
+  gap: 0;
+  padding: 0;
+}
+
+.activations-tab--empty {
+  display: block;
+  padding: 24px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.activations-tab__controls {
+  grid-area: controls;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: 48px;
+  padding: 10px 16px;
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.activations-tab__control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.activations-tab__control label {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.activations-tab__control select {
+  font: inherit;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.activations-tab__heatmap {
+  grid-area: heatmap;
+  min-width: 0;
+  padding: 16px;
+}
+
+.activations-tab__detail {
+  grid-area: detail;
+  min-width: 0;
+  padding: 0 16px 16px;
+}
+
+.diff-view__token-toggle {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.diff-view__token-toggle button {
+  font: inherit;
+  min-height: 32px;
+  padding: 4px 10px;
+  background: var(--color-bg-elevated);
+  color: inherit;
+  border: 0;
+  cursor: pointer;
+}
+
+.diff-view__token-toggle button[aria-pressed='true'] {
+  background: var(--color-link);
+  color: var(--color-text-inverse);
+}
+
+.diff-view__alignment-status {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  padding: 10px 16px 0;
+}
+
+@media (max-width: 720px) {
+  .activations-tab__controls {
+    align-items: stretch;
+  }
+
+  .activations-tab__control {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

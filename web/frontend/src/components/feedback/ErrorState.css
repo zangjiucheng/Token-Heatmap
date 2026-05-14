@@ -1,0 +1,82 @@
+.error-state {
+  margin: 24px auto;
+  max-width: 560px;
+  padding: 20px 24px;
+  background: var(--color-status-error-bg);
+  color: var(--color-status-error-fg);
+  border: 1px solid var(--color-status-error-fg);
+  border-radius: 6px;
+}
+
+.error-state__title {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.error-state__message {
+  margin: 0 0 16px;
+  color: var(--color-status-error-fg);
+}
+
+.error-state__issues {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+}
+
+.error-state__issues-summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.error-state__issues-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.error-state__issue {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+  border-top: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.error-state__issue:first-child {
+  border-top: none;
+}
+
+.error-state__issue-pointer {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.error-state__issue-message {
+  opacity: 0.85;
+}
+
+.error-state__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.error-state__button {
+  padding: 6px 12px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: var(--color-status-error-fg);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.error-state__button--primary {
+  background: var(--color-status-error-fg);
+  color: var(--color-text-inverse);
+}

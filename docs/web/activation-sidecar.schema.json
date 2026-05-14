@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llm-token-heatmap.venuiti.com/schemas/activation-sidecar.schema.json",
+  "title": "LLM Token Heatmap Activation Sidecar",
+  "description": "Schema describing the structure of a Tier 2 activation sidecar payload referenced by an activation step's `activation_sidecar_ref`. The sidecar is typically stored as a `.npz` archive (numpy.savez_compressed); the keys and array shapes listed below mirror that archive. The corresponding `read_sidecar` helper materializes it as a dict matching this schema. One sidecar file == one (trace, step) pair.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "step",
+    "num_layers",
+    "hidden_dim",
+    "captured_submodules",
+    "captured_layers",
+    "layers"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Semver of this sidecar schema. Bumps independently of the main activation schema and the main trace schema.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "examples": ["1.0.0"]
+    },
+    "step": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Zero-indexed generation step the sidecar belongs to."
+    },
+    "num_layers": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Total number of decoder layers in the model (regardless of how many were captured)."
+    },
+    "hidden_dim": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Per-layer residual-stream / hidden dimension. Length of every captured activation vector."
+    },
+    "captured_submodules": {
+      "type": "array",
+      "description": "Submodule names captured by the probe, in the same order as the main activation schema's `activation_metadata.captured_submodules`. Must be non-empty.",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "captured_layers": {
+      "type": "array",
+      "description": "Zero-indexed decoder layer indices that the probe captured (ascending; duplicate-free). MUST equal the layer indices in the `layers` array.",
+      "items": { "type": "integer", "minimum": 0 }
+    },
+    "layers": {
+      "type": "array",
+      "description": "Per-captured-layer payloads. Order matches `captured_layers` ascending.",
+      "items": { "$ref": "#/$defs/SidecarLayer" }
+    }
+  },
+  "$defs": {
+    "SidecarLayer": {
+      "type": "object",
+      "required": ["layer", "submodule_tensors"],
+      "additionalProperties": false,
+      "properties": {
+        "layer": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-indexed decoder layer index."
+        },
+        "submodule_tensors": {
+          "type": "object",
+          "description": "Map of submodule name (matching one of `captured_submodules`) to its raw activation vector of length `hidden_dim`. A layer-row MAY omit a submodule key when that submodule was not captured for this layer (e.g. an architecture where the submodule is absent).",
+          "additionalProperties": {
+            "type": "array",
+            "description": "Raw activation vector, shape `[hidden_dim]`.",
+            "items": { "type": "number" }
+          }
+        }
+      }
+    }
+  }
+}

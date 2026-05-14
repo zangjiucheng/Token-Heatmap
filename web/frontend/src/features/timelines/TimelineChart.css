@@ -1,0 +1,65 @@
+.timeline-chart {
+  position: relative;
+  width: 100%;
+  font-size: 11px;
+  color: var(--color-text, #1a1d21);
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e1e4e8);
+  border-radius: 4px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+}
+
+.timeline-chart:focus {
+  outline: 2px solid rgb(0 114 178);
+  outline-offset: -2px;
+}
+
+.timeline-chart:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.timeline-chart__title {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--color-text, #1a1d21);
+}
+
+.timeline-chart__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.timeline-chart__line {
+  fill: none;
+  stroke: var(--color-accent, rgb(0 114 178));
+  stroke-width: 1.5;
+}
+
+.timeline-chart__point {
+  fill: var(--color-accent, rgb(0 114 178));
+}
+
+.timeline-chart__point--hover {
+  fill: #d55e00;
+}
+
+.timeline-chart__axis {
+  stroke: #b6bac0;
+  stroke-width: 1;
+}
+
+.timeline-chart__axis-label {
+  fill: #4b5159;
+}
+
+.timeline-chart__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  color: var(--color-text-muted, #4b5159);
+  font-style: italic;
+}

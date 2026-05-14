@@ -1,0 +1,42 @@
+.loading-state {
+  padding: 24px;
+}
+
+.loading-state__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.loading-state__skeleton-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.loading-state__skeleton-row {
+  height: 16px;
+  background: linear-gradient(
+    90deg,
+    var(--color-skeleton) 0%,
+    var(--color-skeleton-shine) 50%,
+    var(--color-skeleton) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: loading-shimmer 1.4s infinite;
+}
+
+@keyframes loading-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}

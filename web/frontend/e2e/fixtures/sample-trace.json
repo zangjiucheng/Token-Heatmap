@@ -1,0 +1,120 @@
+{
+  "schema_version": "1.0.0",
+  "metadata": {
+    "model": "fixtures/e2e-tiny",
+    "prompt": "The quick brown fox",
+    "system_prompt": null,
+    "use_chat_template": false,
+    "generated_text": "The quick brown fox jumps over",
+    "generated_at": "2026-05-12T10:00:00Z",
+    "device": "cpu",
+    "dtype": "float32",
+    "vocab_size": 32000,
+    "generation_params": {
+      "max_new_tokens": 3,
+      "temperature": 1.0,
+      "top_p": 0.9,
+      "sample_top_k": 0
+    },
+    "probe_config": {
+      "min_k": 1,
+      "max_k": 4,
+      "mass_threshold": 0.9,
+      "eps": 1e-9
+    }
+  },
+  "tokens": {
+    "prompt_token_ids": [101, 102, 103, 104],
+    "prompt_tokens": ["The", " quick", " brown", " fox"]
+  },
+  "steps": [
+    {
+      "step": 0,
+      "selected": { "token_id": 200, "token": " jumps" },
+      "raw": {
+        "k_used": 2,
+        "entropy": 0.30,
+        "top_mass_used": 0.95,
+        "selected_prob": 0.85,
+        "selected_logprob": -0.1625,
+        "selected_rank": 1,
+        "candidates": [
+          { "rank": 1, "token_id": 200, "token": " jumps", "prob": 0.85, "logprob": -0.1625 },
+          { "rank": 2, "token_id": 201, "token": " runs",  "prob": 0.10, "logprob": -2.3026 }
+        ]
+      },
+      "processed": {
+        "k_used": 2,
+        "entropy": 0.28,
+        "top_mass_used": 0.97,
+        "selected_prob": 0.88,
+        "selected_logprob": -0.1278,
+        "selected_rank": 1,
+        "candidates": [
+          { "rank": 1, "token_id": 200, "token": " jumps", "prob": 0.88, "logprob": -0.1278 },
+          { "rank": 2, "token_id": 201, "token": " runs",  "prob": 0.09, "logprob": -2.4079 }
+        ]
+      }
+    },
+    {
+      "step": 1,
+      "selected": { "token_id": 210, "token": " over" },
+      "raw": {
+        "k_used": 3,
+        "entropy": 0.92,
+        "top_mass_used": 0.93,
+        "selected_prob": 0.60,
+        "selected_logprob": -0.5108,
+        "selected_rank": 1,
+        "candidates": [
+          { "rank": 1, "token_id": 210, "token": " over", "prob": 0.60, "logprob": -0.5108 },
+          { "rank": 2, "token_id": 211, "token": " on",   "prob": 0.20, "logprob": -1.6094 },
+          { "rank": 3, "token_id": 212, "token": " into", "prob": 0.13, "logprob": -2.0402 }
+        ]
+      },
+      "processed": {
+        "k_used": 2,
+        "entropy": 0.75,
+        "top_mass_used": 0.90,
+        "selected_prob": 0.70,
+        "selected_logprob": -0.3567,
+        "selected_rank": 1,
+        "candidates": [
+          { "rank": 1, "token_id": 210, "token": " over", "prob": 0.70, "logprob": -0.3567 },
+          { "rank": 2, "token_id": 211, "token": " on",   "prob": 0.20, "logprob": -1.6094 }
+        ]
+      }
+    },
+    {
+      "step": 2,
+      "selected": { "token_id": 220, "token": " the" },
+      "raw": {
+        "k_used": 4,
+        "entropy": 1.30,
+        "top_mass_used": 0.91,
+        "selected_prob": 0.45,
+        "selected_logprob": -0.7985,
+        "selected_rank": 1,
+        "candidates": [
+          { "rank": 1, "token_id": 220, "token": " the", "prob": 0.45, "logprob": -0.7985 },
+          { "rank": 2, "token_id": 221, "token": " a",   "prob": 0.25, "logprob": -1.3863 },
+          { "rank": 3, "token_id": 222, "token": " an",  "prob": 0.12, "logprob": -2.1203 },
+          { "rank": 4, "token_id": 223, "token": " its", "prob": 0.09, "logprob": -2.4079 }
+        ]
+      },
+      "processed": {
+        "k_used": 3,
+        "entropy": 1.08,
+        "top_mass_used": 0.92,
+        "selected_prob": 0.55,
+        "selected_logprob": -0.5978,
+        "selected_rank": 1,
+        "candidates": [
+          { "rank": 1, "token_id": 220, "token": " the", "prob": 0.55, "logprob": -0.5978 },
+          { "rank": 2, "token_id": 221, "token": " a",   "prob": 0.25, "logprob": -1.3863 },
+          { "rank": 3, "token_id": 222, "token": " an",  "prob": 0.12, "logprob": -2.1203 }
+        ]
+      }
+    }
+  ]
+}
