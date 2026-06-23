@@ -417,6 +417,54 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
     )
     manifold_parser.set_defaults(func=run_manifold)
 
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Serve an existing output directory over HTTP with CORS (no generation).",
+        description=(
+            "Start a stdlib http.server with CORS headers serving DIR so the frontend "
+            "(possibly on another host, via an SSH port-forward) can fetch the trace "
+            "JSON. Unlike `trace --serve`, this does NOT regenerate — use it to serve a "
+            "trace you have already produced (and, optionally, augmented with "
+            "`token-heatmap manifold`). Press Ctrl+C to stop."
+        ),
+    )
+    serve_parser.add_argument(
+        "dir",
+        type=Path,
+        nargs="?",
+        default=Path("outputs"),
+        help="Directory to serve (default: outputs/).",
+    )
+    serve_parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port for the file server (default: 8000).",
+    )
+    serve_parser.add_argument(
+        "--frontend-url",
+        default="http://localhost:5173",
+        help=(
+            "Frontend origin used to build the printed viewer URL (default: "
+            "http://localhost:5173). With --frontend, the dev server binds to this "
+            "URL's port."
+        ),
+    )
+    serve_parser.add_argument(
+        "--frontend",
+        action="store_true",
+        help=(
+            "Also start the Vite frontend (npm run dev) from web/frontend and open the "
+            "viewer in your browser. Requires Node.js and a repo checkout."
+        ),
+    )
+    serve_parser.add_argument(
+        "--no-open",
+        action="store_true",
+        help="With --frontend, do not auto-open the viewer in a browser.",
+    )
+    serve_parser.set_defaults(func=run_serve)
+
     return parser, trace_parser
 
 
@@ -1108,6 +1156,28 @@ def run_manifold(args: argparse.Namespace) -> int:
     print(
         f"Added manifold analysis ({len(layers_out)} layer/submodule "
         f"cloud{'s' if len(layers_out) != 1 else ''}) to {out_path}"
+    )
+    return 0
+
+
+def run_serve(args: argparse.Namespace) -> int:
+    """Execute the `serve` sub-command: serve an existing directory, no generation.
+
+    Thin wrapper over :func:`_serve_outputs` (the same CORS file server the
+    ``trace --serve`` flag uses) so a trace produced earlier — and augmented with
+    ``token-heatmap manifold`` — can be served without re-running generation.
+    """
+    serve_dir: Path = args.dir
+    if not serve_dir.is_dir():
+        print(f"error: directory not found: {serve_dir}", file=sys.stderr)
+        return 2
+
+    _serve_outputs(
+        serve_dir,
+        port=args.port,
+        frontend_url=args.frontend_url,
+        start_frontend=getattr(args, "frontend", False),
+        open_browser=not getattr(args, "no_open", False),
     )
     return 0
 

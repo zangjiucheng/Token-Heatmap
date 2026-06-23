@@ -244,3 +244,28 @@ Exits non-zero when the trace has no `activation_metadata`, carries no
 or when no `(layer, submodule)` cloud has at least two positions to analyze.
 
 See [`interpreting.md`](interpreting.md#manifold-metrics) for what the metrics mean.
+
+## Serving an existing trace (`serve`)
+
+`trace --serve` regenerates before serving, so it can't serve a trace you've
+just augmented with `manifold`. The `serve` subcommand serves an existing
+directory over HTTP with CORS — **no regeneration** — so the full flow fits in
+one terminal:
+
+```bash
+token-heatmap trace --config configs/example.yaml \
+  --capture-activations --capture-full-activations          # writes outputs/example-run/
+token-heatmap manifold --trace outputs/example-run/adaptive_token_trace.json
+token-heatmap serve outputs/example-run                     # serves it, CORS, no regen
+```
+
+| Flag             | Default                   | Meaning                                                      |
+| ---------------- | ------------------------- | ----------------------------------------------------------- |
+| `dir`            | `outputs/`                | Directory to serve.                                         |
+| `--port`         | `8000`                    | File-server port.                                          |
+| `--frontend-url` | `http://localhost:5173`   | Frontend origin used to build the printed viewer URL.      |
+| `--frontend`     | off                       | Also start the Vite frontend (`npm run dev`) and open it.  |
+| `--no-open`      | off                       | With `--frontend`, don't auto-open the browser.            |
+
+On HPC, SSH port-forward the file-server port to your laptop (use a free local
+port — see [`web-app.md`](web-app.md)) before opening the URL.

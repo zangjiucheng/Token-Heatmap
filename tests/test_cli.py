@@ -19,6 +19,7 @@ from llm_token_heatmap.cli import (
     _emit_eager_warning,
     build_parser,
     run_diff,
+    run_serve,
 )
 from llm_token_heatmap.trace_payload import project_activation_subset
 
@@ -106,6 +107,26 @@ def test_cli_parses_thresholds() -> None:
 def _parse_trace_args(extra: list[str]) -> object:
     parser, _ = build_parser()
     return parser.parse_args(["trace", "--model", "fake/model", "--prompt", "hi", *extra])
+
+
+def test_cli_serve_argparse_and_missing_dir(tmp_path: Path) -> None:
+    """`serve` parses its dir/port/frontend flags, and run_serve short-circuits
+    to exit code 2 on a missing directory (never tries to bind a socket)."""
+    parser, _ = build_parser()
+
+    args = parser.parse_args(["serve", "outdir", "--port", "9100", "--frontend", "--no-open"])
+    assert args.func is run_serve
+    assert args.dir == Path("outdir")
+    assert args.port == 9100
+    assert args.frontend is True
+    assert args.no_open is True
+
+    defaults = parser.parse_args(["serve"])
+    assert defaults.dir == Path("outputs")
+    assert defaults.port == 8000
+    assert defaults.frontend is False
+
+    assert run_serve(parser.parse_args(["serve", str(tmp_path / "nope")])) == 2
 
 
 def test_cli_help_lists_attention_flags(capsys: pytest.CaptureFixture[str]) -> None:
