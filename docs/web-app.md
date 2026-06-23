@@ -8,25 +8,150 @@ exploring traces that already exist.
 
 - Drop a CSV or JSON trace file → view the interactive heatmap
 - Click **Try sample data** → loads a small bundled trace
+- Pass `?trace=<url>` in the URL → auto-loads the trace on page open
 - Toggle **raw / processed / split** comparison
 - Switch the color scale between `prob` and `logprob`
 - Filter the step range, adjust the color range
-- Hover the heatmap → the step detail panel and timeline cursors follow
+- Hover the heatmap → step detail panel and timeline cursors follow
 - Click a generated token in the strip above the heatmap to jump to that step
-- Inspect attention layer/head grids and the logit lens (only for traces produced with `--capture-attention` / `--capture-logit-lens`)
+- **Attention tab** — layer × head attention grids and Q/K/V stats (requires `--capture-attention`)
+- **Logit Lens tab** — per-layer top-k next-token predictions (requires `--capture-logit-lens`)
+- **Activations tab** — per-layer activation summary stats (requires `--capture-activations`)
 - Export the current trace as CSV or the current heatmap as PNG
 - Persist view state in the URL — share a link to a specific view
 
-## Running locally
+## Running locally (with Node.js)
 
-See [`installation.md`](installation.md#running-the-web-app) for the install steps and
-the `scripts/dev.sh` helper.
+```bash
+./scripts/dev.sh                        # backend :8000, frontend :5173
+BACKEND_PORT=8765 FRONTEND_PORT=5180 ./scripts/dev.sh   # custom ports
+```
+
+Or manually in two terminals:
+
+```bash
+# Terminal 1
+cd web/backend && uvicorn llm_token_heatmap_api.main:app --reload --port 8000
+
+# Terminal 2
+cd web/frontend && npm run dev          # http://localhost:5173
+```
+
+### Changing the backend port the frontend connects to
+
+The frontend reads `VITE_API_BASE_URL` at startup (default `http://localhost:8000`).
+
+**Persistent** — create `web/frontend/.env.local` (gitignored):
+
+```bash
+cp web/frontend/.env.local.example web/frontend/.env.local
+# edit: VITE_API_BASE_URL=http://localhost:9000
+```
+
+**One-off** — pass it inline:
+
+```bash
+VITE_API_BASE_URL=http://localhost:9000 npm run dev
+```
+
+## HPC / no Node.js
+
+Two patterns depending on how much you want to install on the server.
+
+### Pattern 1 — `--serve` (simplest, zero extra deps)
+
+After generation the CLI starts a stdlib `http.server` that serves the output
+directory with CORS headers. You run the frontend locally on your laptop.
+
+```bash
+# HPC: generate and serve
+token-heatmap trace --config configs/example.yaml --serve
+
+# Optional flags
+#   --port 9000              file server port (default 8000)
+#   --frontend-url http://localhost:3000   adjust the printed URL if your
+#                                          local frontend is on a different port
+```
+
+Output:
+
+```
+[token-heatmap] Serving output directory …
+[token-heatmap] Files: http://localhost:8000/
+[token-heatmap] Open the viewer at:
+[token-heatmap]   http://localhost:5173/?trace=http://localhost:8000/adaptive_token_trace.json
+[token-heatmap] (Press Ctrl+C to stop)
+```
+
+Then on your laptop:
+
+```bash
+# Terminal 1 — port-forward (adjust port to match --port)
+ssh -L 8000:localhost:8000 user@hpc
+
+# Terminal 2 — frontend (any port; pass --frontend-url to match)
+cd web/frontend
+VITE_API_BASE_URL=http://localhost:8000 npm run dev
+# or if you already set it in .env.local:
+npm run dev
+
+# Open the URL printed by --serve
+```
+
+The `?trace=<url>` query param makes the frontend auto-fetch and display the
+trace immediately — no manual file drag needed.
+
+### Pattern 2 — pre-built frontend served by FastAPI
+
+Build the frontend once (on any machine with Node.js), copy `dist/` to the
+server, and the FastAPI backend serves both the API and the UI from the same
+port. No Node.js ever needed on the server.
+
+```bash
+# On your laptop — build (VITE_API_BASE_URL='' → relative/same-origin API calls)
+./scripts/build-frontend.sh
+
+# Copy to HPC
+rsync -av web/frontend/dist/ user@hpc:/path/to/Token-Heatmap/web/frontend/dist/
+```
+
+```bash
+# On HPC — start the backend (also serves the frontend)
+cd web/backend
+uvicorn llm_token_heatmap_api.main:app --host :: --port 8000
+# or with the CLI after a run:
+token-heatmap trace --config configs/example.yaml
+# then start uvicorn manually as above
+```
+
+```bash
+# On your laptop — port-forward and open
+ssh -L 8000:localhost:8000 user@hpc
+open http://localhost:8000
+```
+
+When `web/frontend/dist/` exists, `create_app()` mounts the Vite assets and
+adds an SPA fallback route so every non-API path returns `index.html`. If
+`dist/` is absent the backend still works as an API-only service.
 
 ## Architecture
 
-- **Backend** (`web/backend/`) — FastAPI. Endpoints: `GET /health`, `GET /schema` (returns [`docs/web/trace.schema.json`](web/trace.schema.json) byte-for-byte), `POST /trace/convert-csv`.
-- **Frontend** (`web/frontend/`) — React + Vite SPA. Bundles a copy of `trace.schema.json` for offline validation; on startup fetches `/schema` and swaps in the live copy so the UI validates against whatever the server is serving.
+| Layer | Tech | Serves |
+|---|---|---|
+| Python library | `llm_token_heatmap` | generation, probes, serialization |
+| Backend | FastAPI (`web/backend/`) | `/health`, `/schema`, `/trace/convert-csv`, `/trace/diff`, `/outputs/{path}`, SPA (when `dist/` present) |
+| Frontend | React + Vite (`web/frontend/`) | interactive trace viewer |
 
-The trace JSON contract is the same for the CLI, the example scripts, and the
-backend — they all go through `llm_token_heatmap.trace_payload.serialize_trace_to_json`,
+Key backend endpoints:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/health` | liveness |
+| `GET` | `/schema` | canonical `trace.schema.json` |
+| `POST` | `/trace/convert-csv` | CSV → JSON trace |
+| `POST` | `/trace/diff` | compare two activation traces |
+| `GET` | `/outputs/{path}` | serve files from `LLM_HEATMAP_OUTPUT_DIR` |
+
+The trace JSON contract is the same for the CLI, example scripts, and backend —
+they all go through `llm_token_heatmap.trace_payload.serialize_trace_to_json`,
 which conforms to the schema described in [`schema.md`](schema.md).

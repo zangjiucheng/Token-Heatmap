@@ -15,11 +15,12 @@ prompt + previous tokens → logits → probabilities → next token
 
 ## What you get
 
-- **`llm_token_heatmap`** — Python library: `AdaptiveTokenProbe`, a manual generation loop, sampling helpers, CSV/JSON/DataFrame export, attention + logit-lens probes, and matplotlib heatmaps.
-- **`token-heatmap`** — CLI that takes a model + prompt and writes a full trace bundle (CSV, JSON, 4 plots) to disk.
-- **`web/backend`** — FastAPI service exposing `/health`, `/schema`, and `/trace/convert-csv`.
-- **`web/frontend`** — React + Vite SPA: interactive heatmap, step detail panel, entropy and selected-probability timelines, raw-vs-processed comparison, attention/logit-lens views, CSV/PNG export.
-- **`scripts/dev.sh`** — one-shot script that boots both backend and frontend for local development.
+- **`llm_token_heatmap`** — Python library: `AdaptiveTokenProbe`, a manual generation loop, sampling helpers, CSV/JSON/DataFrame export, attention + logit-lens + activation probes, matplotlib heatmaps, and activation diff.
+- **`token-heatmap`** — CLI that takes a model + prompt (or a YAML config file) and writes a full trace bundle to disk. Includes `--serve` to instantly view the result in the browser.
+- **`web/backend`** — FastAPI service: `/health`, `/schema`, `/trace/convert-csv`, `/trace/diff`, `/outputs/{path}`. Also serves the pre-built frontend when `web/frontend/dist/` exists.
+- **`web/frontend`** — React + Vite SPA: interactive heatmap, step detail, entropy / selected-probability timelines, Attention tab, Logit Lens tab, Activations tab, CSV/PNG export, diff view.
+- **`scripts/dev.sh`** — boots backend + frontend together for local development.
+- **`scripts/build-frontend.sh`** — builds the frontend for deployment on servers without Node.js.
 
 ## Documentation
 
@@ -41,9 +42,16 @@ The docs index lives at [`docs/README.md`](docs/README.md).
 git clone <repo-url> llm-token-heatmap
 cd llm-token-heatmap
 
-./scripts/setup.sh                  # creates .venv and installs everything
+# Option A — pip + venv
+./scripts/setup.sh
 source .venv/bin/activate
 
+# Option B — conda (no Node.js required on this machine)
+conda env create -f environment.yml
+conda activate token-heatmap
+```
+
+```bash
 # CLI: generate a trace bundle
 token-heatmap trace \
   --model Qwen/Qwen2.5-0.5B-Instruct \
@@ -52,18 +60,42 @@ token-heatmap trace \
   --out outputs/
 ```
 
-Full CLI flags: [`docs/cli.md`](docs/cli.md). Python equivalent:
-[`docs/python-api.md`](docs/python-api.md).
-
-To explore the trace interactively (web app deps were already installed by
-`scripts/setup.sh` if Node was available):
+Or use a YAML config file (see `configs/example.yaml`):
 
 ```bash
-./scripts/dev.sh              # backend :8000, frontend :5173
+token-heatmap trace --config configs/example.yaml
 ```
 
-Open <http://localhost:5173> and drop `outputs/adaptive_token_trace.json`
-(or the CSV) onto the landing page. More in [`docs/web-app.md`](docs/web-app.md).
+Full CLI flags: [`docs/cli.md`](docs/cli.md). Python equivalent: [`docs/python-api.md`](docs/python-api.md).
+
+## Viewing the trace
+
+**Local machine with Node.js:**
+
+```bash
+./scripts/dev.sh          # backend :8000, frontend :5173
+```
+
+Open <http://localhost:5173> and drop `outputs/adaptive_token_trace.json` onto the landing page.
+
+**HPC / server without Node.js:**
+
+```bash
+# 1. Generate trace and start a file server (no extra deps needed)
+token-heatmap trace --config configs/example.yaml --serve --port 8000
+
+# 2. On your laptop — SSH port-forward
+ssh -L 8000:localhost:8000 user@hpc
+
+# 3. On your laptop — run the frontend
+cd web/frontend && npm run dev   # http://localhost:5173
+
+# 4. Open the URL printed by --serve
+#    e.g. http://localhost:5173/?trace=http://localhost:8000/adaptive_token_trace.json
+```
+
+The frontend auto-loads the trace via the `?trace=` URL param — no manual file drop needed.
+See [`docs/web-app.md`](docs/web-app.md) for the full HPC guide including the pre-built frontend option.
 
 ## License
 

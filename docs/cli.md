@@ -1,6 +1,32 @@
 # Command-line interface
 
-After `pip install -e .` the `token-heatmap` command is on your `PATH`.
+After `pip install -e .` (or `conda env create -f environment.yml`) the
+`token-heatmap` command is on your `PATH`.
+
+## YAML config files
+
+All `trace` flags can be set in a YAML file so you don't have to repeat long
+command lines. CLI flags always override YAML values.
+
+```bash
+pip install pyyaml          # one-time; only needed for --config
+token-heatmap trace --config configs/example.yaml
+token-heatmap trace --config configs/example.yaml --max-new-tokens 128   # override one field
+```
+
+`configs/example.yaml` (included in the repo):
+
+```yaml
+model: Qwen/Qwen2.5-0.5B-Instruct
+prompt: "Explain what a large language model is in one sentence."
+max_new_tokens: 64
+temperature: 0.8
+top_p: 0.95
+out: outputs/example-run
+capture_logit_lens: true
+```
+
+All keys are optional — any missing key falls back to the CLI default.
 
 ## Basic trace
 
@@ -15,19 +41,59 @@ token-heatmap trace \
   --out outputs/
 ```
 
-Output:
+Output directory:
 
 ```
 outputs/
 ├── generated.txt
 ├── adaptive_token_trace.csv
+├── adaptive_token_trace.json
 ├── adaptive_heatmap.png
 ├── entropy.png
-├── selected_probability.png
-└── raw_vs_processed.png
+└── selected_probability.png
 ```
 
 Run `token-heatmap trace --help` for the full flag list.
+
+## Serving the result instantly (`--serve`)
+
+Add `--serve` to start a file server immediately after generation and print a
+ready-made URL to open in the browser. Uses Python's built-in `http.server` —
+no uvicorn, no npm, no extra installs required.
+
+```bash
+token-heatmap trace --config configs/example.yaml --serve
+```
+
+```
+[token-heatmap] Serving output directory …
+[token-heatmap] Files: http://localhost:8000/
+[token-heatmap] Open the viewer at:
+[token-heatmap]   http://localhost:5173/?trace=http://localhost:8000/adaptive_token_trace.json
+[token-heatmap] (Press Ctrl+C to stop)
+```
+
+Flags:
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--serve` | off | Start file server after generation |
+| `--port` | `8000` | Port for the file server |
+| `--frontend-url` | `http://localhost:5173` | Frontend origin used to build the printed URL |
+
+Example — backend on port 9000, frontend on port 3000:
+
+```bash
+token-heatmap trace --config configs/example.yaml \
+  --serve --port 9000 --frontend-url http://localhost:3000
+# prints: http://localhost:3000/?trace=http://localhost:9000/adaptive_token_trace.json
+```
+
+On HPC, SSH port-forward the file-server port to your laptop before opening the URL:
+
+```bash
+ssh -L 9000:localhost:9000 user@hpc
+```
 
 ## Inspecting attention and the logit lens
 
@@ -56,22 +122,19 @@ token-heatmap trace \
 | `--lens-layers`            | Same syntax as `--attention-layers`.                                                                         |
 | `--lens-top-k`             | Top-k tokens retained per layer (default 8).                                                                 |
 
-When attention or lens capture is on, the CLI also writes:
+Extra output files when these flags are active:
 
-- `adaptive_token_trace.json` — schema-shaped trace including inline attention aggregates, per-layer logit-lens projections, and `attention_sidecar_ref` pointers. See [`schema.md`](schema.md) for the layout.
-- `attention_layer_head_grid.png` — per-step layer × head entropy grid (first step).
+- `adaptive_token_trace.json` — includes inline attention aggregates, per-layer logit-lens projections, and `attention_sidecar_ref` pointers.
+- `attention_layer_head_grid.png` — per-step layer × head entropy grid.
 - `logit_lens.png` — per-layer top-k table (first step).
 - `selected_rank_heatmap.png` — selected-token rank by layer × step.
 
-A runnable end-to-end script lives at
-[`examples/qwen_attention_inspect.py`](https://github.com/zangjiucheng/Token-Heatmap/blob/main/examples/qwen_attention_inspect.py);
-it runs on `Qwen/Qwen2.5-0.5B-Instruct` in under 90 s on CPU.
+The **Logit Lens** tab in the web app shows this data interactively, synced to the heatmap cursor.
 
 ## Capturing activations
 
-`ActivationProbe` is the third opt-in capture path. When the flags below
-are set, the CLI embeds `activation_metadata` and per-step `activations`
-blocks directly into `adaptive_token_trace.json` (no sibling file).
+`ActivationProbe` captures per-layer / per-submodule summary statistics and,
+optionally, full activation tensors as `.npz` sidecars.
 
 ```bash
 token-heatmap trace \
@@ -85,13 +148,17 @@ token-heatmap trace \
   --out outputs/activations/
 ```
 
-| Flag                         | Meaning                                                                                                                                                                            |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--capture-activations`      | Attach an `ActivationProbe`. Off by default.                                                                                                                                       |
-| `--activation-layers`        | `all` (default) or comma-separated decoder layer indices.                                                                                                                          |
+Add `--capture-full-activations` to also write `activations/activation.<step>.npz`
+(full hidden-state tensors) and embed `activation_sidecar_ref` pointers in the
+JSON trace. Implies `--capture-activations`.
+
+| Flag                         | Meaning                                                                                                                                                                             |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--capture-activations`      | Attach an `ActivationProbe`. Off by default.                                                                                                                                        |
+| `--activation-layers`        | `all` (default) or comma-separated decoder layer indices.                                                                                                                           |
 | `--activation-submodules`    | Comma-separated submodule keys (default `residual_post,mlp_out,o_proj`). Supported: `resid_pre`/`residual_pre`, `resid_post`/`residual_post`, `mlp_out`/`mlp.down_proj`, `o_proj`. |
-| `--activation-top-k`         | Top-k highest-magnitude neurons retained per (layer, submodule) (default 8).                                                                                                       |
-| `--capture-full-activations` | Reserved for the Tier-2 sidecar path; implies `--capture-activations`.                                                                                                             |
+| `--activation-top-k`         | Top-k highest-magnitude neurons retained per (layer, submodule) (default 8).                                                                                                        |
+| `--capture-full-activations` | Write full tensors as `.npz` sidecars under `<out>/activations/`. Implies `--capture-activations`.                                                                                  |
 
 ## Comparing two activation traces
 
@@ -104,12 +171,8 @@ token-heatmap diff outA/adaptive_token_trace.json outB/adaptive_token_trace.json
 The subcommand projects each input's activation subset, calls
 `compare_activations` with `align="auto"`, and writes:
 
-- `activation_diff.json` — schema-shaped diff payload (matches
-  [`web/activation-diff.schema.json`](web/activation-diff.schema.json)).
-- `activation_delta.png` — stacked layer × step heatmap, one subplot per
-  captured submodule, coloured by the chosen metric.
+- `activation_diff.json` — schema-shaped diff payload.
+- `activation_delta.png` — stacked layer × step heatmap, one subplot per captured submodule.
 
 The CLI refuses to diff (non-zero exit) when the two parent traces have
-different `metadata.prompt` values or when zero steps align between them
-— these are the two ways "mismatched generations" present after the
-comparator runs.
+different `metadata.prompt` values or when zero steps align between them.
