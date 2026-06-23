@@ -489,6 +489,18 @@ def test_e2e_activation_capture_and_diff_via_cli(tmp_path: Path) -> None:
     assert payload_a.get("schema_version") == SCHEMA_VERSION
     assert "activation_metadata" in payload_a
     assert "activation_metadata" in payload_b
+    # Regression: activation_metadata must be captured BEFORE the probe is
+    # detached. detach() clears the probe's submodule / layer lists, so building
+    # the metadata afterwards silently records empty lists, which breaks the
+    # Activations and Manifold views downstream. See cli.run_trace.
+    assert set(payload_a["activation_metadata"]["captured_submodules"]) == {
+        "resid_post",
+        "mlp_out",
+        "o_proj",
+    }
+    assert payload_a["activation_metadata"]["captured_layers"], (
+        "captured_layers must be non-empty (regression: metadata built after detach)"
+    )
     # Same seeded subprocess + same checkpoint must produce the same token ids.
     assert [s["token_id"] for s in payload_a["steps"]] == [
         s["token_id"] for s in payload_b["steps"]

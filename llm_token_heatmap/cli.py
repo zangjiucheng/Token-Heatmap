@@ -562,6 +562,8 @@ def run_trace(args: argparse.Namespace) -> int:
         )
         activation_probe.attach(model)
 
+    attention_metadata: dict[str, Any] | None = None
+    activation_metadata: dict[str, Any] | None = None
     print(f"Generating up to {args.max_new_tokens} tokens...")
     try:
         text, trace = generate_with_adaptive_probe(
@@ -577,11 +579,31 @@ def run_trace(args: argparse.Namespace) -> int:
             activation_probe=activation_probe,
         )
     finally:
+        # Snapshot probe metadata BEFORE detaching: detach() clears each probe's
+        # captured-layer / submodule lists, so building the metadata afterwards
+        # would record empty lists and silently break the Activations and
+        # Manifold views (which key off captured_submodules / captured_layers).
         if attention_probe is not None:
+            decoder_root = getattr(model, "model", None) or model
+            decoder_layers = getattr(decoder_root, "layers", None)
+            try:
+                total_layers = len(decoder_layers) if decoder_layers is not None else None
+            except TypeError:
+                total_layers = None
+            attention_metadata = _build_attention_metadata(
+                attention_probe, attention_probe.target_layers, total_layers
+            )
             attention_probe.detach()
         if logit_lens is not None:
             logit_lens.detach()
         if activation_probe is not None:
+            activation_metadata = {
+                "captured_submodules": list(activation_probe.submodule_keys),
+                "num_layers": int(activation_probe.num_layers),
+                "hidden_dim": int(activation_probe.hidden_dim),
+                "tokenizer_fingerprint": tokenizer_fingerprint(tokenizer),
+                "captured_layers": [int(i) for i in activation_probe.target_layers],
+            }
             activation_probe.detach()
 
     generated_path = output_dir / "generated.txt"
@@ -592,29 +614,6 @@ def run_trace(args: argparse.Namespace) -> int:
     df.to_csv(csv_path, index=False)
 
     sidecar_refs: dict[int, str] = {}
-    attention_metadata: dict[str, Any] | None = None
-    if attention_probe is not None:
-        total_layers = None
-        decoder_root = getattr(model, "model", None) or model
-        decoder_layers = getattr(decoder_root, "layers", None)
-        if decoder_layers is not None:
-            try:
-                total_layers = len(decoder_layers)
-            except TypeError:
-                total_layers = None
-        attention_metadata = _build_attention_metadata(
-            attention_probe, attention_probe.target_layers, total_layers
-        )
-
-    activation_metadata: dict[str, Any] | None = None
-    if activation_probe is not None:
-        activation_metadata = {
-            "captured_submodules": list(activation_probe.submodule_keys),
-            "num_layers": int(activation_probe.num_layers),
-            "hidden_dim": int(activation_probe.hidden_dim),
-            "tokenizer_fingerprint": tokenizer_fingerprint(tokenizer),
-            "captured_layers": [int(i) for i in activation_probe.target_layers],
-        }
 
     if args.capture_full_attention:
         sidecar_dir = output_dir / "attention"
@@ -1050,12 +1049,20 @@ def run_manifold(args: argparse.Namespace) -> int:
         )
         return 2
 
-    target_layers = args.layers if args.layers else meta.get("captured_layers", [])
-    target_submodules = (
-        args.submodules if args.submodules else meta.get("captured_submodules", [])
+    # Resolve which (layer, submodule) clouds to analyze. Priority: explicit CLI
+    # flags, then the trace's captured_* metadata, then — if that metadata is
+    # empty (older traces recorded empty lists) — fall back to whatever the
+    # sidecars actually contain. ``None`` means "accept everything".
+    target_layer_set: set[int] | None = (
+        {int(layer) for layer in args.layers}
+        if args.layers
+        else ({int(layer) for layer in meta.get("captured_layers") or []} or None)
     )
-    target_layer_set = {int(layer) for layer in target_layers}
-    target_submodule_set = set(target_submodules)
+    target_submodule_set: set[str] | None = (
+        set(args.submodules)
+        if args.submodules
+        else (set(meta.get("captured_submodules") or []) or None)
+    )
 
     base = trace_path.parent
     # (layer, submodule) -> (positions, list-of-vectors), accumulated in step order.
@@ -1064,10 +1071,10 @@ def run_manifold(args: argparse.Namespace) -> int:
         sidecar = read_sidecar(base / ref)
         for layer_entry in sidecar.get("layers", []):
             layer = int(layer_entry["layer"])
-            if layer not in target_layer_set:
+            if target_layer_set is not None and layer not in target_layer_set:
                 continue
             for submodule, vector in layer_entry.get("submodule_tensors", {}).items():
-                if submodule not in target_submodule_set:
+                if target_submodule_set is not None and submodule not in target_submodule_set:
                     continue
                 pos_list, vec_list = collected.setdefault((layer, submodule), ([], []))
                 pos_list.append(step_idx)
