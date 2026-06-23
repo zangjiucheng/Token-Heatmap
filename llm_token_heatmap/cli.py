@@ -456,7 +456,7 @@ def run_trace(args: argparse.Namespace) -> int:
     tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
-        dtype=dtype,
+        torch_dtype=dtype,
         trust_remote_code=True,
     )
     model = model.to(device)  # type: ignore[arg-type]

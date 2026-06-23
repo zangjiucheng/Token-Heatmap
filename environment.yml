@@ -9,6 +9,7 @@ dependencies:
   # Core ML stack — installs CUDA-enabled PyTorch when the pytorch+nvidia channels are used.
   # For CPU-only: replace with `pytorch::pytorch>=2.1 cpuonly`
   - pytorch::pytorch>=2.1
+  - pytorch::torchvision>=0.16
   - conda-forge:pandas>=2.0
   - conda-forge:numpy>=1.24
   - conda-forge:matplotlib>=3.8
@@ -16,8 +17,11 @@ dependencies:
   - conda-forge:pip
   - pip:
     # transformers/accelerate lag slightly behind conda-forge, so install via pip
-    - transformers>=4.40
+    - transformers>=5.0
     - accelerate>=0.30
+    # Qwen2 tokenizer extras
+    - tiktoken>=0.6
+    - einops>=0.7
     # Backend (FastAPI server + activation-diff endpoint)
     - fastapi>=0.110
     - "uvicorn[standard]>=0.27"

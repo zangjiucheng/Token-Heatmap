@@ -19,7 +19,7 @@ source .venv/bin/activate
 `scripts/setup.sh` is idempotent and does all of the following:
 
 1. Creates `.venv` if it doesn't already exist.
-2. Installs the core package in editable mode (`pip install -r requirements.txt`, `pip install -e ".[dev]"`).
+2. Installs the core package in editable mode (`pip install -e ".[dev,cli,models]"`).
 3. Installs the FastAPI backend in editable mode (`pip install -e ./web/backend`).
 4. Runs `npm install` in `web/frontend` — but only if `npm` is on `PATH`. If you don't have Node, that step is skipped with a friendly message.
 
@@ -45,8 +45,8 @@ For CPU-only machines, edit `environment.yml` and replace the pytorch line with:
 
 | Extra | Command | When you need it |
 |---|---|---|
-| YAML config (`--config`) | `pip install pyyaml` | Using YAML config files with the CLI |
-| Qwen2 tokenizer | `pip install tiktoken einops` | Loading any Qwen2.x model |
+| YAML config (`--config`) | `pip install ".[cli]"` or `pip install pyyaml` | Using YAML config files with the CLI |
+| Qwen2 / model extras | `pip install ".[models]"` or `pip install tiktoken einops` | Loading any Qwen2.x model |
 | Gated models (Llama etc.) | Set `HUGGINGFACE_HUB_TOKEN=hf_...` | Models that require accepting a licence on HF Hub |
 
 ## Running the web app
