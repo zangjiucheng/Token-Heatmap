@@ -4,14 +4,20 @@
   "title": "LLM Token Heatmap Activation Diff",
   "description": "On-disk payload produced by `compare_activations(trace_a, trace_b, ...)`. Carries per-step `delta` records, one per (step, layer, submodule), plus alignment metadata describing how the two source traces were matched up (`token_id` vs `position`). Consumed by the CLI `diff` subcommand and the diff-mode UI. One file == one (trace_a, trace_b) pair.",
   "type": "object",
-  "required": ["schema_version", "alignment", "steps"],
+  "required": [
+    "schema_version",
+    "alignment",
+    "steps"
+  ],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
       "type": "string",
       "description": "Semver of this schema. Bumped independently of the main trace and activation schemas. Consumers must hard-fail on unknown major.",
       "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "examples": ["1.0.0"]
+      "examples": [
+        "1.0.0"
+      ]
     },
     "alignment": {
       "$ref": "#/$defs/Alignment",
@@ -20,7 +26,9 @@
     "steps": {
       "type": "array",
       "description": "Per-step diff records, ordered by the aligned `step` index. Length equals the number of successfully aligned steps; unmatched steps from either side are listed in `alignment.mismatches` instead.",
-      "items": { "$ref": "#/$defs/DiffStep" }
+      "items": {
+        "$ref": "#/$defs/DiffStep"
+      }
     }
   },
   "$defs": {
@@ -37,7 +45,11 @@
       "properties": {
         "mode": {
           "type": "string",
-          "enum": ["token_id", "position", "auto"],
+          "enum": [
+            "token_id",
+            "position",
+            "auto"
+          ],
           "description": "Alignment strategy used. `token_id` zips traces on step index, requiring identical token ids; `position` zips on `decoded_text_offset`, tolerating different tokenizers; `auto` picks `token_id` when the fingerprints match, else `position`."
         },
         "tokenizer_a_fingerprint": {
@@ -51,23 +63,33 @@
         "mismatches": {
           "type": "array",
           "description": "Steps that could not be aligned (e.g. divergent token ids under `token_id` mode, or non-overlapping decoded-text offsets under `position` mode). Empty array when the two traces aligned cleanly.",
-          "items": { "$ref": "#/$defs/AlignmentMismatch" }
+          "items": {
+            "$ref": "#/$defs/AlignmentMismatch"
+          }
         }
       }
     },
     "AlignmentMismatch": {
       "type": "object",
       "description": "A single step where alignment failed. At least one of `step_a` or `step_b` is present, allowing the consumer to render the unmatched step on the correct side of the diff UI.",
-      "required": ["reason"],
+      "required": [
+        "reason"
+      ],
       "additionalProperties": false,
       "properties": {
         "step_a": {
-          "type": ["integer", "null"],
+          "type": [
+            "integer",
+            "null"
+          ],
           "minimum": 0,
           "description": "Zero-indexed step in trace A that could not be aligned, or null if the unmatched step is on the B side."
         },
         "step_b": {
-          "type": ["integer", "null"],
+          "type": [
+            "integer",
+            "null"
+          ],
           "minimum": 0,
           "description": "Zero-indexed step in trace B that could not be aligned, or null if the unmatched step is on the A side."
         },
@@ -118,14 +140,22 @@
         "delta": {
           "type": "array",
           "description": "Per (layer, submodule) deltas. Ordering matches the producer's iteration over the captured submodules of trace A.",
-          "items": { "$ref": "#/$defs/LayerDelta" }
+          "items": {
+            "$ref": "#/$defs/LayerDelta"
+          }
         }
       }
     },
     "LayerDelta": {
       "type": "object",
       "description": "Difference between trace A and trace B for one (layer, submodule) at one aligned step.",
-      "required": ["layer", "submodule", "l2", "cosine", "top_changed_neurons"],
+      "required": [
+        "layer",
+        "submodule",
+        "l2",
+        "cosine",
+        "top_changed_neurons"
+      ],
       "additionalProperties": false,
       "properties": {
         "layer": {
@@ -151,13 +181,18 @@
         "top_changed_neurons": {
           "type": "array",
           "description": "Neurons with the largest absolute delta at this (layer, submodule), sorted by descending `|delta|`.",
-          "items": { "$ref": "#/$defs/TopChangedNeuron" }
+          "items": {
+            "$ref": "#/$defs/TopChangedNeuron"
+          }
         }
       }
     },
     "TopChangedNeuron": {
       "type": "object",
-      "required": ["index", "delta"],
+      "required": [
+        "index",
+        "delta"
+      ],
       "additionalProperties": false,
       "properties": {
         "index": {

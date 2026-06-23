@@ -18,7 +18,7 @@ prompt + previous tokens → logits → probabilities → next token
 - **`llm_token_heatmap`** — Python library: `AdaptiveTokenProbe`, a manual generation loop, sampling helpers, CSV/JSON/DataFrame export, attention + logit-lens + activation probes, matplotlib heatmaps, and activation diff.
 - **`token-heatmap`** — CLI that takes a model + prompt (or a YAML config file) and writes a full trace bundle to disk. Includes `--serve` to instantly view the result in the browser.
 - **`web/backend`** — FastAPI service: `/health`, `/schema`, `/trace/convert-csv`, `/trace/diff`, `/outputs/{path}`. Also serves the pre-built frontend when `web/frontend/dist/` exists.
-- **`web/frontend`** — React + Vite SPA: interactive heatmap, step detail, entropy / selected-probability timelines, Attention tab, Logit Lens tab, Activations tab, CSV/PNG export, diff view.
+- **`web/frontend`** — React + Vite SPA: interactive heatmap, step detail, entropy / selected-probability timelines, Attention tab, Logit Lens tab, Activations tab, Manifold tab, CSV/PNG export, diff view.
 - **`scripts/dev.sh`** — boots backend + frontend together for local development.
 - **`scripts/build-frontend.sh`** — builds the frontend for deployment on servers without Node.js.
 

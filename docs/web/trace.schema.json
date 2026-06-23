@@ -21,6 +21,10 @@
       "$ref": "#/$defs/ActivationMetadata",
       "description": "Architecture and tokenizer metadata describing the activation captures referenced by per-step `activations` blocks. Present whenever any step carries an `activations` array; absent for traces produced without an ActivationProbe. Shape mirrors `docs/web/activation.schema.json#/$defs/ActivationMetadata` so the projected activation subset of this trace validates against the activation schema."
     },
+    "manifold": {
+      "$ref": "#/$defs/Manifold",
+      "description": "Optional manifold analysis of the captured activation clouds — PCA spectrum, participation ratio, TwoNN intrinsic dimension, low-D projection, trajectory curvature, and periodicity — one entry per analyzed (layer, submodule). Produced post-hoc by `token-heatmap manifold` from a trace plus its activation sidecars; absent otherwise. Inspired by transformer-circuits.pub/2025/linebreaks."
+    },
     "metadata": {
       "type": "object",
       "description": "Per-trace metadata: model identity, sampling parameters, and prompt.",
@@ -140,6 +144,160 @@
     }
   },
   "$defs": {
+    "Manifold": {
+      "type": "object",
+      "description": "Manifold analysis results, one entry per analyzed (layer, submodule) activation cloud. See `llm_token_heatmap/manifold.py`.",
+      "required": ["schema_version", "method", "n_components", "layers"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Semver of the manifold payload shape."
+        },
+        "method": {
+          "type": "string",
+          "enum": ["pca"],
+          "description": "Dimensionality-reduction method used for the projection."
+        },
+        "n_components": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of projection components requested."
+        },
+        "layers": {
+          "type": "array",
+          "description": "One manifold-analysis entry per analyzed (layer, submodule) cloud.",
+          "items": { "$ref": "#/$defs/ManifoldLayer" }
+        }
+      }
+    },
+    "ManifoldLayer": {
+      "type": "object",
+      "required": [
+        "layer",
+        "submodule",
+        "n_positions",
+        "hidden_dim",
+        "positions",
+        "pca",
+        "participation_ratio",
+        "intrinsic_dimension",
+        "projection",
+        "trajectory_curvature",
+        "periodicity"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "layer": { "type": "integer", "minimum": 0 },
+        "submodule": { "type": "string" },
+        "n_positions": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of token positions (rows) in the analyzed cloud."
+        },
+        "hidden_dim": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Activation vector dimension."
+        },
+        "positions": {
+          "type": "array",
+          "description": "Generation-step index for each row, aligned with `projection.coords`.",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "pca": { "$ref": "#/$defs/ManifoldPca" },
+        "participation_ratio": {
+          "type": ["number", "null"],
+          "description": "Effective dimensionality (Σλ)²/Σλ²; null when undefined."
+        },
+        "intrinsic_dimension": { "$ref": "#/$defs/ManifoldIntrinsicDimension" },
+        "projection": { "$ref": "#/$defs/ManifoldProjection" },
+        "trajectory_curvature": { "$ref": "#/$defs/ManifoldCurvature" },
+        "periodicity": { "$ref": "#/$defs/ManifoldPeriodicity" }
+      }
+    },
+    "ManifoldPca": {
+      "type": "object",
+      "required": [
+        "eigenvalues",
+        "explained_variance_ratio",
+        "cumulative_variance_ratio"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "eigenvalues": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Covariance eigenvalues, descending (capped)."
+        },
+        "explained_variance_ratio": {
+          "type": "array",
+          "items": { "type": "number" }
+        },
+        "cumulative_variance_ratio": {
+          "type": "array",
+          "items": { "type": "number" }
+        }
+      }
+    },
+    "ManifoldIntrinsicDimension": {
+      "type": "object",
+      "required": ["twonn"],
+      "additionalProperties": false,
+      "properties": {
+        "twonn": {
+          "type": ["number", "null"],
+          "description": "TwoNN intrinsic-dimension estimate; null when not estimable."
+        }
+      }
+    },
+    "ManifoldProjection": {
+      "type": "object",
+      "required": ["n_components", "coords"],
+      "additionalProperties": false,
+      "properties": {
+        "n_components": { "type": "integer", "minimum": 0 },
+        "coords": {
+          "type": "array",
+          "description": "Per-position PCA scores; row i is the projection of position i. Shape (n_positions, n_components).",
+          "items": { "type": "array", "items": { "type": "number" } }
+        }
+      }
+    },
+    "ManifoldCurvature": {
+      "type": "object",
+      "required": ["mean", "per_position"],
+      "additionalProperties": false,
+      "properties": {
+        "mean": {
+          "type": ["number", "null"],
+          "description": "Mean interior discrete curvature; null when undefined."
+        },
+        "per_position": {
+          "type": "array",
+          "description": "Per-position curvature; endpoints and degenerate points are null.",
+          "items": { "type": ["number", "null"] }
+        }
+      }
+    },
+    "ManifoldPeriodicity": {
+      "type": "object",
+      "required": ["dominant_period", "power", "peak_frequency"],
+      "additionalProperties": false,
+      "properties": {
+        "dominant_period": {
+          "type": ["number", "null"],
+          "description": "Period (in positions) of the dominant non-DC FFT component of PC1; null when none."
+        },
+        "power": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Normalized spectral power of the dominant component (peak / total)."
+        },
+        "peak_frequency": { "type": ["number", "null"] }
+      }
+    },
     "Step": {
       "type": "object",
       "required": ["step", "selected", "raw", "processed"],

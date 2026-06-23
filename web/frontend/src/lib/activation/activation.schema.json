@@ -4,14 +4,20 @@
   "title": "LLM Token Heatmap Activation Trace",
   "description": "Companion to `trace.schema.json` describing the activation summary captured by an `ActivationProbe` for a single generation. Carries per-step `activations: ActivationLayerEntry[]` plus a top-level `activation_metadata` block, and a cross-tokenizer alignment field (`decoded_text_offset`) on every step so two traces produced by different tokenizers can still be aligned position-for-position. Consumed by `compare_activations` and the Activations tab UI. One file == one prompt == one generation.",
   "type": "object",
-  "required": ["schema_version", "activation_metadata", "steps"],
+  "required": [
+    "schema_version",
+    "activation_metadata",
+    "steps"
+  ],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
       "type": "string",
       "description": "Semver of this schema. Bumped independently of the main trace schema. Consumers must hard-fail on unknown major. 1.1.0 adds the optional per-step `activation_sidecar_ref` field as a backwards-compatible additive change for the Tier 2 sidecar.",
       "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "examples": ["1.1.0"]
+      "examples": [
+        "1.1.0"
+      ]
     },
     "activation_metadata": {
       "$ref": "#/$defs/ActivationMetadata",
@@ -20,7 +26,9 @@
     "steps": {
       "type": "array",
       "description": "Per-generation-step activation records. `steps[i].step` MUST equal `i`. Iteration ends early on EOS, so length matches the parent trace's `steps` length.",
-      "items": { "$ref": "#/$defs/ActivationStep" }
+      "items": {
+        "$ref": "#/$defs/ActivationStep"
+      }
     }
   },
   "$defs": {
@@ -39,7 +47,9 @@
           "type": "array",
           "description": "Submodule names captured by the probe, in the order their per-(layer, submodule) entries appear inside each step's `activations` array (e.g. `[\"resid_pre\", \"resid_post\", \"mlp.down_proj\", \"o_proj\"]`).",
           "minItems": 1,
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "num_layers": {
           "type": "integer",
@@ -58,14 +68,22 @@
         "captured_layers": {
           "type": "array",
           "description": "Zero-indexed decoder layer indices that the probe captured (ascending; duplicate-free). When omitted, consumers MAY assume all layers `[0, num_layers)` are captured.",
-          "items": { "type": "integer", "minimum": 0 }
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
         }
       }
     },
     "ActivationStep": {
       "type": "object",
       "description": "Activation record for a single generation step. The `token_id` and `decoded_text_offset` fields carry the cross-tokenizer alignment information so this entry can be matched against the corresponding entry in another trace.",
-      "required": ["step", "token_id", "decoded_text_offset", "activations"],
+      "required": [
+        "step",
+        "token_id",
+        "decoded_text_offset",
+        "activations"
+      ],
       "additionalProperties": false,
       "properties": {
         "step": {
@@ -86,10 +104,15 @@
         "activations": {
           "type": "array",
           "description": "Per (layer, submodule) activation summary entries for this step. Ordering is layer-major then submodule-major following `activation_metadata.captured_submodules`.",
-          "items": { "$ref": "#/$defs/ActivationLayerEntry" }
+          "items": {
+            "$ref": "#/$defs/ActivationLayerEntry"
+          }
         },
         "activation_sidecar_ref": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Relative path (or URL) of the Tier 2 `.npz` activation sidecar for this step, or `null` when no sidecar was written (the default; sidecars are opt-in via `--capture-full-activations`). The referenced file conforms to `activation-sidecar.schema.json`."
         }
       }
@@ -135,13 +158,18 @@
         "top_neurons": {
           "type": "array",
           "description": "Highest-magnitude neurons within this (step, layer, submodule), sorted by descending `|value|`.",
-          "items": { "$ref": "#/$defs/TopNeuron" }
+          "items": {
+            "$ref": "#/$defs/TopNeuron"
+          }
         }
       }
     },
     "TopNeuron": {
       "type": "object",
-      "required": ["index", "value"],
+      "required": [
+        "index",
+        "value"
+      ],
       "additionalProperties": false,
       "properties": {
         "index": {

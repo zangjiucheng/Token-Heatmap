@@ -4,18 +4,33 @@
   "title": "LLM Token Heatmap Trace",
   "description": "Canonical JSON payload for a single adaptive-probe generation trace. Produced by `llm_token_heatmap.generate_with_adaptive_probe` after lightweight serialization, and consumed by the CLI exporter, FastAPI backend, and web frontend. One file == one prompt == one generation.",
   "type": "object",
-  "required": ["schema_version", "metadata", "tokens", "steps"],
+  "required": [
+    "schema_version",
+    "metadata",
+    "tokens",
+    "steps"
+  ],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
       "type": "string",
       "description": "Semver of this schema. Bump major on breaking changes; consumers must hard-fail on unknown major.",
       "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "examples": ["2.0.0"]
+      "examples": [
+        "2.0.0"
+      ]
     },
     "attention_metadata": {
       "$ref": "#/$defs/AttentionMetadata",
       "description": "Architecture metadata describing the attention captures referenced by per-step `attention` blocks. Present whenever any step carries an `attention` array; absent for traces produced without an AttentionProbe."
+    },
+    "activation_metadata": {
+      "$ref": "#/$defs/ActivationMetadata",
+      "description": "Architecture and tokenizer metadata describing the activation captures referenced by per-step `activations` blocks. Present whenever any step carries an `activations` array; absent for traces produced without an ActivationProbe. Shape mirrors `docs/web/activation.schema.json#/$defs/ActivationMetadata` so the projected activation subset of this trace validates against the activation schema."
+    },
+    "manifold": {
+      "$ref": "#/$defs/Manifold",
+      "description": "Optional manifold analysis of the captured activation clouds — PCA spectrum, participation ratio, TwoNN intrinsic dimension, low-D projection, trajectory curvature, and periodicity — one entry per analyzed (layer, submodule). Produced post-hoc by `token-heatmap manifold` from a trace plus its activation sidecars; absent otherwise. Inspired by transformer-circuits.pub/2025/linebreaks."
     },
     "metadata": {
       "type": "object",
@@ -33,14 +48,19 @@
         "model": {
           "type": "string",
           "description": "HuggingFace model id or local path used for generation.",
-          "examples": ["Qwen/Qwen2.5-0.5B-Instruct"]
+          "examples": [
+            "Qwen/Qwen2.5-0.5B-Instruct"
+          ]
         },
         "prompt": {
           "type": "string",
           "description": "The user prompt before any chat-template wrapping."
         },
         "system_prompt": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Optional system message used when use_chat_template=true."
         },
         "use_chat_template": {
@@ -58,13 +78,21 @@
         },
         "device": {
           "type": "string",
-          "enum": ["cpu", "cuda", "mps"],
+          "enum": [
+            "cpu",
+            "cuda",
+            "mps"
+          ],
           "description": "Device that ran inference."
         },
         "dtype": {
           "type": "string",
           "description": "PyTorch dtype used for the forward pass.",
-          "examples": ["float16", "float32", "bfloat16"]
+          "examples": [
+            "float16",
+            "float32",
+            "bfloat16"
+          ]
         },
         "vocab_size": {
           "type": "integer",
@@ -103,7 +131,11 @@
         },
         "probe_config": {
           "type": "object",
-          "required": ["min_k", "max_k", "mass_threshold"],
+          "required": [
+            "min_k",
+            "max_k",
+            "mass_threshold"
+          ],
           "additionalProperties": false,
           "properties": {
             "min_k": {
@@ -131,7 +163,10 @@
     "tokens": {
       "type": "object",
       "description": "Prompt tokens, surfaced separately so the UI can render the prompt with the same hover affordances as generated tokens. These are the tokens fed into the model before step 0 (after chat-template wrapping, if any).",
-      "required": ["prompt_token_ids", "prompt_tokens"],
+      "required": [
+        "prompt_token_ids",
+        "prompt_tokens"
+      ],
       "additionalProperties": false,
       "properties": {
         "prompt_token_ids": {
@@ -159,9 +194,243 @@
     }
   },
   "$defs": {
+    "Manifold": {
+      "type": "object",
+      "description": "Manifold analysis results, one entry per analyzed (layer, submodule) activation cloud. See `llm_token_heatmap/manifold.py`.",
+      "required": [
+        "schema_version",
+        "method",
+        "n_components",
+        "layers"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Semver of the manifold payload shape."
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "pca"
+          ],
+          "description": "Dimensionality-reduction method used for the projection."
+        },
+        "n_components": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of projection components requested."
+        },
+        "layers": {
+          "type": "array",
+          "description": "One manifold-analysis entry per analyzed (layer, submodule) cloud.",
+          "items": {
+            "$ref": "#/$defs/ManifoldLayer"
+          }
+        }
+      }
+    },
+    "ManifoldLayer": {
+      "type": "object",
+      "required": [
+        "layer",
+        "submodule",
+        "n_positions",
+        "hidden_dim",
+        "positions",
+        "pca",
+        "participation_ratio",
+        "intrinsic_dimension",
+        "projection",
+        "trajectory_curvature",
+        "periodicity"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "layer": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "submodule": {
+          "type": "string"
+        },
+        "n_positions": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of token positions (rows) in the analyzed cloud."
+        },
+        "hidden_dim": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Activation vector dimension."
+        },
+        "positions": {
+          "type": "array",
+          "description": "Generation-step index for each row, aligned with `projection.coords`.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "pca": {
+          "$ref": "#/$defs/ManifoldPca"
+        },
+        "participation_ratio": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Effective dimensionality (Σλ)²/Σλ²; null when undefined."
+        },
+        "intrinsic_dimension": {
+          "$ref": "#/$defs/ManifoldIntrinsicDimension"
+        },
+        "projection": {
+          "$ref": "#/$defs/ManifoldProjection"
+        },
+        "trajectory_curvature": {
+          "$ref": "#/$defs/ManifoldCurvature"
+        },
+        "periodicity": {
+          "$ref": "#/$defs/ManifoldPeriodicity"
+        }
+      }
+    },
+    "ManifoldPca": {
+      "type": "object",
+      "required": [
+        "eigenvalues",
+        "explained_variance_ratio",
+        "cumulative_variance_ratio"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "eigenvalues": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Covariance eigenvalues, descending (capped)."
+        },
+        "explained_variance_ratio": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "cumulative_variance_ratio": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "ManifoldIntrinsicDimension": {
+      "type": "object",
+      "required": [
+        "twonn"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "twonn": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "TwoNN intrinsic-dimension estimate; null when not estimable."
+        }
+      }
+    },
+    "ManifoldProjection": {
+      "type": "object",
+      "required": [
+        "n_components",
+        "coords"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "n_components": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coords": {
+          "type": "array",
+          "description": "Per-position PCA scores; row i is the projection of position i. Shape (n_positions, n_components).",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "ManifoldCurvature": {
+      "type": "object",
+      "required": [
+        "mean",
+        "per_position"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mean": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Mean interior discrete curvature; null when undefined."
+        },
+        "per_position": {
+          "type": "array",
+          "description": "Per-position curvature; endpoints and degenerate points are null.",
+          "items": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "ManifoldPeriodicity": {
+      "type": "object",
+      "required": [
+        "dominant_period",
+        "power",
+        "peak_frequency"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "dominant_period": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Period (in positions) of the dominant non-DC FFT component of PC1; null when none."
+        },
+        "power": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Normalized spectral power of the dominant component (peak / total)."
+        },
+        "peak_frequency": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
     "Step": {
       "type": "object",
-      "required": ["step", "selected", "raw", "processed"],
+      "required": [
+        "step",
+        "selected",
+        "raw",
+        "processed"
+      ],
       "additionalProperties": false,
       "properties": {
         "step": {
@@ -196,8 +465,129 @@
           }
         },
         "attention_sidecar_ref": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "URI pointer to a Tier 2 sidecar payload (full attention distribution and/or raw Q/K/V tensors) for this step, or null when no sidecar was written. Sidecar files follow `docs/web/attention-sidecar.schema.json`."
+        },
+        "token_id": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Selected token id at this step. Mirrors `selected.token_id`; carried here so the projected activation subset of this trace matches `activation.schema.json#/$defs/ActivationStep`."
+        },
+        "decoded_text_offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Character offset of this step's decoded token in the concatenated decoded text. Drives cross-tokenizer alignment when two traces are compared by `compare_activations`."
+        },
+        "activations": {
+          "type": "array",
+          "description": "Per (layer, submodule) activation summary entries captured by an attached ActivationProbe. Ordering is layer-major then submodule-major following `activation_metadata.captured_submodules`. Absent for traces produced without an ActivationProbe.",
+          "items": {
+            "$ref": "#/$defs/ActivationLayerEntry"
+          }
+        }
+      }
+    },
+    "ActivationMetadata": {
+      "type": "object",
+      "description": "Per-trace metadata describing the ActivationProbe captures. Mirrors `activation.schema.json#/$defs/ActivationMetadata`.",
+      "required": [
+        "captured_submodules",
+        "num_layers",
+        "hidden_dim",
+        "tokenizer_fingerprint"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "captured_submodules": {
+          "type": "array",
+          "description": "Submodule names captured by the probe, in the order their per-(layer, submodule) entries appear inside each step's `activations` array.",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "num_layers": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Total number of decoder layers in the model."
+        },
+        "hidden_dim": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Per-layer residual-stream / hidden dimension."
+        },
+        "tokenizer_fingerprint": {
+          "type": "string",
+          "description": "Stable identifier for the tokenizer that produced this trace's token ids."
+        },
+        "captured_layers": {
+          "type": "array",
+          "description": "Zero-indexed decoder layer indices that the probe captured (ascending; duplicate-free).",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "ActivationLayerEntry": {
+      "type": "object",
+      "description": "Summary statistics for one (step, layer, submodule) activation tensor. Mirrors `activation.schema.json#/$defs/ActivationLayerEntry`.",
+      "required": [
+        "layer",
+        "submodule",
+        "l2_norm",
+        "mean_abs",
+        "sparsity",
+        "top_neurons"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "layer": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "submodule": {
+          "type": "string"
+        },
+        "l2_norm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "mean_abs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "sparsity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "top_neurons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ActivationTopNeuron"
+          }
+        }
+      }
+    },
+    "ActivationTopNeuron": {
+      "type": "object",
+      "required": [
+        "index",
+        "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "value": {
+          "type": "number"
         }
       }
     },
@@ -245,7 +635,7 @@
     },
     "AttentionLayerEntry": {
       "type": "object",
-      "description": "Tier 1 attention summary for a single (step, layer). Head-level aggregation lives in a downstream ticket; the per-layer scalars here are the mean across heads.",
+      "description": "Tier 1 attention summary for a single (step, layer). The per-layer scalars here are the mean across heads.",
       "required": [
         "layer",
         "entropy",
@@ -313,7 +703,10 @@
     },
     "AttentionTopPosition": {
       "type": "object",
-      "required": ["position", "weight"],
+      "required": [
+        "position",
+        "weight"
+      ],
       "additionalProperties": false,
       "properties": {
         "position": {
@@ -331,7 +724,10 @@
     },
     "SelectedToken": {
       "type": "object",
-      "required": ["token_id", "token"],
+      "required": [
+        "token_id",
+        "token"
+      ],
       "additionalProperties": false,
       "properties": {
         "token_id": {
@@ -399,7 +795,13 @@
     },
     "Candidate": {
       "type": "object",
-      "required": ["rank", "token_id", "token", "prob", "logprob"],
+      "required": [
+        "rank",
+        "token_id",
+        "token",
+        "prob",
+        "logprob"
+      ],
       "additionalProperties": false,
       "properties": {
         "rank": {
@@ -468,7 +870,13 @@
     },
     "LogitLensCandidate": {
       "type": "object",
-      "required": ["rank", "token_id", "token", "prob", "logprob"],
+      "required": [
+        "rank",
+        "token_id",
+        "token",
+        "prob",
+        "logprob"
+      ],
       "additionalProperties": false,
       "properties": {
         "rank": {

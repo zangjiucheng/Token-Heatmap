@@ -26,6 +26,7 @@ import {
 } from '@/features/timelines';
 import { AttentionTab, AttentionHeadPattern, LogitLensTab } from '@/features/attention';
 import { ActivationsTab } from '@/features/activations';
+import { ManifoldTab } from '@/features/manifold';
 import type { Trace } from '@/types/trace';
 import type { TraceWithActivations } from '@/types/activation';
 import './TraceViewerPage.css';
@@ -273,10 +274,12 @@ export function TraceViewerPage() {
     trace?.steps.some(
       (s) => Array.isArray(s.logit_lens) && s.logit_lens.length > 0,
     ) ?? false;
+  const hasManifold = (trace?.manifold?.layers?.length ?? 0) > 0;
   let activeTab = state.tab;
   if (!hasAttention && activeTab === 'attention') activeTab = 'heatmap';
   if (!hasLogitLens && activeTab === 'logit-lens') activeTab = 'heatmap';
   if (!hasActivations && activeTab === 'activations') activeTab = 'heatmap';
+  if (!hasManifold && activeTab === 'manifold') activeTab = 'heatmap';
 
   let center: React.ReactNode;
   if (status === 'loading' || status === 'idle') {
@@ -382,6 +385,26 @@ export function TraceViewerPage() {
         >
           Activations
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'manifold'}
+          disabled={!hasManifold}
+          title={
+            hasManifold
+              ? undefined
+              : 'This trace has no manifold analysis. Run `token-heatmap manifold --trace <file>` (needs --capture-full-activations) to add it.'
+          }
+          className={
+            activeTab === 'manifold'
+              ? 'trace-viewer-center__tab trace-viewer-center__tab--active'
+              : 'trace-viewer-center__tab'
+          }
+          onClick={() => setTab('manifold')}
+          data-testid="manifold-tab"
+        >
+          Manifold
+        </button>
       </div>
     );
 
@@ -426,6 +449,16 @@ export function TraceViewerPage() {
       body = (
         <ActivationsTab
           trace={traceWithActivations}
+          selectedStep={selectedStep}
+          onSelectStep={setSelectedStep}
+          hoveredStep={hoveredStep}
+          onHoverStep={setHoveredStep}
+        />
+      );
+    } else if (activeTab === 'manifold') {
+      body = (
+        <ManifoldTab
+          trace={trace}
           selectedStep={selectedStep}
           onSelectStep={setSelectedStep}
           hoveredStep={hoveredStep}

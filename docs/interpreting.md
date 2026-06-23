@@ -36,6 +36,28 @@ can see how sampling reshapes the distribution.
 | High `selected_rank` | The chosen token wasn't among the top candidates — useful for debugging sampling settings |
 | Big gap between raw and processed `k_used` | Sampling filters are aggressively pruning the natural distribution |
 
+## Manifold metrics
+
+`token-heatmap manifold` ([CLI](cli.md#manifold-analysis)) treats the captured
+activations for one `(layer, submodule)` as a cloud of points — one per token
+position — and measures its geometry. The motivation comes from
+[“When Models Manipulate Manifolds”](https://transformer-circuits.pub/2025/linebreaks/index.html):
+models often encode a scalar (there, characters-until-line-break) on a smooth,
+low-dimensional, _curved_ manifold, so the interesting structure is geometric,
+not per-neuron.
+
+| Metric | Meaning | What to look for |
+| --- | --- | --- |
+| **Participation ratio** | `(Σλ)² / Σλ²` over the PCA eigenvalues — a smooth "effective number of dimensions". | A small value (e.g. 2–3) despite a wide hidden dim ⇒ the cloud really lives on a low-dimensional manifold. |
+| **Intrinsic dim (TwoNN)** | Geometry-based dimension estimate that, unlike PCA, sees curvature: a 1-D curve coiled in 3-D reads as ≈1. | Lower than the participation ratio ⇒ the cloud is a curved manifold, not a flat subspace. Unreliable for very short / regularly-spaced traces — prefer the participation ratio there. |
+| **Trajectory curvature** | Mean turning of the position-ordered path through PCA space. | ≈0 ⇒ a straight sweep; large ⇒ the representation bends sharply as generation proceeds. |
+| **Periodicity (period · power)** | Dominant period of the leading projection component (FFT) and its normalized power. | High power at a clean period is the signature of a circular / **helical** coordinate — the line-break "counting" manifold. |
+| **Variance spectrum (scree)** | Explained-variance fraction per principal component, with the cumulative curve. | Variance collapsing into the first few bars ⇒ low-dimensional structure. |
+
+The **Manifold tab** in the web app shows the 2-D PCA projection (coloured by
+step, with the trajectory drawn through it) alongside these metrics, so you can
+_see_ the manifold and read its summary numbers together.
+
 ## Recommended models
 
 For local CPU / small GPU:

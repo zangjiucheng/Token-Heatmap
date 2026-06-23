@@ -12,6 +12,8 @@ export interface Trace {
    */
   schema_version: string;
   attention_metadata?: AttentionMetadata;
+  activation_metadata?: ActivationMetadata;
+  manifold?: Manifold;
   /**
    * Per-trace metadata: model identity, sampling parameters, and prompt.
    */
@@ -115,6 +117,151 @@ export interface AttentionMetadata {
   captured_layers: number[];
 }
 /**
+ * Per-trace metadata describing the ActivationProbe captures. Mirrors `activation.schema.json#/$defs/ActivationMetadata`.
+ *
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ActivationMetadata".
+ */
+export interface ActivationMetadata {
+  /**
+   * Submodule names captured by the probe, in the order their per-(layer, submodule) entries appear inside each step's `activations` array.
+   *
+   * @minItems 1
+   */
+  captured_submodules: [string, ...string[]];
+  /**
+   * Total number of decoder layers in the model.
+   */
+  num_layers: number;
+  /**
+   * Per-layer residual-stream / hidden dimension.
+   */
+  hidden_dim: number;
+  /**
+   * Stable identifier for the tokenizer that produced this trace's token ids.
+   */
+  tokenizer_fingerprint: string;
+  /**
+   * Zero-indexed decoder layer indices that the probe captured (ascending; duplicate-free).
+   */
+  captured_layers?: number[];
+}
+/**
+ * Manifold analysis results, one entry per analyzed (layer, submodule) activation cloud. See `llm_token_heatmap/manifold.py`.
+ *
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "Manifold".
+ */
+export interface Manifold {
+  /**
+   * Semver of the manifold payload shape.
+   */
+  schema_version: string;
+  /**
+   * Dimensionality-reduction method used for the projection.
+   */
+  method: 'pca';
+  /**
+   * Number of projection components requested.
+   */
+  n_components: number;
+  /**
+   * One manifold-analysis entry per analyzed (layer, submodule) cloud.
+   */
+  layers: ManifoldLayer[];
+}
+/**
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ManifoldLayer".
+ */
+export interface ManifoldLayer {
+  layer: number;
+  submodule: string;
+  /**
+   * Number of token positions (rows) in the analyzed cloud.
+   */
+  n_positions: number;
+  /**
+   * Activation vector dimension.
+   */
+  hidden_dim: number;
+  /**
+   * Generation-step index for each row, aligned with `projection.coords`.
+   */
+  positions: number[];
+  pca: ManifoldPca;
+  /**
+   * Effective dimensionality (Σλ)²/Σλ²; null when undefined.
+   */
+  participation_ratio: number | null;
+  intrinsic_dimension: ManifoldIntrinsicDimension;
+  projection: ManifoldProjection;
+  trajectory_curvature: ManifoldCurvature;
+  periodicity: ManifoldPeriodicity;
+}
+/**
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ManifoldPca".
+ */
+export interface ManifoldPca {
+  /**
+   * Covariance eigenvalues, descending (capped).
+   */
+  eigenvalues: number[];
+  explained_variance_ratio: number[];
+  cumulative_variance_ratio: number[];
+}
+/**
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ManifoldIntrinsicDimension".
+ */
+export interface ManifoldIntrinsicDimension {
+  /**
+   * TwoNN intrinsic-dimension estimate; null when not estimable.
+   */
+  twonn: number | null;
+}
+/**
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ManifoldProjection".
+ */
+export interface ManifoldProjection {
+  n_components: number;
+  /**
+   * Per-position PCA scores; row i is the projection of position i. Shape (n_positions, n_components).
+   */
+  coords: number[][];
+}
+/**
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ManifoldCurvature".
+ */
+export interface ManifoldCurvature {
+  /**
+   * Mean interior discrete curvature; null when undefined.
+   */
+  mean: number | null;
+  /**
+   * Per-position curvature; endpoints and degenerate points are null.
+   */
+  per_position: (number | null)[];
+}
+/**
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ManifoldPeriodicity".
+ */
+export interface ManifoldPeriodicity {
+  /**
+   * Period (in positions) of the dominant non-DC FFT component of PC1; null when none.
+   */
+  dominant_period: number | null;
+  /**
+   * Normalized spectral power of the dominant component (peak / total).
+   */
+  power: number;
+  peak_frequency: number | null;
+}
+/**
  * This interface was referenced by `Trace`'s JSON-Schema
  * via the `definition` "Step".
  */
@@ -138,6 +285,18 @@ export interface Step {
    * URI pointer to a Tier 2 sidecar payload (full attention distribution and/or raw Q/K/V tensors) for this step, or null when no sidecar was written. Sidecar files follow `docs/web/attention-sidecar.schema.json`.
    */
   attention_sidecar_ref?: string | null;
+  /**
+   * Selected token id at this step. Mirrors `selected.token_id`; carried here so the projected activation subset of this trace matches `activation.schema.json#/$defs/ActivationStep`.
+   */
+  token_id?: number;
+  /**
+   * Character offset of this step's decoded token in the concatenated decoded text. Drives cross-tokenizer alignment when two traces are compared by `compare_activations`.
+   */
+  decoded_text_offset?: number;
+  /**
+   * Per (layer, submodule) activation summary entries captured by an attached ActivationProbe. Ordering is layer-major then submodule-major following `activation_metadata.captured_submodules`. Absent for traces produced without an ActivationProbe.
+   */
+  activations?: ActivationLayerEntry[];
 }
 /**
  * This interface was referenced by `Trace`'s JSON-Schema
@@ -240,7 +399,7 @@ export interface LogitLensCandidate {
   logprob: number;
 }
 /**
- * Tier 1 attention summary for a single (step, layer). Head-level aggregation lives in a downstream ticket; the per-layer scalars here are the mean across heads.
+ * Tier 1 attention summary for a single (step, layer). The per-layer scalars here are the mean across heads.
  *
  * This interface was referenced by `Trace`'s JSON-Schema
  * via the `definition` "AttentionLayerEntry".
@@ -296,4 +455,26 @@ export interface AttentionTopPosition {
    * Aggregate attention weight on this position (mean across heads).
    */
   weight: number;
+}
+/**
+ * Summary statistics for one (step, layer, submodule) activation tensor. Mirrors `activation.schema.json#/$defs/ActivationLayerEntry`.
+ *
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ActivationLayerEntry".
+ */
+export interface ActivationLayerEntry {
+  layer: number;
+  submodule: string;
+  l2_norm: number;
+  mean_abs: number;
+  sparsity: number;
+  top_neurons: ActivationTopNeuron[];
+}
+/**
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ActivationTopNeuron".
+ */
+export interface ActivationTopNeuron {
+  index: number;
+  value: number;
 }

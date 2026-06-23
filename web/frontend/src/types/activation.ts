@@ -8,7 +8,7 @@
  */
 export interface ActivationTrace {
   /**
-   * Semver of this schema. Bumped independently of the main trace schema. Consumers must hard-fail on unknown major.
+   * Semver of this schema. Bumped independently of the main trace schema. Consumers must hard-fail on unknown major. 1.1.0 adds the optional per-step `activation_sidecar_ref` field as a backwards-compatible additive change for the Tier 2 sidecar.
    */
   schema_version: string;
   activation_metadata: ActivationMetadata;
@@ -70,6 +70,10 @@ export interface ActivationStep {
    * Per (layer, submodule) activation summary entries for this step. Ordering is layer-major then submodule-major following `activation_metadata.captured_submodules`.
    */
   activations: ActivationLayerEntry[];
+  /**
+   * Relative path (or URL) of the Tier 2 `.npz` activation sidecar for this step, or `null` when no sidecar was written (the default; sidecars are opt-in via `--capture-full-activations`). The referenced file conforms to `activation-sidecar.schema.json`.
+   */
+  activation_sidecar_ref?: string | null;
 }
 /**
  * Summary statistics for one (step, layer, submodule) activation tensor. Captured inline (Tier 1); the full tensor lives in an optional sidecar.

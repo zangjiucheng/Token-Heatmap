@@ -17,6 +17,7 @@ exploring traces that already exist.
 - **Attention tab** — layer × head attention grids and Q/K/V stats (requires `--capture-attention`)
 - **Logit Lens tab** — per-layer top-k next-token predictions (requires `--capture-logit-lens`)
 - **Activations tab** — per-layer activation summary stats (requires `--capture-activations`)
+- **Manifold tab** — 2-D PCA projection of the activation cloud (coloured by step) plus participation ratio, intrinsic dimension, curvature, periodicity, and a variance-spectrum scree plot (requires `token-heatmap manifold`; see [`cli.md`](cli.md#manifold-analysis))
 - Export the current trace as CSV or the current heatmap as PNG
 - Persist view state in the URL — share a link to a specific view
 

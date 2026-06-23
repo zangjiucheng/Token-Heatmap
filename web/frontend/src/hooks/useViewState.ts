@@ -4,7 +4,12 @@ import type { ComparisonMode } from '@/features/comparison';
 import type { ValueCol } from '@/features/heatmap';
 import type { ColorRangeValue } from '@/features/controls';
 
-export type ViewerTab = 'heatmap' | 'attention' | 'logit-lens' | 'activations';
+export type ViewerTab =
+  | 'heatmap'
+  | 'attention'
+  | 'logit-lens'
+  | 'activations'
+  | 'manifold';
 
 export interface SelectedHead {
   layer: number;
@@ -40,7 +45,13 @@ export const DEFAULT_VIEW_STATE: ViewState = {
 
 const VALID_MODES: ComparisonMode[] = ['raw', 'processed', 'split'];
 const VALID_VALUE_COLS: ValueCol[] = ['logprob', 'prob'];
-const VALID_TABS: ViewerTab[] = ['heatmap', 'attention', 'logit-lens', 'activations'];
+const VALID_TABS: ViewerTab[] = [
+  'heatmap',
+  'attention',
+  'logit-lens',
+  'activations',
+  'manifold',
+];
 
 function parseMode(raw: string | null): ComparisonMode {
   if (raw && (VALID_MODES as string[]).includes(raw)) {

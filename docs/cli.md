@@ -204,3 +204,43 @@ The subcommand projects each input's activation subset, calls
 
 The CLI refuses to diff (non-zero exit) when the two parent traces have
 different `metadata.prompt` values or when zero steps align between them.
+
+## Manifold analysis
+
+Analyze the _geometry_ of the captured activation clouds — inspired by
+[“When Models Manipulate Manifolds”](https://transformer-circuits.pub/2025/linebreaks/index.html),
+which finds a model encoding a scalar on a low-dimensional, curved (helical)
+manifold. For each `(layer, submodule)` the analysis stacks the full per-token
+activation vectors into a matrix and computes PCA spectrum + participation
+ratio, TwoNN intrinsic dimension, a 2-D/3-D projection, trajectory curvature,
+and FFT periodicity.
+
+It reads the full activation vectors from the sidecars, so generate the trace
+with `--capture-full-activations` first:
+
+```bash
+# 1. generate with full activation sidecars
+token-heatmap trace --config configs/example.yaml \
+  --capture-activations --capture-full-activations
+
+# 2. add the manifold analysis to the trace
+token-heatmap manifold --trace outputs/adaptive_token_trace.json
+```
+
+This writes a top-level `manifold` field back into the trace (in place by
+default), which the web app's **Manifold tab** then renders. The analysis is
+pure-numpy — no torch needed to run it.
+
+| Flag           | Default                  | Meaning                                                       |
+| -------------- | ------------------------ | ------------------------------------------------------------- |
+| `--trace`      | _required_               | Path to a trace JSON that has `activation_sidecar_ref`s.      |
+| `--out`        | _overwrite `--trace`_    | Write the augmented trace elsewhere instead of in place.      |
+| `--layers`     | all captured             | Subset of layer indices to analyze.                           |
+| `--submodules` | all captured             | Subset of submodule names to analyze.                         |
+| `--components` | `3`                      | Number of PCA projection components to keep.                  |
+
+Exits non-zero when the trace has no `activation_metadata`, carries no
+`activation_sidecar_ref` (i.e. was generated without `--capture-full-activations`),
+or when no `(layer, submodule)` cloud has at least two positions to analyze.
+
+See [`interpreting.md`](interpreting.md#manifold-metrics) for what the metrics mean.

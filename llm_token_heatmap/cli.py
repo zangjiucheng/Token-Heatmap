@@ -296,8 +296,9 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         "--capture-full-activations",
         action="store_true",
         help=(
-            "Reserved for the Tier-2 activation sidecar path. Tracked here "
-            "so the flag surface is stable."
+            "Write the full per-(layer, submodule) activation vectors to Tier-2 "
+            ".npz sidecars (requires --capture-activations). Needed for `token-heatmap "
+            "manifold` analysis."
         ),
     )
     trace_parser.add_argument(
@@ -372,6 +373,49 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         help="Per-layer metric to record / colour the heatmap by (default: l2).",
     )
     diff_parser.set_defaults(func=run_diff)
+
+    manifold_parser = subparsers.add_parser(
+        "manifold",
+        help="Add manifold analysis of captured activations to a trace JSON.",
+        description=(
+            "Read an adaptive_token_trace.json plus its activation sidecars (written "
+            "with --capture-full-activations), run PCA / intrinsic-dimension / curvature "
+            "/ periodicity analysis per (layer, submodule), and write a `manifold` field "
+            "back into the trace so the web app's Manifold tab can render it."
+        ),
+    )
+    manifold_parser.add_argument(
+        "--trace",
+        type=Path,
+        required=True,
+        help="Path to an adaptive_token_trace.json with activation sidecars.",
+    )
+    manifold_parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Where to write the augmented trace (default: overwrite --trace in place).",
+    )
+    manifold_parser.add_argument(
+        "--layers",
+        type=int,
+        nargs="*",
+        default=None,
+        help="Subset of layer indices to analyze (default: all captured layers).",
+    )
+    manifold_parser.add_argument(
+        "--submodules",
+        nargs="*",
+        default=None,
+        help="Subset of submodule names to analyze (default: all captured submodules).",
+    )
+    manifold_parser.add_argument(
+        "--components",
+        type=int,
+        default=3,
+        help="Number of PCA projection components to keep (default: 3).",
+    )
+    manifold_parser.set_defaults(func=run_manifold)
 
     return parser, trace_parser
 
@@ -961,6 +1005,103 @@ def run_diff(args: argparse.Namespace) -> int:
     )
 
     print(f"Wrote outputs to {output_dir}/")
+    return 0
+
+
+def run_manifold(args: argparse.Namespace) -> int:
+    """Execute the `manifold` sub-command.
+
+    Re-hydrates the full per-(layer, submodule) activation vectors from the
+    sidecars referenced by each step, stacks them into a ``(positions, hidden)``
+    matrix, runs :func:`llm_token_heatmap.manifold.analyze_manifold` on each, and
+    writes the results back into the trace under a top-level ``manifold`` key.
+    """
+    import numpy as np
+
+    from llm_token_heatmap.activation_serializer import read_sidecar
+    from llm_token_heatmap.manifold import MANIFOLD_SCHEMA_VERSION, analyze_manifold
+
+    trace_path: Path = args.trace
+    if not trace_path.is_file():
+        print(f"error: trace file not found: {trace_path}", file=sys.stderr)
+        return 2
+
+    payload = json.loads(trace_path.read_text(encoding="utf-8"))
+    meta = payload.get("activation_metadata")
+    if meta is None:
+        print(
+            "error: trace has no activation_metadata. Re-run `token-heatmap trace` "
+            "with --capture-activations --capture-full-activations.",
+            file=sys.stderr,
+        )
+        return 2
+
+    steps = payload.get("steps", [])
+    refs = [
+        (int(s["step"]), s["activation_sidecar_ref"])
+        for s in steps
+        if s.get("activation_sidecar_ref")
+    ]
+    if not refs:
+        print(
+            "error: no step carries an activation_sidecar_ref. Re-run `token-heatmap "
+            "trace` with --capture-full-activations.",
+            file=sys.stderr,
+        )
+        return 2
+
+    target_layers = args.layers if args.layers else meta.get("captured_layers", [])
+    target_submodules = (
+        args.submodules if args.submodules else meta.get("captured_submodules", [])
+    )
+    target_layer_set = {int(layer) for layer in target_layers}
+    target_submodule_set = set(target_submodules)
+
+    base = trace_path.parent
+    # (layer, submodule) -> (positions, list-of-vectors), accumulated in step order.
+    collected: dict[tuple[int, str], tuple[list[int], list[list[float]]]] = {}
+    for step_idx, ref in refs:
+        sidecar = read_sidecar(base / ref)
+        for layer_entry in sidecar.get("layers", []):
+            layer = int(layer_entry["layer"])
+            if layer not in target_layer_set:
+                continue
+            for submodule, vector in layer_entry.get("submodule_tensors", {}).items():
+                if submodule not in target_submodule_set:
+                    continue
+                pos_list, vec_list = collected.setdefault((layer, submodule), ([], []))
+                pos_list.append(step_idx)
+                vec_list.append(vector)
+
+    layers_out: list[dict[str, Any]] = []
+    for (layer, submodule), (positions, vectors) in sorted(collected.items()):
+        matrix = np.asarray(vectors, dtype=np.float64)
+        if matrix.ndim != 2 or matrix.shape[0] < 2:
+            continue  # need at least two positions to have any geometry
+        entry = analyze_manifold(matrix, positions=positions, n_components=args.components)
+        layers_out.append({"layer": layer, "submodule": submodule, **entry})
+
+    if not layers_out:
+        print(
+            "error: no (layer, submodule) cloud had >= 2 positions to analyze.",
+            file=sys.stderr,
+        )
+        return 2
+
+    payload["manifold"] = {
+        "schema_version": MANIFOLD_SCHEMA_VERSION,
+        "method": "pca",
+        "n_components": int(args.components),
+        "layers": layers_out,
+    }
+
+    out_path: Path = args.out if args.out is not None else trace_path
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(
+        f"Added manifold analysis ({len(layers_out)} layer/submodule "
+        f"cloud{'s' if len(layers_out) != 1 else ''}) to {out_path}"
+    )
     return 0
 
 
