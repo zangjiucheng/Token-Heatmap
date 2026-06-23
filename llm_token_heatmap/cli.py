@@ -82,8 +82,47 @@ def _parse_layers_spec(value: str) -> str | list[int]:
     return indices
 
 
-def build_parser() -> argparse.ArgumentParser:
-    """Build the top-level argument parser for the `token-heatmap` CLI."""
+def _load_yaml_config(path: Path) -> dict:
+    """Load a YAML config file and return a dict of argparse-dest → value.
+
+    Requires PyYAML (``pip install pyyaml``).  Converts typed values so that
+    argparse ``set_defaults`` receives the same Python types it would from the
+    command line (e.g. Path for ``out``, list[int] for layer specs).
+    """
+    try:
+        import yaml  # type: ignore[import-untyped]
+    except ImportError as exc:
+        raise SystemExit(
+            "error: --config requires PyYAML. Install it with: pip install pyyaml"
+        ) from exc
+
+    try:
+        raw: dict = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:  # noqa: BLE001
+        raise SystemExit(f"error: failed to read config file {path}: {exc}") from exc
+
+    if not isinstance(raw, dict):
+        raise SystemExit(f"error: config file {path} must be a YAML mapping, got {type(raw).__name__}")
+
+    out: dict = {}
+    for key, val in raw.items():
+        if key == "out":
+            out[key] = Path(val)
+        elif key in ("attention_layers", "lens_layers", "activation_layers"):
+            out[key] = _parse_layers_spec(str(val))
+        elif key == "activation_submodules":
+            out[key] = _parse_submodules_spec(str(val)) if isinstance(val, str) else list(val)
+        else:
+            out[key] = val
+    return out
+
+
+def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
+    """Build the top-level argument parser for the `token-heatmap` CLI.
+
+    Returns ``(parser, trace_subparser)`` so callers can apply YAML defaults
+    directly onto ``trace_subparser`` before the final ``parse_args`` call.
+    """
     parser = argparse.ArgumentParser(
         prog="token-heatmap",
         description=(
@@ -104,13 +143,23 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     trace_parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        metavar="FILE",
+        help=(
+            "YAML config file. All CLI flags override config file values. "
+            "Requires PyYAML (pip install pyyaml)."
+        ),
+    )
+    trace_parser.add_argument(
         "--model",
-        required=True,
+        default=None,
         help="HuggingFace model id or local path (e.g. Qwen/Qwen2.5-0.5B-Instruct).",
     )
     trace_parser.add_argument(
         "--prompt",
-        required=True,
+        default=None,
         help="Input prompt string for generation.",
     )
     trace_parser.add_argument(
@@ -251,6 +300,29 @@ def build_parser() -> argparse.ArgumentParser:
             "so the flag surface is stable."
         ),
     )
+    trace_parser.add_argument(
+        "--serve",
+        action="store_true",
+        help=(
+            "After generation, start the FastAPI backend so the frontend can "
+            "load the trace via a URL. Requires uvicorn and llm_token_heatmap_api "
+            "to be installed. Press Ctrl+C to stop."
+        ),
+    )
+    trace_parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Backend port when --serve is set (default: 8000).",
+    )
+    trace_parser.add_argument(
+        "--frontend-url",
+        default="http://localhost:5173",
+        help=(
+            "Frontend origin printed with --serve so you can copy the ready-made URL "
+            "(default: http://localhost:5173)."
+        ),
+    )
     trace_parser.set_defaults(func=run_trace)
 
     diff_parser = subparsers.add_parser(
@@ -286,7 +358,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     diff_parser.set_defaults(func=run_diff)
 
-    return parser
+    return parser, trace_parser
 
 
 def _emit_eager_warning(stream: Any = None) -> None:
@@ -317,6 +389,19 @@ def run_trace(args: argparse.Namespace) -> int:
     Imports torch/transformers lazily so `--help` and argument parsing remain
     fast and cheap to test without model dependencies installed at parse time.
     """
+    if args.model is None:
+        print(
+            "error: --model is required (pass it on the command line or set 'model:' in --config).",
+            file=sys.stderr,
+        )
+        return 2
+    if args.prompt is None:
+        print(
+            "error: --prompt is required (pass it on the command line or set 'prompt:' in --config).",
+            file=sys.stderr,
+        )
+        return 2
+
     if args.capture_attention:
         _emit_eager_warning()
     if args.capture_full_attention and not args.capture_attention:
@@ -413,6 +498,7 @@ def run_trace(args: argparse.Namespace) -> int:
                 layers=args.activation_layers,
                 submodules=list(args.activation_submodules),
                 top_k=args.activation_top_k,
+                capture_full=args.capture_full_activations,
             )
         )
         activation_probe.attach(model)
@@ -484,6 +570,26 @@ def run_trace(args: argparse.Namespace) -> int:
             )
             sidecar_refs[step_idx] = str(sidecar_path.relative_to(output_dir))
 
+    activation_sidecar_refs: dict[int, str] | None = None
+    if args.capture_full_activations:
+        from llm_token_heatmap.activation_serializer import (
+            write_sidecar as write_activation_sidecar,
+        )
+
+        act_sidecar_dir = output_dir / "activations"
+        act_sidecar_dir.mkdir(parents=True, exist_ok=True)
+        activation_sidecar_refs = {}
+        for entry in trace:
+            full_stats = entry.get("_activation_full_stats")
+            if full_stats is None:
+                continue
+            step_idx = int(entry["step"])
+            act_path = write_activation_sidecar(
+                full_stats, act_sidecar_dir / f"activation.{step_idx}", step=step_idx
+            )
+            if act_path is not None:
+                activation_sidecar_refs[step_idx] = str(act_path.relative_to(output_dir))
+
     metadata = {
         "model": args.model,
         "prompt": args.prompt,
@@ -505,10 +611,10 @@ def run_trace(args: argparse.Namespace) -> int:
         "capture_logit_lens": bool(args.capture_logit_lens),
     }
 
-    # Strip the internal ``_attention_stats`` references before JSON dump.
+    # Strip all private (underscore-prefixed) keys before JSON dump.
     trace_for_json: list[dict[str, Any]] = []
     for entry in trace:
-        clean = {k: v for k, v in entry.items() if k != "_attention_stats"}
+        clean = {k: v for k, v in entry.items() if not k.startswith("_")}
         trace_for_json.append(clean)
 
     json_payload = _serialize_trace_to_json(
@@ -519,6 +625,7 @@ def run_trace(args: argparse.Namespace) -> int:
         tokenizer=tokenizer,
         prompt=args.prompt,
         activation_metadata=activation_metadata,
+        activation_sidecar_refs=activation_sidecar_refs,
     )
     json_path = output_dir / "adaptive_token_trace.json"
     json_path.write_text(json.dumps(json_payload, indent=2), encoding="utf-8")
@@ -552,7 +659,53 @@ def run_trace(args: argparse.Namespace) -> int:
             )
 
     print(f"Wrote outputs to {output_dir}/")
+
+    if getattr(args, "serve", False):
+        _serve_outputs(output_dir, port=args.port, frontend_url=args.frontend_url)
+
     return 0
+
+
+def _serve_outputs(output_dir: Path, port: int = 8000, frontend_url: str = "http://localhost:5173") -> None:
+    """Start the FastAPI backend with LLM_HEATMAP_OUTPUT_DIR set to output_dir.
+
+    Blocks until Ctrl+C, then terminates the server.
+    """
+    import os
+    import signal
+    import subprocess
+
+    env = os.environ.copy()
+    env["LLM_HEATMAP_OUTPUT_DIR"] = str(output_dir.resolve())
+    env["LLM_HEATMAP_ALLOWED_ORIGINS"] = frontend_url
+
+    cmd = [
+        sys.executable, "-m", "uvicorn",
+        "llm_token_heatmap_api.main:app",
+        "--host", "::",
+        "--port", str(port),
+    ]
+
+    backend_url = f"http://localhost:{port}"
+    trace_file_url = f"{backend_url}/outputs/adaptive_token_trace.json"
+    viewer_url = f"{frontend_url}/?trace={trace_file_url}"
+
+    print("\n[token-heatmap] Starting backend …")
+    print(f"[token-heatmap] Backend:  {backend_url}")
+    print(f"[token-heatmap] Open the viewer at:")
+    print(f"[token-heatmap]   {viewer_url}")
+    print("[token-heatmap] (Press Ctrl+C to stop)\n")
+
+    try:
+        proc = subprocess.Popen(cmd, env=env)
+        proc.wait()
+    except KeyboardInterrupt:
+        print("\n[token-heatmap] Shutting down …")
+        proc.send_signal(signal.SIGTERM)
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
 
 
 def _load_activation_trace(path: Path) -> dict[str, Any]:
@@ -658,7 +811,16 @@ def run_diff(args: argparse.Namespace) -> int:
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Entry point for the `token-heatmap` console script."""
-    parser = build_parser()
+    parser, trace_parser = build_parser()
+
+    # Two-pass: do a lenient first parse to discover --config, apply its
+    # values as defaults on the trace sub-parser, then do the real parse so
+    # that explicit CLI flags always win over config-file values.
+    ns, _ = parser.parse_known_args(argv)
+    if getattr(ns, "config", None) is not None:
+        yaml_defaults = _load_yaml_config(ns.config)
+        trace_parser.set_defaults(**yaml_defaults)
+
     args = parser.parse_args(argv)
     return int(args.func(args))
 

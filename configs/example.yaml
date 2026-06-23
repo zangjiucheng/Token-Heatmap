@@ -1,0 +1,23 @@
+# token-heatmap trace config
+# Usage: token-heatmap trace --config configs/example.yaml [--serve]
+# All keys can be overridden on the command line, e.g.:
+#   token-heatmap trace --config configs/example.yaml --prompt "other prompt"
+
+model: Qwen/Qwen2.5-0.5B-Instruct
+prompt: "Explain what a large language model is in one sentence."
+
+max_new_tokens: 64
+temperature: 0.8
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/example-run
+
+capture_logit_lens: true
+lens_layers: all
+lens_top_k: 8
+
+capture_attention: false
+capture_activations: false

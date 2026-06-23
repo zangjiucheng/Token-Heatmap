@@ -73,6 +73,15 @@ function GlobalShortcuts() {
         tab?.focus();
       }, 0);
     },
+    'navigation.gotoLogitLens': () => {
+      setTab('logit-lens');
+      window.setTimeout(() => {
+        const tab = document.querySelector<HTMLElement>(
+          '[data-testid="logit-lens-tab"]',
+        );
+        tab?.focus();
+      }, 0);
+    },
     'navigation.gotoDetail': () => {
       const panel = document.querySelector<HTMLElement>(
         '[data-testid="step-detail-panel"]',

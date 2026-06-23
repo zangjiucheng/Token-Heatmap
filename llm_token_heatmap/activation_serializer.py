@@ -18,10 +18,9 @@ on demand for downstream analysis.
   validate it with ``jsonschema`` if needed and consumers can JSON-serialize
   it without further conversion.
 
-The CLI plumbing that actually invokes ``write_sidecar`` per step and writes
-the resulting path into ``ActivationStep.activation_sidecar_ref`` lives in
-the separate ``--capture-full-activations`` wiring ticket; this module only
-exposes the read/write primitives.
+The CLI invokes ``write_sidecar`` per step when ``--capture-full-activations``
+is set and embeds the resulting path as ``activation_sidecar_ref`` on each
+``ActivationStep`` in the JSON trace.
 """
 
 from __future__ import annotations

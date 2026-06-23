@@ -189,6 +189,8 @@ def generate_with_adaptive_probe(
         if activation_probe is not None and activation_probe.is_attached:
             activation_entries = activation_probe.capture_step()
             step_entry["activations"] = [asdict(entry) for entry in activation_entries]
+            if activation_probe.config.capture_full:
+                step_entry["_activation_full_stats"] = activation_probe.last_full_stats
         trace.append(step_entry)
 
         generated = torch.cat([generated, next_token[:, None]], dim=-1)

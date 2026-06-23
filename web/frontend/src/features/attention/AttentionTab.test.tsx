@@ -19,7 +19,7 @@ describe('AttentionTab', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('renders the grid and logit-lens sub-views when attention_metadata is present', () => {
+  it('renders the attention grid when attention_metadata is present', () => {
     render(
       <AttentionTab
         trace={makeAttentionTrace()}
@@ -29,8 +29,11 @@ describe('AttentionTab', () => {
       />,
     );
     expect(screen.getByTestId('attention-layer-head-grid')).toBeInTheDocument();
-    expect(screen.getByTestId('logit-lens-table')).toBeInTheDocument();
-    // AttentionHeadPattern lives in the right pane (TraceViewerPage) now.
+    // LogitLensTable lives in the dedicated Logit Lens tab now.
+    expect(
+      screen.queryByTestId('logit-lens-table'),
+    ).not.toBeInTheDocument();
+    // AttentionHeadPattern lives in the right pane (TraceViewerPage).
     expect(
       screen.queryByTestId('attention-head-pattern'),
     ).not.toBeInTheDocument();
@@ -52,6 +55,5 @@ describe('AttentionTab', () => {
     expect(
       screen.queryByTestId('attention-layer-head-grid'),
     ).not.toBeInTheDocument();
-    expect(screen.queryByTestId('logit-lens-table')).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,7 @@
 export { AttentionTab } from './AttentionTab';
 export type { AttentionTabProps } from './AttentionTab';
+export { LogitLensTab } from './LogitLensTab';
+export type { LogitLensTabProps } from './LogitLensTab';
 export { AttentionLayerHeadGrid } from './AttentionLayerHeadGrid';
 export type { AttentionLayerHeadGridProps } from './AttentionLayerHeadGrid';
 export { AttentionHeadPattern } from './AttentionHeadPattern';

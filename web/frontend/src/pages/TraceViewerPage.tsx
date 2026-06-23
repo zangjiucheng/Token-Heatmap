@@ -24,7 +24,7 @@ import {
   EntropyTimeline,
   SelectedProbabilityTimeline,
 } from '@/features/timelines';
-import { AttentionTab, AttentionHeadPattern } from '@/features/attention';
+import { AttentionTab, AttentionHeadPattern, LogitLensTab } from '@/features/attention';
 import { ActivationsTab } from '@/features/activations';
 import type { Trace } from '@/types/trace';
 import type { TraceWithActivations } from '@/types/activation';
@@ -269,8 +269,13 @@ export function TraceViewerPage() {
   const hasAttention = trace?.attention_metadata != null;
   const hasActivations =
     (trace as TraceWithActivations | null)?.activation_metadata != null;
+  const hasLogitLens =
+    trace?.steps.some(
+      (s) => Array.isArray(s.logit_lens) && s.logit_lens.length > 0,
+    ) ?? false;
   let activeTab = state.tab;
   if (!hasAttention && activeTab === 'attention') activeTab = 'heatmap';
+  if (!hasLogitLens && activeTab === 'logit-lens') activeTab = 'heatmap';
   if (!hasActivations && activeTab === 'activations') activeTab = 'heatmap';
 
   let center: React.ReactNode;
@@ -340,6 +345,26 @@ export function TraceViewerPage() {
         <button
           type="button"
           role="tab"
+          aria-selected={activeTab === 'logit-lens'}
+          disabled={!hasLogitLens}
+          title={
+            hasLogitLens
+              ? undefined
+              : 'This trace was generated without --capture-logit-lens. Re-run the CLI with that flag to inspect per-layer predictions.'
+          }
+          className={
+            activeTab === 'logit-lens'
+              ? 'trace-viewer-center__tab trace-viewer-center__tab--active'
+              : 'trace-viewer-center__tab'
+          }
+          onClick={() => setTab('logit-lens')}
+          data-testid="logit-lens-tab"
+        >
+          Logit Lens
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={activeTab === 'activations'}
           disabled={!hasActivations}
           title={
@@ -392,6 +417,10 @@ export function TraceViewerPage() {
           selectedHead={state.selectedHead}
           onSelectHead={setSelectedHead}
         />
+      );
+    } else if (activeTab === 'logit-lens') {
+      body = (
+        <LogitLensTab trace={trace} selectedStep={selectedStep} />
       );
     } else if (activeTab === 'activations') {
       body = (

@@ -25,6 +25,9 @@ dev = [
     "mypy>=1.0",
     "ruff>=0.1",
 ]
+cli = [
+    "pyyaml>=5.1",
+]
 docs = [
     "mkdocs>=1.6",
 ]

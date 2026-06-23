@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { BackendStatusBanner } from '@/components/feedback/BackendStatusBanner';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
@@ -14,8 +14,20 @@ export function LandingPage() {
   const { trace, load, status, error } = useTrace();
   const health = useBackendHealth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [dismissed, setDismissed] = useState(false);
   const [pendingNavId, setPendingNavId] = useState<string | null>(null);
+  const urlLoadFired = useRef(false);
+
+  // Auto-load trace from ?trace=<url> query param (set by `token-heatmap trace --serve`).
+  useEffect(() => {
+    if (urlLoadFired.current) return;
+    const traceUrl = searchParams.get('trace');
+    if (!traceUrl) return;
+    urlLoadFired.current = true;
+    setPendingNavId('url-loaded');
+    void load({ type: 'url', url: traceUrl });
+  }, [searchParams, load]);
 
   useEffect(() => {
     if (trace && pendingNavId) {

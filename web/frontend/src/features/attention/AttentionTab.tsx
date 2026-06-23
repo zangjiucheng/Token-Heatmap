@@ -1,7 +1,6 @@
 import type { Trace } from '@/types/trace';
 import type { SelectedHead } from '@/hooks/useViewState';
 import { AttentionLayerHeadGrid } from './AttentionLayerHeadGrid';
-import { LogitLensTable, type LogitLensTokenizer } from './LogitLensTable';
 import './AttentionTab.css';
 
 export interface AttentionTabProps {
@@ -9,7 +8,6 @@ export interface AttentionTabProps {
   selectedStep: number | null;
   selectedHead: SelectedHead | null;
   onSelectHead: (head: SelectedHead | null) => void;
-  tokenizer?: LogitLensTokenizer;
 }
 
 export function AttentionTab({
@@ -17,7 +15,6 @@ export function AttentionTab({
   selectedStep,
   selectedHead,
   onSelectHead,
-  tokenizer,
 }: AttentionTabProps) {
   if (!trace.attention_metadata) {
     return (
@@ -64,13 +61,6 @@ export function AttentionTab({
           selectedStep={selectedStep}
           selectedHead={selectedHead}
           onSelectHead={(layer, head) => onSelectHead({ layer, head })}
-        />
-      </div>
-      <div className="attention-tab__lens">
-        <LogitLensTable
-          trace={trace}
-          selectedStep={selectedStep}
-          tokenizer={tokenizer}
         />
       </div>
     </div>

@@ -46,7 +46,7 @@ ATTENTION_FLAGS = [
 
 
 def test_cli_help_lists_all_flags(capsys: pytest.CaptureFixture[str]) -> None:
-    parser = build_parser()
+    parser, _ = build_parser()
     with pytest.raises(SystemExit) as exc:
         parser.parse_args(["trace", "--help"])
     assert exc.value.code == 0
@@ -59,17 +59,18 @@ def test_cli_help_lists_all_flags(capsys: pytest.CaptureFixture[str]) -> None:
 def test_cli_missing_required_args_exits_nonzero(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    parser = build_parser()
-    with pytest.raises(SystemExit) as exc:
-        parser.parse_args(["trace", "--prompt", "hi"])
-    assert exc.value.code != 0
+    # --model and --prompt are now validated in run_trace (not by argparse)
+    # so that --config can supply them.  Missing --model returns exit code 2.
+    from llm_token_heatmap.cli import main
 
+    rc = main(["trace", "--prompt", "hi"])
+    assert rc != 0
     err = capsys.readouterr().err
     assert "--model" in err
 
 
 def test_cli_parses_thresholds() -> None:
-    parser = build_parser()
+    parser, _ = build_parser()
     args = parser.parse_args(
         [
             "trace",
@@ -103,12 +104,12 @@ def test_cli_parses_thresholds() -> None:
 
 
 def _parse_trace_args(extra: list[str]) -> object:
-    parser = build_parser()
+    parser, _ = build_parser()
     return parser.parse_args(["trace", "--model", "fake/model", "--prompt", "hi", *extra])
 
 
 def test_cli_help_lists_attention_flags(capsys: pytest.CaptureFixture[str]) -> None:
-    parser = build_parser()
+    parser, _ = build_parser()
     with pytest.raises(SystemExit) as exc:
         parser.parse_args(["trace", "--help"])
     assert exc.value.code == 0
@@ -154,7 +155,7 @@ def test_cli_parses_lens_flags() -> None:
 
 
 def test_cli_rejects_mixed_layers_value(capsys: pytest.CaptureFixture[str]) -> None:
-    parser = build_parser()
+    parser, _ = build_parser()
     with pytest.raises(SystemExit) as exc:
         parser.parse_args(
             [
@@ -174,7 +175,7 @@ def test_cli_rejects_mixed_layers_value(capsys: pytest.CaptureFixture[str]) -> N
 
 
 def test_cli_rejects_non_integer_layers_value() -> None:
-    parser = build_parser()
+    parser, _ = build_parser()
     with pytest.raises(SystemExit) as exc:
         parser.parse_args(
             [
@@ -229,7 +230,7 @@ TRACE_SCHEMA_PATH = REPO_ROOT / "docs" / "web" / "trace.schema.json"
 
 
 def test_cli_help_lists_activation_flags(capsys: pytest.CaptureFixture[str]) -> None:
-    parser = build_parser()
+    parser, _ = build_parser()
     with pytest.raises(SystemExit) as exc:
         parser.parse_args(["trace", "--help"])
     assert exc.value.code == 0
@@ -266,7 +267,7 @@ def test_cli_parses_activation_layers_list() -> None:
 
 
 def test_cli_rejects_empty_activation_submodules() -> None:
-    parser = build_parser()
+    parser, _ = build_parser()
     with pytest.raises(SystemExit) as exc:
         parser.parse_args(
             [
@@ -466,7 +467,7 @@ def test_cli_trace_capture_activations_writes_metadata(tmp_path: Path) -> None:
 
 
 def test_cli_diff_help_lists_metric_and_out(capsys: pytest.CaptureFixture[str]) -> None:
-    parser = build_parser()
+    parser, _ = build_parser()
     with pytest.raises(SystemExit) as exc:
         parser.parse_args(["diff", "--help"])
     assert exc.value.code == 0
@@ -498,7 +499,7 @@ def test_cli_diff_subcommand_writes_outputs(tmp_path: Path) -> None:
     trace_b_path.write_text(json.dumps(payload_b), encoding="utf-8")
 
     out_dir = tmp_path / "diff"
-    parser = build_parser()
+    parser, _ = build_parser()
     args = parser.parse_args(
         [
             "diff",
@@ -539,7 +540,7 @@ def test_cli_diff_rejects_mismatched_prompts(
     trace_b_path.write_text(json.dumps(payload_b), encoding="utf-8")
 
     out_dir = tmp_path / "diff"
-    parser = build_parser()
+    parser, _ = build_parser()
     args = parser.parse_args(
         [
             "diff",
@@ -555,3 +556,165 @@ def test_cli_diff_rejects_mismatched_prompts(
     err = capsys.readouterr().err
     assert "mismatched generations" in err
     assert not (out_dir / "activation_diff.json").exists()
+
+
+# --------------------------------------------------------------------------- #
+# --capture-full-activations: serializer sidecar-ref wiring
+# --------------------------------------------------------------------------- #
+
+
+def test_serialize_trace_writes_activation_sidecar_refs() -> None:
+    """When `activation_sidecar_refs` is passed, each step receives
+    `activation_sidecar_ref` (string path or null)."""
+
+    import torch
+
+    from llm_token_heatmap.trace_payload import serialize_trace_to_json
+
+    def _stats(token_id: int) -> dict[str, Any]:
+        return {
+            "top_ids": torch.tensor([[token_id]], dtype=torch.long),
+            "top_probs": torch.tensor([[1.0]]),
+            "top_logprobs": torch.tensor([[0.0]]),
+            "valid_mask": torch.tensor([[True]]),
+            "k_used": torch.tensor([1]),
+            "entropy": torch.tensor([0.0]),
+            "top_mass_used": torch.tensor([1.0]),
+            "selected_prob": torch.tensor([1.0]),
+            "selected_logprob": torch.tensor([0.0]),
+            "selected_rank": torch.tensor([1]),
+            "selected_ids": torch.tensor([token_id], dtype=torch.long),
+        }
+
+    trace = [
+        {
+            "step": 0,
+            "decoded_text_offset": 0,
+            "raw": _stats(5),
+            "processed": _stats(5),
+            "activations": [
+                {
+                    "layer": 0,
+                    "submodule": "resid_post",
+                    "l2_norm": 1.0,
+                    "mean_abs": 0.5,
+                    "sparsity": 0.0,
+                    "top_neurons": [{"index": 0, "value": 1.0}],
+                }
+            ],
+        },
+        {
+            "step": 1,
+            "decoded_text_offset": 5,
+            "raw": _stats(7),
+            "processed": _stats(7),
+            "activations": [
+                {
+                    "layer": 0,
+                    "submodule": "resid_post",
+                    "l2_norm": 0.5,
+                    "mean_abs": 0.25,
+                    "sparsity": 0.0,
+                    "top_neurons": [{"index": 0, "value": 0.5}],
+                }
+            ],
+        },
+    ]
+
+    metadata = {
+        "model": "fake/model",
+        "prompt": "hello",
+        "generated_text": "hello world",
+        "generation_params": {"max_new_tokens": 2, "temperature": 1.0, "top_p": 1.0, "sample_top_k": 0},
+        "probe_config": {"min_k": 1, "max_k": 4, "mass_threshold": 0.95},
+    }
+    activation_metadata = {
+        "captured_submodules": ["resid_post"],
+        "num_layers": 2,
+        "hidden_dim": 4,
+        "tokenizer_fingerprint": "sha256:fake",
+        "captured_layers": [0],
+    }
+
+    # Step 0 has a sidecar; step 1 does not.
+    activation_sidecar_refs = {0: "activations/activation.0.npz"}
+
+    payload = serialize_trace_to_json(
+        trace=trace,
+        metadata=metadata,
+        attention_metadata=None,
+        sidecar_refs={},
+        tokenizer=_make_fake_tokenizer(),
+        prompt="hello",
+        activation_metadata=activation_metadata,
+        activation_sidecar_refs=activation_sidecar_refs,
+    )
+
+    assert payload["steps"][0]["activation_sidecar_ref"] == "activations/activation.0.npz"
+    assert payload["steps"][1]["activation_sidecar_ref"] is None
+
+    # Without activation_sidecar_refs the field must be absent.
+    payload_no_ref = serialize_trace_to_json(
+        trace=trace,
+        metadata=metadata,
+        attention_metadata=None,
+        sidecar_refs={},
+        tokenizer=_make_fake_tokenizer(),
+        prompt="hello",
+        activation_metadata=activation_metadata,
+    )
+    for step in payload_no_ref["steps"]:
+        assert "activation_sidecar_ref" not in step
+
+
+def test_activation_full_stats_stashed_in_step_entry() -> None:
+    """After `capture_step()` with `capture_full=True`, `last_full_stats` is
+    non-None and the generation loop would stash it as `_activation_full_stats`.
+    This test exercises the probe directly (the generation loop addition is a
+    one-liner guarded by the same `config.capture_full` flag tested here)."""
+
+    import torch
+    from llm_token_heatmap.activation_probe import ActivationProbe, ActivationProbeConfig
+    from tests.fixtures.tiny_attention_model import build_tiny_model
+
+    model = build_tiny_model(num_hidden_layers=2)
+
+    # --- capture_full=True: last_full_stats populated ---
+    probe = ActivationProbe(
+        ActivationProbeConfig(layers="all", submodules=["resid_post"], capture_full=True)
+    )
+    probe.attach(model)
+    try:
+        input_ids = torch.zeros((1, 3), dtype=torch.long)
+        with torch.no_grad():
+            model(input_ids)
+        probe.capture_step()
+        full_stats = probe.last_full_stats
+    finally:
+        probe.detach()
+
+    assert full_stats is not None, "capture_full=True should populate last_full_stats"
+    # Verify that the generation loop logic would add it to the step dict.
+    step_entry: dict[str, Any] = {"step": 0}
+    if probe.config.capture_full:
+        step_entry["_activation_full_stats"] = full_stats
+    assert "_activation_full_stats" in step_entry
+
+    # --- capture_full=False: last_full_stats is None ---
+    probe2 = ActivationProbe(
+        ActivationProbeConfig(layers="all", submodules=["resid_post"], capture_full=False)
+    )
+    probe2.attach(model)
+    try:
+        with torch.no_grad():
+            model(input_ids)
+        probe2.capture_step()
+        full_stats2 = probe2.last_full_stats
+    finally:
+        probe2.detach()
+
+    assert full_stats2 is None
+    step_entry2: dict[str, Any] = {"step": 0}
+    if probe2.config.capture_full:
+        step_entry2["_activation_full_stats"] = full_stats2
+    assert "_activation_full_stats" not in step_entry2

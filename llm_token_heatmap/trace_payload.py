@@ -206,6 +206,7 @@ def serialize_trace_to_json(
     tokenizer: Any,
     prompt: str,
     activation_metadata: dict[str, Any] | None = None,
+    activation_sidecar_refs: dict[int, str] | None = None,
 ) -> dict[str, Any]:
     """Build a JSON-safe payload conforming to ``docs/web/trace.schema.json``.
 
@@ -239,6 +240,8 @@ def serialize_trace_to_json(
             step_payload["token_id"] = int(selected_payload["token_id"])
             step_payload["decoded_text_offset"] = int(entry.get("decoded_text_offset", 0))
             step_payload["activations"] = tensor_to_jsonable(entry.get("activations", []))
+            if activation_sidecar_refs is not None:
+                step_payload["activation_sidecar_ref"] = activation_sidecar_refs.get(step_idx)
         steps.append(step_payload)
 
     md = {k: v for k, v in metadata.items() if k in _ALLOWED_METADATA_KEYS}

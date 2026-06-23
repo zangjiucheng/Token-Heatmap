@@ -45,6 +45,11 @@ class InvalidCsvError(APIError):
     kind = "invalid_csv"
 
 
+class InvalidActivationTraceError(APIError):
+    status_code = 422
+    kind = "invalid_activation_trace"
+
+
 def _envelope(kind: str, message: str, details: Any | None = None) -> dict[str, Any]:
     body: dict[str, Any] = {"kind": kind, "message": message}
     if details is not None:

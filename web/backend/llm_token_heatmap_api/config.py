@@ -49,6 +49,13 @@ class Settings(BaseSettings):
 
     api_port: int = Field(default=8000, ge=1, le=65535)
     allowed_origins: str = Field(default="http://localhost:5173")
+    output_dir: Path | None = Field(
+        default=None,
+        description=(
+            "Absolute path to the directory from which the /outputs/ endpoint serves "
+            "trace files. Set via LLM_HEATMAP_OUTPUT_DIR. No files are served when unset."
+        ),
+    )
     schema_path: Path = Field(default_factory=_default_schema_path)
     activation_schema_path: Path = Field(default_factory=_default_activation_schema_path)
     activation_diff_schema_path: Path = Field(
