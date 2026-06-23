@@ -667,45 +667,56 @@ def run_trace(args: argparse.Namespace) -> int:
 
 
 def _serve_outputs(output_dir: Path, port: int = 8000, frontend_url: str = "http://localhost:5173") -> None:
-    """Start the FastAPI backend with LLM_HEATMAP_OUTPUT_DIR set to output_dir.
+    """Serve the output directory over HTTP using Python's stdlib http.server.
 
-    Blocks until Ctrl+C, then terminates the server.
+    No extra dependencies required — works with any Python 3.10+ installation.
+    CORS headers are added so the frontend (running on a different port or host)
+    can fetch the trace JSON.
+
+    Blocks until Ctrl+C.
     """
+    import http.server
     import os
-    import signal
-    import subprocess
+    import socketserver
+    import threading
 
-    env = os.environ.copy()
-    env["LLM_HEATMAP_OUTPUT_DIR"] = str(output_dir.resolve())
-    env["LLM_HEATMAP_ALLOWED_ORIGINS"] = frontend_url
+    class _CORSHandler(http.server.SimpleHTTPRequestHandler):
+        """Static-file handler with permissive CORS headers."""
 
-    cmd = [
-        sys.executable, "-m", "uvicorn",
-        "llm_token_heatmap_api.main:app",
-        "--host", "::",
-        "--port", str(port),
-    ]
+        def end_headers(self) -> None:
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            super().end_headers()
+
+        def do_OPTIONS(self) -> None:  # pre-flight
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, fmt: str, *args: object) -> None:
+            pass  # suppress per-request noise; the URL is already printed below
 
     backend_url = f"http://localhost:{port}"
-    trace_file_url = f"{backend_url}/outputs/adaptive_token_trace.json"
+    trace_file_url = f"{backend_url}/adaptive_token_trace.json"
     viewer_url = f"{frontend_url}/?trace={trace_file_url}"
 
-    print("\n[token-heatmap] Starting backend …")
-    print(f"[token-heatmap] Backend:  {backend_url}")
+    print("\n[token-heatmap] Serving output directory …")
+    print(f"[token-heatmap] Files: {backend_url}/")
     print(f"[token-heatmap] Open the viewer at:")
     print(f"[token-heatmap]   {viewer_url}")
     print("[token-heatmap] (Press Ctrl+C to stop)\n")
 
+    orig_dir = os.getcwd()
     try:
-        proc = subprocess.Popen(cmd, env=env)
-        proc.wait()
-    except KeyboardInterrupt:
-        print("\n[token-heatmap] Shutting down …")
-        proc.send_signal(signal.SIGTERM)
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
+        os.chdir(output_dir)
+        with socketserver.TCPServer(("", port), _CORSHandler) as httpd:
+            httpd.allow_reuse_address = True
+            try:
+                httpd.serve_forever()
+            except KeyboardInterrupt:
+                print("\n[token-heatmap] Shutting down …")
+    finally:
+        os.chdir(orig_dir)
 
 
 def _load_activation_trace(path: Path) -> dict[str, Any]:
