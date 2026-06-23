@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="LLM Token Heatmap">
+  <rect width="64" height="64" rx="14" fill="#1a1d21"/>
+  <!-- 3x3 viridis heatmap: dark purple (low) → yellow (high) along the anti-diagonal -->
+  <g>
+    <rect x="10" y="10" width="12" height="12" rx="3" fill="#440154"/>
+    <rect x="26" y="10" width="12" height="12" rx="3" fill="#3b528b"/>
+    <rect x="42" y="10" width="12" height="12" rx="3" fill="#21918c"/>
+    <rect x="10" y="26" width="12" height="12" rx="3" fill="#3b528b"/>
+    <rect x="26" y="26" width="12" height="12" rx="3" fill="#21918c"/>
+    <rect x="42" y="26" width="12" height="12" rx="3" fill="#5ec962"/>
+    <rect x="10" y="42" width="12" height="12" rx="3" fill="#21918c"/>
+    <rect x="26" y="42" width="12" height="12" rx="3" fill="#5ec962"/>
+    <rect x="42" y="42" width="12" height="12" rx="3" fill="#fde725"/>
+  </g>
+</svg>
