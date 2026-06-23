@@ -80,6 +80,8 @@ Flags:
 | `--serve` | off | Start file server after generation |
 | `--port` | `8000` | Port for the file server |
 | `--frontend-url` | `http://localhost:5173` | Frontend origin used to build the printed URL |
+| `--frontend` | off | Also start the Vite frontend (`npm run dev`) and open the viewer. Implies `--serve`. Needs Node.js + a repo checkout. |
+| `--no-open` | off | With `--frontend`, don't auto-open the browser |
 
 Example — backend on port 9000, frontend on port 3000:
 
@@ -94,6 +96,32 @@ On HPC, SSH port-forward the file-server port to your laptop before opening the 
 ```bash
 ssh -L 9000:localhost:9000 user@hpc
 ```
+
+### One command, frontend included (`--frontend`)
+
+On a **local machine with Node.js and a repo checkout**, `--frontend` starts the
+file server *and* the Vite dev server, then opens the ready-made viewer URL once
+the frontend is up. The dev server binds to the port in `--frontend-url`
+(default `5173`). One `Ctrl+C` stops both.
+
+```bash
+token-heatmap trace --config configs/example.yaml --serve --frontend
+```
+
+```
+[token-heatmap] Starting frontend (npm run dev) on port 5173 …
+[token-heatmap] Serving output directory …
+[token-heatmap] Files: http://localhost:8000/
+[token-heatmap] Frontend (npm run dev): http://localhost:5173
+[token-heatmap] Open the viewer at:
+[token-heatmap]   http://localhost:5173/?trace=http://localhost:8000/adaptive_token_trace.json
+[token-heatmap] (Press Ctrl+C to stop)
+```
+
+If `npm` isn't on `PATH` or `web/frontend` is missing (e.g. a pip-only install),
+it prints a warning and degrades to serving files only. This flag is for local
+use — the HPC node typically has no Node.js, which is exactly why the
+SSH-forward-the-port workflow above exists.
 
 ## Inspecting attention and the logit lens
 

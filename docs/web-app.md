@@ -27,6 +27,14 @@ exploring traces that already exist.
 BACKEND_PORT=8765 FRONTEND_PORT=5180 ./scripts/dev.sh   # custom ports
 ```
 
+Or generate a trace and boot the frontend in one command — `--frontend` starts
+the file server *and* `npm run dev`, then opens the viewer (see
+[`docs/cli.md`](cli.md#one-command-frontend-included---frontend)):
+
+```bash
+token-heatmap trace --config configs/example.yaml --serve --frontend
+```
+
 Or manually in two terminals:
 
 ```bash

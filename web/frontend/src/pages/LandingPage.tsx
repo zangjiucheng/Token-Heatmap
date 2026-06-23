@@ -47,6 +47,12 @@ export function LandingPage() {
     await load({ type: 'sample' });
   };
 
+  const handleUrlSubmit = async (url: string) => {
+    setDismissed(false);
+    setPendingNavId('url-loaded');
+    await load({ type: 'url', url });
+  };
+
   const handleFileDropped = async (file: File) => {
     setDismissed(false);
     const isCsv =
@@ -115,6 +121,7 @@ export function LandingPage() {
         onLoadSample={handleLoadSample}
         onFileDropped={handleFileDropped}
         onTwoFilesDropped={handleTwoFilesDropped}
+        onUrlSubmit={handleUrlSubmit}
       />
     </div>
   );

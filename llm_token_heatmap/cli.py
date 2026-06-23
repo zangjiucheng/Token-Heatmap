@@ -320,8 +320,23 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         default="http://localhost:5173",
         help=(
             "Frontend origin printed with --serve so you can copy the ready-made URL "
-            "(default: http://localhost:5173)."
+            "(default: http://localhost:5173). With --frontend, the dev server binds "
+            "to this URL's port."
         ),
+    )
+    trace_parser.add_argument(
+        "--frontend",
+        action="store_true",
+        help=(
+            "Also start the Vite frontend (npm run dev) from web/frontend and open "
+            "the viewer in your browser. Requires Node.js and a repo checkout. "
+            "Implies --serve. Press Ctrl+C to stop both."
+        ),
+    )
+    trace_parser.add_argument(
+        "--no-open",
+        action="store_true",
+        help="With --frontend, do not auto-open the viewer in a browser.",
     )
     trace_parser.set_defaults(func=run_trace)
 
@@ -660,25 +675,42 @@ def run_trace(args: argparse.Namespace) -> int:
 
     print(f"Wrote outputs to {output_dir}/")
 
-    if getattr(args, "serve", False):
-        _serve_outputs(output_dir, port=args.port, frontend_url=args.frontend_url)
+    start_frontend = getattr(args, "frontend", False)
+    if getattr(args, "serve", False) or start_frontend:
+        _serve_outputs(
+            output_dir,
+            port=args.port,
+            frontend_url=args.frontend_url,
+            start_frontend=start_frontend,
+            open_browser=not getattr(args, "no_open", False),
+        )
 
     return 0
 
 
-def _serve_outputs(output_dir: Path, port: int = 8000, frontend_url: str = "http://localhost:5173") -> None:
+def _serve_outputs(
+    output_dir: Path,
+    port: int = 8000,
+    frontend_url: str = "http://localhost:5173",
+    start_frontend: bool = False,
+    open_browser: bool = True,
+) -> None:
     """Serve the output directory over HTTP using Python's stdlib http.server.
 
     No extra dependencies required — works with any Python 3.10+ installation.
     CORS headers are added so the frontend (running on a different port or host)
     can fetch the trace JSON.
 
+    When ``start_frontend`` is set, also launch the bundled Vite frontend
+    (``npm run dev`` in ``web/frontend``) and, unless ``open_browser`` is False,
+    open the ready-made viewer URL once the dev server is accepting connections.
+    The frontend subprocess is terminated on shutdown.
+
     Blocks until Ctrl+C.
     """
     import http.server
     import os
     import socketserver
-    import threading
 
     class _CORSHandler(http.server.SimpleHTTPRequestHandler):
         """Static-file handler with permissive CORS headers."""
@@ -700,9 +732,20 @@ def _serve_outputs(output_dir: Path, port: int = 8000, frontend_url: str = "http
     trace_file_url = f"{backend_url}/adaptive_token_trace.json"
     viewer_url = f"{frontend_url}/?trace={trace_file_url}"
 
+    # Start the frontend before the file server so its npm/Vite startup logs
+    # print first and the "open the viewer" line lands last.
+    frontend_proc = None
+    if start_frontend:
+        frontend_proc = _start_frontend_dev_server(frontend_url, backend_url)
+        if frontend_proc is None:
+            # npm or the frontend dir was unavailable; degrade to files-only.
+            start_frontend = False
+
     print("\n[token-heatmap] Serving output directory …")
     print(f"[token-heatmap] Files: {backend_url}/")
-    print(f"[token-heatmap] Open the viewer at:")
+    if start_frontend:
+        print(f"[token-heatmap] Frontend (npm run dev): {frontend_url}")
+    print("[token-heatmap] Open the viewer at:")
     print(f"[token-heatmap]   {viewer_url}")
     print("[token-heatmap] (Press Ctrl+C to stop)\n")
 
@@ -711,12 +754,113 @@ def _serve_outputs(output_dir: Path, port: int = 8000, frontend_url: str = "http
         os.chdir(output_dir)
         with socketserver.TCPServer(("", port), _CORSHandler) as httpd:
             httpd.allow_reuse_address = True
+            if start_frontend and open_browser:
+                _open_viewer_when_ready(viewer_url, frontend_url)
             try:
                 httpd.serve_forever()
             except KeyboardInterrupt:
                 print("\n[token-heatmap] Shutting down …")
     finally:
         os.chdir(orig_dir)
+        if frontend_proc is not None:
+            _terminate_process(frontend_proc)
+
+
+def _start_frontend_dev_server(frontend_url: str, backend_url: str) -> Any:
+    """Launch ``npm run dev`` for the bundled ``web/frontend``.
+
+    Returns the ``subprocess.Popen`` handle, or ``None`` (after printing a
+    warning) when npm or the frontend directory is unavailable so the caller
+    can fall back to serving files only.
+    """
+    import os
+    import shutil
+    import subprocess
+    from urllib.parse import urlparse
+
+    # llm_token_heatmap/cli.py -> repo root is one parent up.
+    repo_root = Path(__file__).resolve().parents[1]
+    frontend_dir = repo_root / "web" / "frontend"
+    if not frontend_dir.is_dir():
+        print(
+            f"[token-heatmap] WARNING: --frontend set but {frontend_dir} was not found. "
+            "Run from a repo checkout to use it. Serving files only."
+        )
+        return None
+
+    npm = shutil.which("npm")
+    if npm is None:
+        print(
+            "[token-heatmap] WARNING: --frontend set but 'npm' is not on PATH. "
+            "Install Node.js 20+ to use it. Serving files only."
+        )
+        return None
+
+    frontend_port = urlparse(frontend_url).port or 5173
+
+    env = dict(os.environ)
+    # Point the SPA's API base at our file server so its same-origin assumptions
+    # hold; the trace itself loads via the ?trace= URL regardless. Respect a
+    # caller-provided value.
+    env.setdefault("VITE_API_BASE_URL", backend_url)
+
+    print(f"[token-heatmap] Starting frontend (npm run dev) on port {frontend_port} …")
+    try:
+        return subprocess.Popen(
+            [npm, "run", "dev", "--", "--port", str(frontend_port), "--strictPort"],
+            cwd=str(frontend_dir),
+            env=env,
+        )
+    except OSError as exc:
+        print(f"[token-heatmap] WARNING: failed to start npm ({exc}). Serving files only.")
+        return None
+
+
+def _open_viewer_when_ready(viewer_url: str, frontend_url: str) -> None:
+    """Open ``viewer_url`` once the frontend port accepts connections.
+
+    Polls in a daemon thread so it never blocks the file server. Gives up
+    quietly after a timeout — the URL is already printed for manual use.
+    """
+    import socket
+    import threading
+    import time
+    import webbrowser
+    from urllib.parse import urlparse
+
+    parsed = urlparse(frontend_url)
+    host = parsed.hostname or "localhost"
+    fport = parsed.port or 5173
+
+    def _wait_and_open() -> None:
+        deadline = time.monotonic() + 60.0
+        while time.monotonic() < deadline:
+            try:
+                with socket.create_connection((host, fport), timeout=1.0):
+                    break
+            except OSError:
+                time.sleep(0.5)
+        else:
+            return  # never came up; nothing to open
+        try:
+            webbrowser.open(viewer_url)
+        except Exception:  # pragma: no cover - platform-dependent
+            pass
+
+    threading.Thread(target=_wait_and_open, daemon=True).start()
+
+
+def _terminate_process(proc: Any) -> None:
+    """Terminate a subprocess, escalating to kill if it ignores SIGTERM."""
+    import subprocess
+
+    if proc.poll() is not None:
+        return
+    proc.terminate()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
 
 
 def _load_activation_trace(path: Path) -> dict[str, Any]:

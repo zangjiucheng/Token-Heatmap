@@ -94,6 +94,62 @@
   display: none;
 }
 
+.empty-state__url {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
+}
+
+.empty-state__url-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.empty-state__url-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.empty-state__url-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.empty-state__url-input:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.empty-state__secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.empty-state__url-hint {
+  margin: 8px 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.empty-state__url-hint code {
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--color-bg-elevated);
+}
+
 .empty-state__subtitle {
   margin: 0 0 8px;
   font-size: 16px;
