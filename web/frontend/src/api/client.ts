@@ -25,7 +25,7 @@ export interface RequestOptions {
 const DEFAULT_BASE_URL = 'http://localhost:8000';
 
 function resolveBaseUrl(explicit?: string): string {
-  if (explicit) return stripTrailingSlash(explicit);
+  if (explicit !== undefined) return stripTrailingSlash(explicit);
   // `import.meta.env` is only defined in a Vite/build context. Fall back to
   // the documented dev default so unit tests that import this module
   // outside Vite don't crash.
@@ -33,7 +33,9 @@ function resolveBaseUrl(explicit?: string): string {
     env?: { VITE_API_BASE_URL?: string };
   };
   const fromEnv = meta?.env?.VITE_API_BASE_URL;
-  return stripTrailingSlash(fromEnv ?? DEFAULT_BASE_URL);
+  // VITE_API_BASE_URL='' means same-origin (frontend served by the API server).
+  // undefined means the env var was not set at build time — use the dev default.
+  return fromEnv !== undefined ? stripTrailingSlash(fromEnv) : DEFAULT_BASE_URL;
 }
 
 function stripTrailingSlash(url: string): string {
