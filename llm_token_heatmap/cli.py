@@ -305,9 +305,9 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         "--serve",
         action="store_true",
         help=(
-            "After generation, start the FastAPI backend so the frontend can "
-            "load the trace via a URL. Requires uvicorn and llm_token_heatmap_api "
-            "to be installed. Press Ctrl+C to stop."
+            "After generation, serve the output directory over HTTP (Python's "
+            "stdlib http.server with CORS — no extra dependencies) so the frontend "
+            "can load the trace via a URL. Press Ctrl+C to stop."
         ),
     )
     trace_parser.add_argument(
