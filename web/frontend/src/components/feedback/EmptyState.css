@@ -156,6 +156,11 @@
   color: var(--color-text);
 }
 
+/* The generate panel spans both grid columns as a full-width row. */
+.empty-state__generate {
+  grid-column: 1 / -1;
+}
+
 .empty-state__dropzone--diff {
   border-style: dashed;
   background: var(--color-surface);

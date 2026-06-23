@@ -5,12 +5,18 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
+from llm_token_heatmap.runner import GenerateTraceConfig, generate_trace_payload
 from llm_token_heatmap_api import SCHEMA_VERSION
 from llm_token_heatmap_api.config import Settings, get_settings
-from llm_token_heatmap_api.errors import InvalidActivationTraceError, InvalidCsvError
+from llm_token_heatmap_api.errors import (
+    GenerationError,
+    InvalidActivationTraceError,
+    InvalidCsvError,
+)
 from llm_token_heatmap_api.services.trace_serializer import csv_to_trace_json
 
 router = APIRouter(prefix="/trace", tags=["trace"])
@@ -41,6 +47,28 @@ class DiffRequest(BaseModel):
     trace_b: dict[str, Any]
     metric: Literal["l2", "cosine"] = "l2"
     align: Literal["token_id", "position", "auto"] = "auto"
+
+
+class GenerateRequest(BaseModel):
+    """Parameters for server-side trace generation. Bounds mirror the CLI."""
+
+    model: str = Field(min_length=1)
+    prompt: str = Field(min_length=1)
+    max_new_tokens: int = Field(default=64, ge=1, le=512)
+    temperature: float = Field(default=0.8, gt=0, le=5)
+    top_p: float = Field(default=0.95, gt=0, le=1)
+    min_k: int = Field(default=8, ge=1, le=10000)
+    max_k: int = Field(default=64, ge=1, le=10000)
+    mass_threshold: float = Field(default=0.95, gt=0, le=1)
+    capture_attention: bool = False
+    capture_logit_lens: bool = False
+    capture_activations: bool = False
+
+    @model_validator(mode="after")
+    def _max_k_ge_min_k(self) -> GenerateRequest:
+        if self.max_k < self.min_k:
+            raise ValueError("max_k must be >= min_k")
+        return self
 
 
 def _project_activation_subset(trace: dict[str, Any], label: str) -> dict[str, Any]:
@@ -109,3 +137,43 @@ async def diff_traces(body: DiffRequest) -> JSONResponse:
 
     diff = compare_activations(proj_a, proj_b, metric=body.metric, align=body.align)
     return JSONResponse(content=diff)
+
+
+@router.post("/generate")
+async def generate_trace(body: GenerateRequest) -> JSONResponse:
+    """Generate a trace on the server and return the canonical JSON payload.
+
+    Loads ``body.model`` with ``trust_remote_code=True`` (which can execute
+    model-author code) and runs the adaptive token probe plus any requested
+    *inline* captures (attention / logit-lens / activations). Generation is
+    blocking and serialized on the server, so it runs in a worker thread.
+
+    Security: only expose this endpoint over a trusted channel (e.g. an SSH
+    tunnel), never the public internet — an attacker who can reach it can load
+    an arbitrary model and run its code.
+    """
+    config = GenerateTraceConfig(
+        model=body.model,
+        prompt=body.prompt,
+        max_new_tokens=body.max_new_tokens,
+        temperature=body.temperature,
+        top_p=body.top_p,
+        min_k=body.min_k,
+        max_k=body.max_k,
+        mass_threshold=body.mass_threshold,
+        capture_attention=body.capture_attention,
+        capture_logit_lens=body.capture_logit_lens,
+        capture_activations=body.capture_activations,
+    )
+    try:
+        payload = await run_in_threadpool(generate_trace_payload, config)
+    except (OSError, ValueError) as exc:
+        # Unknown model id / repo-not-found / config transformers rejects —
+        # client-fixable, so 422 rather than 500.
+        raise GenerationError(
+            f"Could not load or run model {body.model!r}: {exc}",
+            status_code=422,
+        ) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise GenerationError(f"Generation failed: {exc}") from exc
+    return _with_schema_header(payload)

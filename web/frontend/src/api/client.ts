@@ -22,6 +22,21 @@ export interface RequestOptions {
   signal?: AbortSignal;
 }
 
+/** Body for `POST /trace/generate`. Field names/bounds mirror the backend. */
+export interface GenerateParams {
+  model: string;
+  prompt: string;
+  max_new_tokens: number;
+  temperature: number;
+  top_p: number;
+  min_k: number;
+  max_k: number;
+  mass_threshold: number;
+  capture_attention: boolean;
+  capture_logit_lens: boolean;
+  capture_activations: boolean;
+}
+
 const DEFAULT_BASE_URL = 'http://localhost:8000';
 
 function resolveBaseUrl(explicit?: string): string {
@@ -123,6 +138,34 @@ export class ApiClient {
       response = await this.fetchImpl(this.url('/trace/convert-csv'), {
         method: 'POST',
         body: form,
+        signal: options.signal,
+      });
+    } catch (cause) {
+      throw mapTransportError(cause);
+    }
+    if (!response.ok) {
+      const body = await readJson(response);
+      throw mapBackendError(response.status, body);
+    }
+    const body = await readJson(response);
+    return validateTrace(body);
+  }
+
+  /**
+   * `POST /trace/generate` — run generation on the backend and return the
+   * validated trace. Blocking on the server (model load + decode), so this can
+   * take a while; pass an `AbortSignal` to cancel.
+   */
+  async generate(
+    params: GenerateParams,
+    options: RequestOptions = {},
+  ): Promise<Trace> {
+    let response: Response;
+    try {
+      response = await this.fetchImpl(this.url('/trace/generate'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
         signal: options.signal,
       });
     } catch (cause) {

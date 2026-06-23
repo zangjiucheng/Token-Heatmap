@@ -50,6 +50,22 @@ class InvalidActivationTraceError(APIError):
     kind = "invalid_activation_trace"
 
 
+class GenerationError(APIError):
+    """Raised when server-side trace generation fails.
+
+    Defaults to 500; pass ``status_code=422`` for client-fixable causes such as
+    an unknown model id or a config transformers rejects.
+    """
+
+    kind = "generation_failed"
+
+    def __init__(
+        self, message: str, details: Any | None = None, status_code: int = 500
+    ) -> None:
+        super().__init__(message, details)
+        self.status_code = status_code
+
+
 def _envelope(kind: str, message: str, details: Any | None = None) -> dict[str, Any]:
     body: dict[str, Any] = {"kind": kind, "message": message}
     if details is not None:

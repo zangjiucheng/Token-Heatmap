@@ -1,4 +1,6 @@
 import { useRef, useState, type DragEvent, type ReactNode } from 'react';
+import type { GenerateParams } from '@/api/client';
+import { GenerateForm } from '@/components/forms/GenerateForm';
 import './EmptyState.css';
 
 export interface EmptyStateProps {
@@ -15,6 +17,12 @@ export interface EmptyStateProps {
    * server (`ssh -L 8000:localhost:8000 user@host`).
    */
   onUrlSubmit?: (url: string) => void;
+  /**
+   * Called when the user submits the generation form. When provided, a
+   * "Generate" panel is shown so a trace can be produced from a prompt via the
+   * backend instead of loaded from disk/URL.
+   */
+  onGenerate?: (params: GenerateParams) => void;
   title?: string;
   description?: ReactNode;
 }
@@ -24,6 +32,7 @@ export function EmptyState({
   onFileDropped,
   onTwoFilesDropped,
   onUrlSubmit,
+  onGenerate,
   title = 'No trace loaded',
   description = (
     <>
@@ -222,6 +231,12 @@ export function EmptyState({
                 aria-label="Two activation trace files"
               />
             </div>
+          </div>
+        )}
+
+        {onGenerate && (
+          <div className="empty-state__generate">
+            <GenerateForm onGenerate={onGenerate} />
           </div>
         )}
       </div>

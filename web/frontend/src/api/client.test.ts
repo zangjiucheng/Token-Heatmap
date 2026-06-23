@@ -86,4 +86,49 @@ describe('ApiClient', () => {
     const client = new ApiClient({ baseUrl: 'http://api', fetchImpl });
     expect(await client.getSchema()).toEqual(schema);
   });
+
+  const generateParams = {
+    model: 'Qwen/Qwen2.5-0.5B-Instruct',
+    prompt: 'hello',
+    max_new_tokens: 8,
+    temperature: 0.8,
+    top_p: 0.95,
+    min_k: 8,
+    max_k: 64,
+    mass_threshold: 0.95,
+    capture_attention: false,
+    capture_logit_lens: false,
+    capture_activations: false,
+  };
+
+  it('generate posts JSON to /trace/generate and returns the validated trace', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(makeJsonResponse(sampleTrace));
+    const client = new ApiClient({ baseUrl: 'http://api', fetchImpl });
+    const result = await client.generate(generateParams);
+    expect(result.steps).toHaveLength(5);
+    const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('http://api/trace/generate');
+    expect(init.method).toBe('POST');
+    expect((init.headers as Record<string, string>)['Content-Type']).toBe(
+      'application/json',
+    );
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      model: 'Qwen/Qwen2.5-0.5B-Instruct',
+      prompt: 'hello',
+      max_new_tokens: 8,
+    });
+  });
+
+  it('generate surfaces a backend error envelope as TraceLoadError', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      makeJsonResponse(
+        { error: { kind: 'generation_failed', message: 'boom' } },
+        500,
+      ),
+    );
+    const client = new ApiClient({ baseUrl: 'http://api', fetchImpl });
+    await expect(client.generate(generateParams)).rejects.toBeInstanceOf(
+      TraceLoadError,
+    );
+  });
 });

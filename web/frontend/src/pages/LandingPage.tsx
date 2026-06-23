@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import type { GenerateParams } from '@/api/client';
 import { BackendStatusBanner } from '@/components/feedback/BackendStatusBanner';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
@@ -53,6 +54,12 @@ export function LandingPage() {
     await load({ type: 'url', url });
   };
 
+  const handleGenerate = async (params: GenerateParams) => {
+    setDismissed(false);
+    setPendingNavId('generated');
+    await load({ type: 'generate', params });
+  };
+
   const handleFileDropped = async (file: File) => {
     setDismissed(false);
     const isCsv =
@@ -87,7 +94,11 @@ export function LandingPage() {
   };
 
   if (status === 'loading') {
-    return <LoadingState label="Loading trace" />;
+    const label =
+      pendingNavId === 'generated'
+        ? 'Generating trace (this can take a while)…'
+        : 'Loading trace';
+    return <LoadingState label={label} />;
   }
 
   if (status === 'error' && error && !dismissed) {
@@ -122,6 +133,7 @@ export function LandingPage() {
         onFileDropped={handleFileDropped}
         onTwoFilesDropped={handleTwoFilesDropped}
         onUrlSubmit={handleUrlSubmit}
+        onGenerate={handleGenerate}
       />
     </div>
   );

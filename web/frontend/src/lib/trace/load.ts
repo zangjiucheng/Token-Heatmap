@@ -1,6 +1,6 @@
 import type { Trace } from '@/types/trace';
 import sampleTrace from '@/lib/sample/trace.json';
-import { getApiClient } from '@/api/client';
+import { getApiClient, type GenerateParams } from '@/api/client';
 import { TraceLoadError } from './errors';
 import { setActiveTraceSchema, validateTrace } from './validate';
 
@@ -69,6 +69,17 @@ export async function loadSampleTrace(): Promise<Trace> {
  */
 export async function convertCsvToTrace(file: File, signal?: AbortSignal): Promise<Trace> {
   return getApiClient().convertCsv(file, { signal });
+}
+
+/**
+ * Generate a trace on the backend from model + prompt + sampling params via
+ * the `/trace/generate` endpoint and return the validated JSON trace.
+ */
+export async function generateTrace(
+  params: GenerateParams,
+  signal?: AbortSignal,
+): Promise<Trace> {
+  return getApiClient().generate(params, { signal });
 }
 
 /**

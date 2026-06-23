@@ -7,8 +7,8 @@ import type { UseBackendHealthResult } from '@/hooks/useBackendHealth';
 import { TraceLoadError } from '@/lib/trace/errors';
 import { LandingPage } from '@/pages/LandingPage';
 
-const useTraceMock = vi.fn<[], UseTraceResult>();
-const useHealthMock = vi.fn<[], UseBackendHealthResult>();
+const useTraceMock = vi.fn<() => UseTraceResult>();
+const useHealthMock = vi.fn<() => UseBackendHealthResult>();
 
 vi.mock('@/hooks/useTrace', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks/useTrace')>();
