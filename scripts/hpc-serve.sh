@@ -53,14 +53,19 @@ fi
 # SSH connection drops, instead of a wrapper shell swallowing it.
 REMOTE_CMD="cd '${REMOTE_REPO}'"
 if [[ "$REGEN" == "1" ]]; then
-  REMOTE_CMD="${REMOTE_CMD} && '${REMOTE_BIN}' trace --config '${CONFIG}' --capture-activations --capture-full-activations"
+  # Capture the full set so every UI tab is populated: attention (forces eager
+  # attention -- slower, but that's what lights up the Attention tab),
+  # logit-lens (from the config), and activations. Then add manifold geometry.
+  REMOTE_CMD="${REMOTE_CMD} && '${REMOTE_BIN}' trace --config '${CONFIG}'"
+  REMOTE_CMD="${REMOTE_CMD} --capture-attention --attention-layers all --capture-full-attention"
+  REMOTE_CMD="${REMOTE_CMD} --capture-activations --capture-full-activations"
   REMOTE_CMD="${REMOTE_CMD} && '${REMOTE_BIN}' manifold --trace '${REMOTE_DIR}/adaptive_token_trace.json'"
 fi
 REMOTE_CMD="${REMOTE_CMD} && exec '${REMOTE_BIN}' serve '${REMOTE_DIR}' --port ${REMOTE_PORT}"
 
 echo "[hpc-serve] host=${SSH_HOST}"
 echo "[hpc-serve] serving ${REMOTE_DIR} on remote :${REMOTE_PORT}  ->  forwarded to local :${LOCAL_PORT}"
-[[ "$REGEN" == "1" ]] && echo "[hpc-serve] --gen: regenerating trace + manifold first (this runs the model; takes a while)"
+[[ "$REGEN" == "1" ]] && echo "[hpc-serve] --gen: regenerating full trace (attention + logit-lens + activations) + manifold first (runs the model, eager attention; takes a while)"
 echo "[hpc-serve] once it says 'Serving', open the viewer:"
 echo "              ${VIEWER_URL}"
 echo "[hpc-serve] Ctrl+C here stops the tunnel AND the remote server."
