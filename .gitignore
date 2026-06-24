@@ -22,6 +22,7 @@ site/
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+.playwright-cli/
 
 # IDE
 .idea/
