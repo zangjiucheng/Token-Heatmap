@@ -43,6 +43,10 @@ export function ManifoldTab({
   const [xComponent, setXComponent] = useState(0);
   const [yComponent, setYComponent] = useState(1);
   const [view, setView] = useState<'2d' | '3d'>('3d');
+  // Colour points by generation step, or by the probe scalar when present.
+  const [colorBy, setColorBy] = useState<'step' | 'scalar'>(() =>
+    trace.manifold?.scalar ? 'scalar' : 'step',
+  );
 
   // Keep the selection valid if the trace (and thus its layers) changes.
   useEffect(() => {
@@ -57,6 +61,15 @@ export function ManifoldTab({
       layers[0],
     [layers, selectedKey],
   );
+
+  // When colouring by the scalar, map each of the active cloud's positions to
+  // its scalar value (undefined → the scatter falls back to colour-by-step).
+  const colorValues = useMemo(() => {
+    const sc = trace.manifold?.scalar;
+    if (colorBy !== 'scalar' || !sc || !active) return undefined;
+    const byStep = new Map(sc.positions.map((p, i) => [p, sc.values[i]]));
+    return active.positions.map((p) => byStep.get(p) ?? 0);
+  }, [colorBy, trace.manifold, active]);
 
   if (!trace.manifold || layers.length === 0 || !active) {
     return (
@@ -86,6 +99,9 @@ export function ManifoldTab({
   const safeY = Math.min(yComponent, Math.max(0, components - 1));
   // 3-D needs three components; otherwise fall back to the 2-D projection.
   const can3d = components >= 3;
+  // Supervised probe of a task scalar (present when `manifold --probe` ran).
+  const scalar = trace.manifold.scalar;
+  const probe = active.probe;
   const activeView: '2d' | '3d' = can3d ? view : '2d';
 
   return (
@@ -143,6 +159,35 @@ export function ManifoldTab({
             </div>
           </div>
         )}
+        {scalar && (
+          <div className="manifold-tab__control">
+            <span className="manifold-tab__control-label">Colour by</span>
+            <div
+              className="manifold-tab__view"
+              role="group"
+              aria-label="Colour points by"
+            >
+              <button
+                type="button"
+                className="manifold-tab__view-option"
+                data-selected={colorBy === 'step' ? 'true' : 'false'}
+                data-testid="manifold-color-step"
+                onClick={() => setColorBy('step')}
+              >
+                Step
+              </button>
+              <button
+                type="button"
+                className="manifold-tab__view-option"
+                data-selected={colorBy === 'scalar' ? 'true' : 'false'}
+                data-testid="manifold-color-scalar"
+                onClick={() => setColorBy('scalar')}
+              >
+                {scalar.name}
+              </button>
+            </div>
+          </div>
+        )}
         {activeView === '2d' && (
           <>
             <div className="manifold-tab__control">
@@ -182,19 +227,22 @@ export function ManifoldTab({
               <ManifoldScatter3D
                 coords={active.projection.coords}
                 positions={active.positions}
+                colorValues={colorValues}
                 selectedStep={selectedStep}
                 hoveredStep={hoveredStep}
                 onSelectStep={onSelectStep}
                 onHoverStep={onHoverStep}
               />
               <p className="manifold-tab__hint">
-                Drag to rotate · colour follows generation step
+                Drag to rotate · colour ={' '}
+                {colorBy === 'scalar' && scalar ? scalar.name : 'generation step'}
               </p>
             </>
           ) : (
             <ManifoldScatter
               coords={active.projection.coords}
               positions={active.positions}
+              colorValues={colorValues}
               xComponent={safeX}
               yComponent={safeY}
               selectedStep={selectedStep}
@@ -233,6 +281,14 @@ export function ManifoldTab({
                 )}`}
               </dd>
             </div>
+            {probe && (
+              <div className="manifold-tab__metric manifold-tab__metric--probe">
+                <dt>{`Probe R² · ${probe.scalar}`}</dt>
+                <dd data-testid="manifold-metric-probe-r2">
+                  {formatNumber(probe.r2_cv, 2)}
+                </dd>
+              </div>
+            )}
           </dl>
 
           <div className="manifold-tab__scree">

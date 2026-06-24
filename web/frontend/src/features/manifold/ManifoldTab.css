@@ -181,6 +181,13 @@
   color: var(--color-accent-text);
 }
 
+/* The supervised probe metric — marked with a spectrum edge as the "this is
+   the task-scalar decodability" readout. */
+.manifold-tab__metric--probe {
+  border-left: 2px solid transparent;
+  border-image: var(--gradient-spectrum) 1;
+}
+
 .manifold-tab__scree-title {
   margin: 0 0 6px;
   font-family: var(--font-display);

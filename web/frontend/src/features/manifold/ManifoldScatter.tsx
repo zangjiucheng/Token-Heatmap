@@ -7,6 +7,11 @@ export interface ManifoldScatterProps {
   coords: number[][];
   /** Generation-step index for each row, aligned with `coords`. */
   positions: number[];
+  /**
+   * Optional per-row values to colour by (e.g. a probe scalar). Defaults to
+   * `positions` (colour-by-step) when omitted.
+   */
+  colorValues?: number[];
   /** Column of `coords` plotted on the x axis. */
   xComponent: number;
   /** Column of `coords` plotted on the y axis. */
@@ -45,6 +50,7 @@ function extent(values: number[]): [number, number] {
 export function ManifoldScatter({
   coords,
   positions,
+  colorValues,
   xComponent,
   yComponent,
   selectedStep,
@@ -58,9 +64,9 @@ export function ManifoldScatter({
     const ys = coords.map((row) => row[yComponent] ?? 0);
     const [xmin, xmax] = extent(xs);
     const [ymin, ymax] = extent(ys);
-    const tMin = positions.length ? Math.min(...positions) : 0;
-    const tMax = positions.length ? Math.max(...positions) : 1;
-    const tSpan = tMax - tMin || 1;
+    const cvals = colorValues ?? positions;
+    const [cMin, cMax] = extent(cvals);
+    const cSpan = cMax - cMin || 1;
     return coords.map((row, i) => {
       const xv = row[xComponent] ?? 0;
       const yv = row[yComponent] ?? 0;
@@ -71,10 +77,10 @@ export function ManifoldScatter({
         step: positions[i] ?? i,
         x: px,
         y: py,
-        color: rampColor((positions[i] - tMin) / tSpan),
+        color: rampColor(((cvals[i] ?? cMin) - cMin) / cSpan),
       };
     });
-  }, [coords, positions, xComponent, yComponent]);
+  }, [coords, positions, colorValues, xComponent, yComponent]);
 
   const pathD = useMemo(
     () =>

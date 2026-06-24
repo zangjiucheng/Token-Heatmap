@@ -85,4 +85,32 @@ export function makeTraceWithoutManifold(): Trace {
   return { ...trace, manifold: undefined };
 }
 
+/** A manifold trace augmented with a supervised probe + scalar (as
+ * `manifold --probe line_position` produces). */
+export function makeManifoldTraceWithProbe(): Trace {
+  const trace = makeManifoldTrace();
+  const m = trace.manifold!;
+  return {
+    ...trace,
+    manifold: {
+      ...m,
+      scalar: {
+        name: 'line_position',
+        positions: Array.from({ length: N_POSITIONS }, (_, i) => i),
+        values: Array.from({ length: N_POSITIONS }, (_, i) => i % 3),
+      },
+      layers: m.layers.map((l, idx) => ({
+        ...l,
+        probe: {
+          scalar: 'line_position',
+          r2_cv: 0.8 - idx * 0.1,
+          r2_full: 0.9,
+          n_components: 3,
+          cv_folds: 2,
+        },
+      })),
+    },
+  };
+}
+
 export const FIXTURE_MANIFOLD_POSITIONS = N_POSITIONS;

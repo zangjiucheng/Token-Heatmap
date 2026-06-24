@@ -13,6 +13,8 @@ export interface ManifoldScatter3DProps {
   coords: number[][];
   /** Generation-step index for each row, aligned with `coords`. */
   positions: number[];
+  /** Optional per-row values to colour by; defaults to `positions`. */
+  colorValues?: number[];
   selectedStep: number | null;
   hoveredStep: number | null;
   onSelectStep: (step: number) => void;
@@ -33,6 +35,7 @@ const PITCH_LIMIT = 1.45;
 export function ManifoldScatter3D({
   coords,
   positions,
+  colorValues,
   selectedStep,
   hoveredStep,
   onSelectStep,
@@ -44,10 +47,11 @@ export function ManifoldScatter3D({
 
   const { proj, colors, pathD, tMin, tSpan } = useMemo(() => {
     const projection = projectManifold(coords, rotation.yaw, rotation.pitch);
-    const min = positions.length ? Math.min(...positions) : 0;
-    const max = positions.length ? Math.max(...positions) : 1;
+    const cvals = colorValues ?? positions;
+    const min = cvals.length ? Math.min(...cvals) : 0;
+    const max = cvals.length ? Math.max(...cvals) : 1;
     const span = max - min || 1;
-    const cols = positions.map((p) => rampColor((p - min) / span));
+    const cols = cvals.map((v) => rampColor((v - min) / span));
     const d = projection.points
       .map(
         (p, i) =>
@@ -55,7 +59,7 @@ export function ManifoldScatter3D({
       )
       .join(' ');
     return { proj: projection, colors: cols, pathD: d, tMin: min, tSpan: span };
-  }, [coords, positions, rotation]);
+  }, [coords, positions, colorValues, rotation]);
 
   // Far-to-near draw order so nearer points overpaint farther ones.
   const ordered = useMemo(

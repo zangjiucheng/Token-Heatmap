@@ -5,6 +5,7 @@ import { ManifoldTab } from './ManifoldTab';
 import {
   FIXTURE_MANIFOLD_POSITIONS,
   makeManifoldTrace,
+  makeManifoldTraceWithProbe,
   makeTraceWithoutManifold,
 } from './testFixtures';
 
@@ -40,6 +41,40 @@ describe('ManifoldTab', () => {
     expect(screen.getByTestId('manifold-scatter-3d')).toBeInTheDocument();
     expect(screen.getByTestId('manifold-scree')).toBeInTheDocument();
     expect(screen.getByTestId('manifold-metrics')).toBeInTheDocument();
+  });
+
+  it('shows the colour-by toggle and probe R² when a probe is present', async () => {
+    render(
+      <ManifoldTab
+        trace={makeManifoldTraceWithProbe()}
+        selectedStep={null}
+        onSelectStep={noop}
+        hoveredStep={null}
+        onHoverStep={noop}
+      />,
+    );
+    // Probe R² readout for the active (first) layer.
+    expect(screen.getByTestId('manifold-metric-probe-r2')).toHaveTextContent(
+      '0.80',
+    );
+    // Colour-by toggle exists; switching colour mode keeps the scatter mounted.
+    expect(screen.getByTestId('manifold-color-scalar')).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('manifold-color-step'));
+    expect(screen.getByTestId('manifold-scatter-3d')).toBeInTheDocument();
+  });
+
+  it('omits the probe UI when no probe is present', () => {
+    render(
+      <ManifoldTab
+        trace={makeManifoldTrace()}
+        selectedStep={null}
+        onSelectStep={noop}
+        hoveredStep={null}
+        onHoverStep={noop}
+      />,
+    );
+    expect(screen.queryByTestId('manifold-metric-probe-r2')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('manifold-color-scalar')).not.toBeInTheDocument();
   });
 
   it('toggles between the 3-D and 2-D projection', async () => {
