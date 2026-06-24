@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Trace } from '@/types/trace';
+import { useThemeTokens } from '@/hooks/useThemeTokens';
 import {
   ATTENTION_METRICS,
   ATTENTION_METRIC_LABELS,
@@ -75,6 +76,7 @@ export function AttentionLayerHeadGrid({
   initialMetric = 'entropy',
   onSelectHead,
 }: AttentionLayerHeadGridProps) {
+  const tk = useThemeTokens();
   const [metric, setMetric] = useState<AttentionMetric>(initialMetric);
   const [hover, setHover] = useState<GridCell | null>(null);
 
@@ -201,7 +203,7 @@ export function AttentionLayerHeadGrid({
               width={CELL_SIZE}
               height={CELL_SIZE}
               fill={colorFor(cell.value, min, max)}
-              stroke={isSelected ? '#ffffff' : 'transparent'}
+              stroke={isSelected ? tk.text : 'transparent'}
               strokeWidth={isSelected ? 2 : 0}
               data-testid={`attention-cell-${cell.layer}-${cell.head}`}
               data-layer={cell.layer}
