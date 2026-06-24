@@ -74,31 +74,38 @@ confounded.
 
 ## Running a bigger model (GPU + Slurm)
 
-### ⚠️ Step 0 — make the GPU actually work
+### Step 0 — use the GPU env (built + verified ✅)
 
-**Today every "GPU" job silently runs on CPU.** The installed torch is
-`2.12.1+cu130` (CUDA 13.0) but the GPU nodes' driver is **CUDA 12.4** — too old —
-so `torch.cuda.is_available()` is `False` (the job log prints `device=cpu` and a
-"NVIDIA driver too old" warning). That's tolerable for 7B at short lengths
-(~6 min on CPU) but hopeless for anything bigger or longer.
+The default CLI (`/work/j7zang/.local/bin/token-heatmap`) runs everything on
+**CPU**: its torch is `2.12.1+cu130` (CUDA 13.0) but the GPU nodes' driver is
+**550.90.07 = CUDA 12.4**, too old, so `torch.cuda.is_available()` is `False`
+(the log prints `device=cpu` + a "driver too old" warning). Tolerable for 7B at
+short lengths (~6 min) but hopeless for anything bigger/longer.
 
-To use the RTX‑6000 / L40S you need a torch built for **CUDA ≤ 12.4**. Do this in
-a **dedicated env** so it can't break your other research (`bridge-routing`,
-etc.) that depends on the current torch:
+A **dedicated GPU venv** is already set up so it can't disturb your other
+research (`bridge-routing`, etc.): **`/work/j7zang/th-gpu`** with
+`torch 2.6.0+cu124`. Verified on an L40S — `device=cuda`, real matmul works,
+7B loads on GPU. **Use its CLI for GPU runs:**
 
 ```bash
-# on the HPC, a throwaway venv just for token-heatmap GPU runs
+BIN=/work/j7zang/th-gpu/bin/token-heatmap
+```
+
+How it was built (for reproduction / rebuilding):
+
+```bash
 /opt/uw/anaconda3/2025.06.1/bin/python3.13 -m venv /work/j7zang/th-gpu
 source /work/j7zang/th-gpu/bin/activate
 pip install --upgrade pip
-pip install torch --index-url https://download.pytorch.org/whl/cu124   # or cu121
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
 pip install -e /work/j7zang/Token-Heatmap
-python -c "import torch; print('cuda:', torch.cuda.is_available())"     # must print True
+# verify ON A GPU NODE (the login node has no GPU):
+#   srun --account=normal --qos=normal --gres=gpu:l40s:1 --mem=8G --time=00:05:00 \
+#     /work/j7zang/th-gpu/bin/python -c "import torch; print(torch.cuda.is_available())"
 ```
 
-Then point the Slurm job at that env's CLI:
-`BIN=/work/j7zang/th-gpu/bin/token-heatmap`. With CUDA live, 7B drops from
-~6 min to ~1 min — which is the real enabler for longer traces and bigger models.
+With CUDA live, generation is fast (model load ~1 min dominates), so longer
+`wrap-text` traces and bigger models become practical.
 
 ### Slurm — RTX‑6000
 
