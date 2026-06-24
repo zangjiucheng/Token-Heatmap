@@ -142,6 +142,12 @@ def test_cli_manifold_probe_argparse() -> None:
 
     default = parser.parse_args(["manifold", "--trace", "t.json"])
     assert default.probe is None
+    assert default.scalar_max is None
+
+    scoped = parser.parse_args(
+        ["manifold", "--trace", "t.json", "--probe", "line_position", "--scalar-max", "60"]
+    )
+    assert scoped.scalar_max == 60.0
 
     with pytest.raises(SystemExit):
         parser.parse_args(["manifold", "--trace", "t.json", "--probe", "nope"])

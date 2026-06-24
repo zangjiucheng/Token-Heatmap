@@ -437,6 +437,17 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "the web app). 'line_position' = characters since the last newline."
         ),
     )
+    manifold_parser.add_argument(
+        "--scalar-max",
+        type=float,
+        default=None,
+        help=(
+            "Drop positions whose probe scalar exceeds this before fitting (keeps "
+            "the manifold geometry untouched). Use it to exclude run-on outliers — "
+            "e.g. a single line the model failed to wrap — that otherwise skew the "
+            "period sweep and inflate the helix R²."
+        ),
+    )
     manifold_parser.set_defaults(func=run_manifold)
 
     serve_parser = subparsers.add_parser(
@@ -1197,8 +1208,14 @@ def run_manifold(args: argparse.Namespace) -> int:
         entry = analyze_manifold(matrix, positions=positions, n_components=args.components)
         if scalar_by_step is not None:
             cloud_scalar = [scalar_by_step.get(p, 0.0) for p in positions]
-            probe = linear_probe(matrix, cloud_scalar)
-            helix = helix_probe(matrix, cloud_scalar)
+            probe_matrix = matrix
+            probe_scalar = cloud_scalar
+            if args.scalar_max is not None:
+                keep = [i for i, v in enumerate(cloud_scalar) if v <= args.scalar_max]
+                probe_matrix = matrix[keep]
+                probe_scalar = [cloud_scalar[i] for i in keep]
+            probe = linear_probe(probe_matrix, probe_scalar)
+            helix = helix_probe(probe_matrix, probe_scalar)
             entry["probe"] = {
                 "scalar": args.probe,
                 "r2_cv": probe["r2_cv"],

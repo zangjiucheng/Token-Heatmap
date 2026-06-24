@@ -40,7 +40,20 @@ def main() -> int:
     values = scalar["values"]
     s_min, s_max = min(values), max(values)
     s_range = s_max - s_min
-    print(f"scalar: {scalar['name']}  |  positions: {len(values)}  |  range: {s_min:.0f}–{s_max:.0f}")
+    # Robust span (2.5–97.5 pct) for the "interior period" test, so a single
+    # run-on line (e.g. the model failing to wrap) can't inflate the range and
+    # fool the verdict into calling a boundary period "interior".
+    sv = sorted(values)
+    pct = lambda p: sv[min(len(sv) - 1, int(p / 100 * len(sv)))]
+    robust_range = (pct(97.5) - pct(2.5)) or s_range
+    outlier = s_max > 1.5 * pct(97.5) + 1e-9
+    print(f"scalar: {scalar['name']}  |  positions: {len(values)}  |  range: {s_min:.0f}–{s_max:.0f}", end="")
+    print(f"  (robust span ~{robust_range:.0f})" if outlier else "")
+    if outlier:
+        print(
+            f"  ⚠ run-on outlier: max {s_max:.0f} >> typical ~{pct(97.5):.0f}. "
+            "Re-run `manifold --probe` with --scalar-max to exclude it."
+        )
     print()
 
     rows = []
@@ -68,8 +81,8 @@ def main() -> int:
     # period≈range fit is a single bend / ramp alias, not a repeating coil).
     interior = (
         [(r[0], r[3], r[2]) for r in rows
-         if r[3] is not None and r[2] is not None and s_range > 0 and r[2] < 0.9 * s_range]
-        if s_range > 0
+         if r[3] is not None and r[2] is not None and r[2] < 0.9 * robust_range]
+        if robust_range > 0
         else []
     )
     strong = [t for t in interior if t[1] > 0.5]
