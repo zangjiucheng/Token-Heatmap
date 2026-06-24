@@ -89,12 +89,20 @@ def _load_model_and_tokenizer(model_id: str) -> tuple[Any, Any, str]:
     dtype = torch.float16 if use_cuda else torch.float32
 
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id,
-        torch_dtype=dtype,
-        trust_remote_code=True,
-    )
-    model = model.to(device)  # type: ignore[arg-type]
+    load_kwargs: dict[str, Any] = {
+        "torch_dtype": dtype,
+        "trust_remote_code": True,
+    }
+    if use_cuda:
+        # Stream the weight shards straight onto the GPU rather than
+        # materialising the whole model in host RAM first and then `.to(cuda)`.
+        # A 14B fp16 model would otherwise peak ~28 GB of CPU memory and blow a
+        # tight Slurm --mem cap. Needs `accelerate` (a declared dependency).
+        load_kwargs["device_map"] = {"": 0}
+        load_kwargs["low_cpu_mem_usage"] = True
+    model = AutoModelForCausalLM.from_pretrained(model_id, **load_kwargs)
+    if not use_cuda:
+        model = model.to(device)  # type: ignore[arg-type]
     model.eval()
 
     entry = (model, tokenizer, device)
