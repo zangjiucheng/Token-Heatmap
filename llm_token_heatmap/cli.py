@@ -164,6 +164,12 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         help="HuggingFace model id or local path (e.g. Qwen/Qwen2.5-0.5B-Instruct).",
     )
     trace_parser.add_argument(
+        "--load-in-4bit",
+        action="store_true",
+        help="Load the model in 4-bit NF4 (bitsandbytes) on GPU — fits a 32B on a "
+        "single 48 GB GPU. Ignored on CPU. Activations are still captured in fp16.",
+    )
+    trace_parser.add_argument(
         "--prompt",
         default=None,
         help="Input prompt string for generation.",
@@ -575,14 +581,36 @@ def run_trace(args: argparse.Namespace) -> int:
     device = "cuda" if use_cuda else "cpu"
     dtype = torch.float16 if use_cuda else torch.float32
 
-    print(f"Loading tokenizer and model: {args.model} (device={device})")
-    tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model,
-        torch_dtype=dtype,
-        trust_remote_code=True,
+    load_in_4bit = bool(getattr(args, "load_in_4bit", False)) and use_cuda
+    print(
+        f"Loading tokenizer and model: {args.model} "
+        f"(device={device}{', 4-bit NF4' if load_in_4bit else ''})"
     )
-    model = model.to(device)  # type: ignore[arg-type]
+    tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
+    load_kwargs: dict[str, Any] = {"trust_remote_code": True}
+    if use_cuda:
+        # Stream the weight shards straight onto the GPU rather than building the
+        # full model in host RAM and then `.to(cuda)` (a 14B fp16 peaks ~28 GB of
+        # CPU memory; a 32B would blow a tight Slurm --mem cap). Needs accelerate.
+        load_kwargs["device_map"] = {"": 0}
+        load_kwargs["low_cpu_mem_usage"] = True
+        if load_in_4bit:
+            # 4-bit NF4 — fits a 32B on a single 48 GB GPU. Needs bitsandbytes.
+            from transformers import BitsAndBytesConfig
+
+            load_kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True,
+            )
+        else:
+            load_kwargs["torch_dtype"] = dtype
+    else:
+        load_kwargs["torch_dtype"] = dtype
+    model = AutoModelForCausalLM.from_pretrained(args.model, **load_kwargs)
+    if not use_cuda:
+        model = model.to(device)  # type: ignore[arg-type]
     model.eval()
 
     probe = AdaptiveTokenProbe(
