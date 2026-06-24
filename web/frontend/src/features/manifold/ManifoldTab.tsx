@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Trace } from '@/types/trace';
 import { ManifoldScatter } from './ManifoldScatter';
+import { ManifoldScatter3D } from './ManifoldScatter3D';
 import { ManifoldScreePlot } from './ManifoldScreePlot';
 import './ManifoldTab.css';
 
@@ -41,6 +42,7 @@ export function ManifoldTab({
   );
   const [xComponent, setXComponent] = useState(0);
   const [yComponent, setYComponent] = useState(1);
+  const [view, setView] = useState<'2d' | '3d'>('3d');
 
   // Keep the selection valid if the trace (and thus its layers) changes.
   useEffect(() => {
@@ -82,6 +84,9 @@ export function ManifoldTab({
   // Clamp axis selectors to the available components for this cloud.
   const safeX = Math.min(xComponent, components - 1);
   const safeY = Math.min(yComponent, Math.max(0, components - 1));
+  // 3-D needs three components; otherwise fall back to the 2-D projection.
+  const can3d = components >= 3;
+  const activeView: '2d' | '3d' = can3d ? view : '2d';
 
   return (
     <div
@@ -109,46 +114,95 @@ export function ManifoldTab({
             })}
           </select>
         </div>
-        <div className="manifold-tab__control">
-          <label htmlFor="manifold-x-select">X axis</label>
-          <select
-            id="manifold-x-select"
-            value={safeX}
-            onChange={(e) => setXComponent(Number(e.target.value))}
-            data-testid="manifold-x-select"
-          >
-            {componentOptions.map((i) => (
-              <option key={i} value={i}>{`PC${i + 1}`}</option>
-            ))}
-          </select>
-        </div>
-        <div className="manifold-tab__control">
-          <label htmlFor="manifold-y-select">Y axis</label>
-          <select
-            id="manifold-y-select"
-            value={safeY}
-            onChange={(e) => setYComponent(Number(e.target.value))}
-            data-testid="manifold-y-select"
-          >
-            {componentOptions.map((i) => (
-              <option key={i} value={i}>{`PC${i + 1}`}</option>
-            ))}
-          </select>
-        </div>
+        {can3d && (
+          <div className="manifold-tab__control">
+            <span className="manifold-tab__control-label">View</span>
+            <div
+              className="manifold-tab__view"
+              role="group"
+              aria-label="Projection view"
+            >
+              <button
+                type="button"
+                className="manifold-tab__view-option"
+                data-selected={activeView === '3d' ? 'true' : 'false'}
+                data-testid="manifold-view-3d"
+                onClick={() => setView('3d')}
+              >
+                3D
+              </button>
+              <button
+                type="button"
+                className="manifold-tab__view-option"
+                data-selected={activeView === '2d' ? 'true' : 'false'}
+                data-testid="manifold-view-2d"
+                onClick={() => setView('2d')}
+              >
+                2D
+              </button>
+            </div>
+          </div>
+        )}
+        {activeView === '2d' && (
+          <>
+            <div className="manifold-tab__control">
+              <label htmlFor="manifold-x-select">X axis</label>
+              <select
+                id="manifold-x-select"
+                value={safeX}
+                onChange={(e) => setXComponent(Number(e.target.value))}
+                data-testid="manifold-x-select"
+              >
+                {componentOptions.map((i) => (
+                  <option key={i} value={i}>{`PC${i + 1}`}</option>
+                ))}
+              </select>
+            </div>
+            <div className="manifold-tab__control">
+              <label htmlFor="manifold-y-select">Y axis</label>
+              <select
+                id="manifold-y-select"
+                value={safeY}
+                onChange={(e) => setYComponent(Number(e.target.value))}
+                data-testid="manifold-y-select"
+              >
+                {componentOptions.map((i) => (
+                  <option key={i} value={i}>{`PC${i + 1}`}</option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="manifold-tab__body">
         <div className="manifold-tab__scatter">
-          <ManifoldScatter
-            coords={active.projection.coords}
-            positions={active.positions}
-            xComponent={safeX}
-            yComponent={safeY}
-            selectedStep={selectedStep}
-            hoveredStep={hoveredStep}
-            onSelectStep={onSelectStep}
-            onHoverStep={onHoverStep}
-          />
+          {activeView === '3d' ? (
+            <>
+              <ManifoldScatter3D
+                coords={active.projection.coords}
+                positions={active.positions}
+                selectedStep={selectedStep}
+                hoveredStep={hoveredStep}
+                onSelectStep={onSelectStep}
+                onHoverStep={onHoverStep}
+              />
+              <p className="manifold-tab__hint">
+                Drag to rotate · colour follows generation step
+              </p>
+            </>
+          ) : (
+            <ManifoldScatter
+              coords={active.projection.coords}
+              positions={active.positions}
+              xComponent={safeX}
+              yComponent={safeY}
+              selectedStep={selectedStep}
+              hoveredStep={hoveredStep}
+              onSelectStep={onSelectStep}
+              onHoverStep={onHoverStep}
+            />
+          )}
         </div>
 
         <div className="manifold-tab__side">

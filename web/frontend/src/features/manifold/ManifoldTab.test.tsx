@@ -36,9 +36,28 @@ describe('ManifoldTab', () => {
       />,
     );
     expect(screen.getByTestId('manifold-tab-content')).toBeInTheDocument();
-    expect(screen.getByTestId('manifold-scatter')).toBeInTheDocument();
+    // Defaults to the 3-D projection when the cloud has >= 3 components.
+    expect(screen.getByTestId('manifold-scatter-3d')).toBeInTheDocument();
     expect(screen.getByTestId('manifold-scree')).toBeInTheDocument();
     expect(screen.getByTestId('manifold-metrics')).toBeInTheDocument();
+  });
+
+  it('toggles between the 3-D and 2-D projection', async () => {
+    render(
+      <ManifoldTab
+        trace={makeManifoldTrace()}
+        selectedStep={null}
+        onSelectStep={noop}
+        hoveredStep={null}
+        onHoverStep={noop}
+      />,
+    );
+    expect(screen.getByTestId('manifold-scatter-3d')).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('manifold-view-2d'));
+    expect(screen.getByTestId('manifold-scatter')).toBeInTheDocument();
+    expect(screen.queryByTestId('manifold-scatter-3d')).not.toBeInTheDocument();
+    // The X/Y component selectors only exist in the 2-D view.
+    expect(screen.getByTestId('manifold-x-select')).toBeInTheDocument();
   });
 
   it('draws one point per token position', () => {
