@@ -20,7 +20,8 @@
 #SBATCH --qos=normal
 #SBATCH --gres=gpu:l40s:1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
+# qos=normal caps mem at 30000M and cpu at 12 per user; 28G/8cpu stays under it.
+#SBATCH --mem=28G
 #SBATCH --time=01:00:00
 #SBATCH --chdir=/work/j7zang/Token-Heatmap
 #SBATCH --output=outputs/hpc-gen-%j.log
