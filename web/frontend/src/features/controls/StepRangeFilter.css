@@ -1,7 +1,7 @@
 .step-range-filter {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .step-range-filter__header {
@@ -12,42 +12,88 @@
 }
 
 .step-range-filter__label {
-  font-size: 12px;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--track-label);
 }
 
 .step-range-filter__readout {
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
-  color: var(--color-text);
+  color: var(--color-accent-text);
 }
 
 .step-range-filter__inputs {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .step-range-filter__thumb {
   display: grid;
-  grid-template-columns: 44px 1fr;
+  grid-template-columns: 40px 1fr;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .step-range-filter__thumb-label {
-  font-size: 11px;
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
   color: var(--color-text-muted);
 }
 
+/* Range inputs styled as instrument sliders: a thin rail with a teal thumb. */
 .step-range-filter__thumb input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
+  height: 4px;
+  margin: 6px 0;
+  border-radius: 999px;
+  background: var(--color-bg-muted);
+  cursor: pointer;
+}
+
+.step-range-filter__thumb input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-border-strong);
+  transition: transform var(--transition-fast);
+}
+
+.step-range-filter__thumb input[type='range']::-webkit-slider-thumb:hover {
+  transform: scale(1.12);
+}
+
+.step-range-filter__thumb input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-bg-muted);
+}
+
+.step-range-filter__thumb input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-border-strong);
 }
 
 .step-range-filter__thumb input[type='range']:focus-visible {
   outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline-offset: 4px;
+  border-radius: 999px;
 }

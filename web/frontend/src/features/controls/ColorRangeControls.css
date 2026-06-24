@@ -8,17 +8,19 @@
 }
 
 .color-range-controls__legend {
-  font-size: 12px;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--track-label);
 }
 
 .color-range-controls__modes {
   display: inline-flex;
-  gap: 12px;
-  font-size: 13px;
+  gap: 14px;
+  font-size: var(--text-sm);
+  accent-color: var(--color-accent);
 }
 
 .color-range-controls__mode {
@@ -37,17 +39,22 @@
 .color-range-controls__input {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: 12px;
+  gap: 4px;
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
   color: var(--color-text-muted);
 }
 
 .color-range-controls__input input {
-  padding: 4px 6px;
+  padding: 6px 8px;
   border: 1px solid var(--color-border);
   background: var(--color-bg-elevated);
-  border-radius: 4px;
-  font-size: 13px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
