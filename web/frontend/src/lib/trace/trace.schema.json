@@ -373,6 +373,42 @@
           "type": "integer",
           "minimum": 0,
           "description": "Number of CV folds used (0 when CV was skipped)."
+        },
+        "circular": {
+          "$ref": "#/$defs/ManifoldProbeCircular"
+        }
+      }
+    },
+    "ManifoldProbeCircular": {
+      "type": "object",
+      "description": "Helix test: how decodable the *circular* coordinate cos/sin(2π·scalar/period) of the scalar is, at the best-fitting period. High circular r2_cv together with a high linear probe r2_cv is the helix signature (a plain linear ramp gives near-zero circular r2_cv).",
+      "required": [
+        "best_period",
+        "r2_cv",
+        "r2_full"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "best_period": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Period (in scalar units) whose circular coordinate is most decodable; null when the scalar range is too small to resolve one."
+        },
+        "r2_cv": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Cross-validated R² of decoding the circular coordinate at `best_period` (averaged over cos and sin)."
+        },
+        "r2_full": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "In-sample R² of the circular decode at `best_period`."
         }
       }
     },

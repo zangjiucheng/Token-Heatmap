@@ -107,6 +107,7 @@ export function makeManifoldTraceWithProbe(): Trace {
           r2_full: 0.9,
           n_components: 3,
           cv_folds: 2,
+          circular: { best_period: 7, r2_cv: 0.65 - idx * 0.1, r2_full: 0.75 },
         },
       })),
     },

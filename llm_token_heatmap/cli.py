@@ -1149,7 +1149,7 @@ def run_manifold(args: argparse.Namespace) -> int:
     scalar_by_step: dict[int, float] | None = None
     scalar_block: dict[str, Any] | None = None
     if args.probe:
-        from llm_token_heatmap.probe import SCALARS, linear_probe
+        from llm_token_heatmap.probe import SCALARS, helix_probe, linear_probe
 
         token_texts = [str(s.get("selected", {}).get("token", "")) for s in steps]
         step_numbers = [int(s["step"]) for s in steps]
@@ -1170,12 +1170,18 @@ def run_manifold(args: argparse.Namespace) -> int:
         if scalar_by_step is not None:
             cloud_scalar = [scalar_by_step.get(p, 0.0) for p in positions]
             probe = linear_probe(matrix, cloud_scalar)
+            helix = helix_probe(matrix, cloud_scalar)
             entry["probe"] = {
                 "scalar": args.probe,
                 "r2_cv": probe["r2_cv"],
                 "r2_full": probe["r2_full"],
                 "n_components": probe["n_components"],
                 "cv_folds": probe["cv_folds"],
+                "circular": {
+                    "best_period": helix["best_period"],
+                    "r2_cv": helix["r2_cv"],
+                    "r2_full": helix["r2_full"],
+                },
             }
         layers_out.append({"layer": layer, "submodule": submodule, **entry})
 

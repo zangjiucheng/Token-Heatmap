@@ -290,6 +290,27 @@ export interface ManifoldProbe {
    * Number of CV folds used (0 when CV was skipped).
    */
   cv_folds: number;
+  circular?: ManifoldProbeCircular;
+}
+/**
+ * Helix test: how decodable the *circular* coordinate cos/sin(2π·scalar/period) of the scalar is, at the best-fitting period. High circular r2_cv together with a high linear probe r2_cv is the helix signature (a plain linear ramp gives near-zero circular r2_cv).
+ *
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ManifoldProbeCircular".
+ */
+export interface ManifoldProbeCircular {
+  /**
+   * Period (in scalar units) whose circular coordinate is most decodable; null when the scalar range is too small to resolve one.
+   */
+  best_period: number | null;
+  /**
+   * Cross-validated R² of decoding the circular coordinate at `best_period` (averaged over cos and sin).
+   */
+  r2_cv: number | null;
+  /**
+   * In-sample R² of the circular decode at `best_period`.
+   */
+  r2_full: number | null;
 }
 /**
  * The per-position task scalar a supervised probe was fit against (present when `manifold --probe` was used). Lets the web app colour the manifold by the scalar instead of by generation step.

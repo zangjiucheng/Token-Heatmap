@@ -289,6 +289,14 @@ export function ManifoldTab({
                 </dd>
               </div>
             )}
+            {probe?.circular && probe.circular.best_period != null && (
+              <div className="manifold-tab__metric manifold-tab__metric--probe">
+                <dt>{`Helix R² · period ${formatNumber(probe.circular.best_period, 0)}`}</dt>
+                <dd data-testid="manifold-metric-helix-r2">
+                  {formatNumber(probe.circular.r2_cv, 2)}
+                </dd>
+              </div>
+            )}
           </dl>
 
           <div className="manifold-tab__scree">

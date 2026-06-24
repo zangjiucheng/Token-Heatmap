@@ -57,6 +57,10 @@ describe('ManifoldTab', () => {
     expect(screen.getByTestId('manifold-metric-probe-r2')).toHaveTextContent(
       '0.80',
     );
+    // Helix test readout (circular decode at the best period).
+    expect(screen.getByTestId('manifold-metric-helix-r2')).toHaveTextContent(
+      '0.65',
+    );
     // Colour-by toggle exists; switching colour mode keeps the scatter mounted.
     expect(screen.getByTestId('manifold-color-scalar')).toBeInTheDocument();
     await userEvent.click(screen.getByTestId('manifold-color-step'));
