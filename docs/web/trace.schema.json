@@ -334,6 +334,10 @@
           "type": ["string", "null"],
           "description": "URI pointer to a Tier 2 sidecar payload (full attention distribution and/or raw Q/K/V tensors) for this step, or null when no sidecar was written. Sidecar files follow `docs/web/attention-sidecar.schema.json`."
         },
+        "activation_sidecar_ref": {
+          "type": ["string", "null"],
+          "description": "URI pointer to a Tier 2 activation sidecar payload (full per-(layer, submodule) hidden-state tensors) for this step, written when generated with `--capture-full-activations`. Null or absent when no activation sidecar was written."
+        },
         "token_id": {
           "type": "integer",
           "minimum": 0,

@@ -286,6 +286,10 @@ export interface Step {
    */
   attention_sidecar_ref?: string | null;
   /**
+   * URI pointer to a Tier 2 activation sidecar payload (full per-(layer, submodule) hidden-state tensors) for this step, written when generated with `--capture-full-activations`. Null or absent when no activation sidecar was written.
+   */
+  activation_sidecar_ref?: string | null;
+  /**
    * Selected token id at this step. Mirrors `selected.token_id`; carried here so the projected activation subset of this trace matches `activation.schema.json#/$defs/ActivationStep`.
    */
   token_id?: number;

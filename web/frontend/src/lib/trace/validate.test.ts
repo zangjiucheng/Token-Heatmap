@@ -55,4 +55,19 @@ describe('validateTrace', () => {
     const pointers = err.issues!.map((i) => i.pointer);
     expect(pointers).toContain('/steps/0/raw/entropy');
   });
+
+  it('validate_accepts_activation_sidecar_ref_on_step', () => {
+    // The serializer emits `activation_sidecar_ref` per step under
+    // --capture-full-activations. Step has additionalProperties:false, so a
+    // missing schema property would fail every such step (regression guard:
+    // a full-activation trace from HPC failed with 64 "additional properties"
+    // errors until the schema declared this field).
+    const trace = cloneSample() as {
+      steps: Array<Record<string, unknown>>;
+    };
+    trace.steps[0].activation_sidecar_ref = 'activations/activation.0.npz';
+    trace.steps[1].activation_sidecar_ref = null;
+
+    expect(() => validateTrace(trace)).not.toThrow();
+  });
 });

@@ -19,3 +19,6 @@ vitest.config.d.ts
 .env
 .env.local
 .env.*.local
+
+# Playwright CLI scratch artifacts (snapshots, console logs)
+.playwright-cli/
