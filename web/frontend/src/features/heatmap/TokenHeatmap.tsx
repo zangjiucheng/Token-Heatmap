@@ -21,6 +21,7 @@ import {
 import { sampleColor } from './colormap';
 import { HeatmapTooltip, type HeatmapTooltipDatum } from './HeatmapTooltip';
 import { HeatmapLegend } from './HeatmapLegend';
+import { useThemeTokens } from '@/hooks/useThemeTokens';
 import './TokenHeatmap.css';
 
 export interface TokenHeatmapProps {
@@ -159,6 +160,10 @@ export function TokenHeatmap({
   const axisCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const dataCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Canvas can't read CSS vars; pull resolved theme colors and repaint on
+  // theme change (tk is in the draw effects' deps below).
+  const tk = useThemeTokens();
 
   const [size, setSize] = useState<{ w: number; h: number }>({
     w: widthProp ?? 800,
@@ -316,7 +321,7 @@ export function TokenHeatmap({
     ctx.clearRect(0, 0, w, h);
 
     // Background for the cell area.
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = tk.surface;
     ctx.fillRect(0, 0, w, plot.cellAreaH);
 
     const { cellW, cellH, originY } = plot;
@@ -332,7 +337,7 @@ export function TokenHeatmap({
     if (hctx) {
       hctx.fillStyle = 'rgba(0, 0, 0, 0)';
       hctx.fillRect(0, 0, hatchSize, hatchSize);
-      hctx.strokeStyle = 'rgba(154, 160, 166, 0.6)';
+      hctx.strokeStyle = tk.borderStrong;
       hctx.lineWidth = 1;
       hctx.beginPath();
       hctx.moveTo(-1, hatchSize + 1);
@@ -349,7 +354,7 @@ export function TokenHeatmap({
     ctx.clip();
 
     const fontSize = Math.max(8, Math.min(12, Math.floor(cellH * 0.6)));
-    ctx.font = `${fontSize}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+    ctx.font = `${fontSize}px 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -399,9 +404,8 @@ export function TokenHeatmap({
     ctx.restore();
 
     // X-axis ticks below the cell area (scrolls with the content).
-    ctx.fillStyle = '#4b5159';
-    ctx.font =
-      '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = tk.textMuted;
+    ctx.font = "11px 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     const xStride =
@@ -424,6 +428,7 @@ export function TokenHeatmap({
     effectiveMin,
     effectiveMax,
     onRenderTime,
+    tk,
   ]);
 
   // Paint the left-rail axis canvas (y-axis tick labels + rotated title).
@@ -445,9 +450,8 @@ export function TokenHeatmap({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    ctx.fillStyle = '#4b5159';
-    ctx.font =
-      '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = tk.textMuted;
+    ctx.font = "11px 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace";
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
 
@@ -460,7 +464,8 @@ export function TokenHeatmap({
     }
 
     // Rotated "Adaptive rank" label.
-    ctx.fillStyle = '#1a1d21';
+    ctx.fillStyle = tk.text;
+    ctx.font = "600 11px 'Space Grotesk', system-ui, sans-serif";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.save();
@@ -468,7 +473,7 @@ export function TokenHeatmap({
     ctx.rotate(-Math.PI / 2);
     ctx.fillText('Adaptive rank', 0, 0);
     ctx.restore();
-  }, [plot, grid.ranks]);
+  }, [plot, grid.ranks, tk]);
 
   // Paint the overlay canvas (selection column + hover crosshair). It lives
   // inside the scroll wrapper so its painted positions move with the content;

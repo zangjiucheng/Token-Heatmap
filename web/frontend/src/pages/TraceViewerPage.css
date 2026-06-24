@@ -20,7 +20,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 16px 12px;
+  padding: var(--space-4) var(--space-4) var(--space-3);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-elevated);
 }
@@ -30,20 +30,22 @@
 }
 
 .trace-viewer-center__eyebrow {
-  margin-bottom: 2px;
+  margin-bottom: 3px;
   color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
 }
 
 .trace-viewer-center__title {
   margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   color: var(--color-text);
-  font-size: 16px;
-  font-weight: 650;
-  line-height: 1.25;
 }
 
 .trace-viewer-center__prompt {
@@ -71,51 +73,71 @@
 
 .trace-viewer-center__meta dt {
   color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
 }
 
 .trace-viewer-center__meta dd {
   margin: 0;
   color: var(--color-text);
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
 }
 
+/* Lens selector — flat tabs; the active one is marked by the viridis
+   spectrum, tying the chrome to the data colormap (the page signature). */
 .trace-viewer-center__tabs {
   display: flex;
-  gap: 2px;
-  padding: 4px 12px 0;
+  gap: var(--space-1);
+  padding: 0 var(--space-4);
+  background: var(--color-bg-elevated);
   border-bottom: 1px solid var(--color-border);
 }
 
 .trace-viewer-center__tab {
+  position: relative;
   background: transparent;
-  border: 1px solid var(--color-border);
-  border-bottom: none;
-  color: var(--color-text);
-  padding: 6px 14px;
-  font-size: 13px;
-  border-radius: 4px 4px 0 0;
+  border: none;
+  color: var(--color-text-muted);
+  padding: 11px 12px;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 500;
   cursor: pointer;
-  margin-bottom: -1px;
+  transition: color var(--transition-fast);
+}
+
+.trace-viewer-center__tab::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background var(--transition-fast);
 }
 
 .trace-viewer-center__tab:hover:not(:disabled) {
-  background: var(--color-bg-muted);
+  color: var(--color-text);
 }
 
 .trace-viewer-center__tab:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.4;
 }
 
 .trace-viewer-center__tab--active {
-  background: var(--color-bg, #fff);
+  color: var(--color-text);
   font-weight: 600;
-  border-bottom: 1px solid var(--color-bg, #fff);
+}
+
+.trace-viewer-center__tab--active::after {
+  background: var(--gradient-spectrum);
 }
 
 .trace-viewer-center__heatmap {

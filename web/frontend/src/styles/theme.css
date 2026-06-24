@@ -1,25 +1,91 @@
 /*
- * Source of truth for every color used in the app.
+ * Source of truth for every color, font, and metric token in the app.
  * No rgb()/hsl()/hex literals are allowed outside this file.
  *
+ * Design language: "Probe" — a bench instrument for reading a model's
+ * internals. The accent system is sampled from the viridis scientific
+ * colormap the data visualisations use, so the chrome and the data share a
+ * single identity.
+ *
  * Categorical palette is Okabe-Ito (color-blind safe, distinguishable for
- * the most common forms of color vision deficiency).
+ * the most common forms of color vision deficiency) and is preserved as-is
+ * for correctness of the data marks.
  */
+
+:root {
+  /* Type — a technical grotesque for labels, a mono readout for all data. */
+  --font-display: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Type scale (1.20 minor third off a 13px data base). */
+  --text-2xs: 10.5px;
+  --text-xs: 11.5px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 19px;
+  --text-2xl: 23px;
+
+  /* The instrument's eyebrow/label treatment. */
+  --track-label: 0.09em;
+
+  /* Spacing scale. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Radii — modest; an instrument, not a pill-shaped SaaS card. */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --transition-fast: 120ms cubic-bezier(0.2, 0, 0, 1);
+
+  /* The signature: the viridis colormap, used for the active-lens indicator,
+     the brand mark, and selection accents. Same in both themes. */
+  --gradient-spectrum: linear-gradient(
+    90deg,
+    #440154 0%,
+    #414487 22%,
+    #2a788e 46%,
+    #22a884 68%,
+    #7ad151 86%,
+    #fde725 100%
+  );
+}
 
 :root,
 [data-theme='light'] {
   /* Surface and text */
-  --color-bg: #ffffff;
-  --color-bg-elevated: #f7f7f8;
-  --color-bg-muted: #eceef1;
+  --color-bg: #fbfcfe;
+  --color-bg-elevated: #ffffff;
+  --color-bg-muted: #eef2f7;
   --color-surface: #ffffff;
-  --color-border: #d6d9de;
-  --color-border-strong: #9aa0a6;
-  --color-text: #1a1d21;
-  --color-text-muted: #4b5159;
+  --color-border: #e2e8f0;
+  --color-border-strong: #aeb9c8;
+  --color-text: #0a0e15;
+  --color-text-muted: #586273;
   --color-text-inverse: #ffffff;
-  --color-link: #005bbb;
-  --color-focus-ring: rgb(0 114 178);
+
+  /* Accent — signal teal sampled from mid-viridis. `accent` is for fills and
+     indicators; `accent-text` is darkened to stay AA on light surfaces. */
+  --color-accent: #109e89;
+  --color-accent-strong: #0a7d6c;
+  --color-accent-soft: #dff3ef;
+  --color-accent-text: #0a7163;
+  --color-accent-contrast: #ffffff;
+
+  /* Selection — warm amber, reserved for "the step you're inspecting". */
+  --color-selected: #b26b05;
+  --color-selected-soft: #fbeccd;
+
+  --color-link: var(--color-accent-text);
+  --color-focus-ring: var(--color-accent);
 
   /* Status */
   --color-status-error-bg: #fdecec;
@@ -33,6 +99,9 @@
   /* Skeleton */
   --color-skeleton: #e3e6ea;
   --color-skeleton-shine: #f3f5f7;
+
+  --shadow-panel: 0 1px 2px rgb(10 14 21 / 6%), 0 8px 24px rgb(10 14 21 / 4%);
+  --shadow-pop: 0 6px 28px rgb(10 14 21 / 12%);
 
   /* Okabe-Ito categorical palette */
   --okabe-black: #000000;
@@ -58,17 +127,27 @@
 }
 
 [data-theme='dark'] {
-  --color-bg: #14171a;
-  --color-bg-elevated: #1c2025;
-  --color-bg-muted: #242a31;
-  --color-surface: #1c2025;
-  --color-border: #2f3640;
-  --color-border-strong: #5b6470;
-  --color-text: #ecedef;
-  --color-text-muted: #a8b0ba;
-  --color-text-inverse: #14171a;
-  --color-link: #56b4e9;
-  --color-focus-ring: #56b4e9;
+  --color-bg: #0a0e15;
+  --color-bg-elevated: #121a27;
+  --color-bg-muted: #1a2433;
+  --color-surface: #121a27;
+  --color-border: #232f41;
+  --color-border-strong: #3a4860;
+  --color-text: #dde4ee;
+  --color-text-muted: #8995a8;
+  --color-text-inverse: #0a0e15;
+
+  --color-accent: #35e0c6;
+  --color-accent-strong: #5fe9d3;
+  --color-accent-soft: #102a2a;
+  --color-accent-text: #4fe6cf;
+  --color-accent-contrast: #04140f;
+
+  --color-selected: #f4b650;
+  --color-selected-soft: #2c2310;
+
+  --color-link: var(--color-accent-text);
+  --color-focus-ring: var(--color-accent);
 
   --color-status-error-bg: #3a1414;
   --color-status-error-fg: #ffb3b3;
@@ -78,8 +157,11 @@
   --color-status-warning-fg: #f3d27a;
   --color-status-warning-border: #7a5a1f;
 
-  --color-skeleton: #242a31;
-  --color-skeleton-shine: #2f3640;
+  --color-skeleton: #1a2433;
+  --color-skeleton-shine: #243044;
+
+  --shadow-panel: 0 1px 0 rgb(0 0 0 / 40%), 0 12px 32px rgb(0 0 0 / 30%);
+  --shadow-pop: 0 8px 32px rgb(0 0 0 / 50%);
 
   color-scheme: dark;
 }
@@ -98,11 +180,12 @@ body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-text);
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
-    Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  font-size: 14px;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -111,6 +194,24 @@ a {
 
 button {
   font: inherit;
+}
+
+/* Data — every number, token, and metric reads as a mono instrument
+   readout with tabular figures so columns of values align. */
+.tabular,
+[data-numeric] {
+  font-family: var(--font-mono);
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Instrument eyebrow: small, tracked-out, uppercase label. */
+.eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
 :focus {
