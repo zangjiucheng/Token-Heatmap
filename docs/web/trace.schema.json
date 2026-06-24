@@ -169,6 +169,29 @@
           "type": "array",
           "description": "One manifold-analysis entry per analyzed (layer, submodule) cloud.",
           "items": { "$ref": "#/$defs/ManifoldLayer" }
+        },
+        "scalar": { "$ref": "#/$defs/ManifoldScalar" }
+      }
+    },
+    "ManifoldScalar": {
+      "type": "object",
+      "description": "The per-position task scalar a supervised probe was fit against (present when `manifold --probe` was used). Lets the web app colour the manifold by the scalar instead of by generation step.",
+      "required": ["name", "positions", "values"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Scalar name, e.g. `line_position` (characters since the last newline)."
+        },
+        "positions": {
+          "type": "array",
+          "description": "Generation-step index for each value.",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "values": {
+          "type": "array",
+          "description": "Scalar value at each position, aligned with `positions`.",
+          "items": { "type": "number" }
         }
       }
     },
@@ -214,7 +237,38 @@
         "intrinsic_dimension": { "$ref": "#/$defs/ManifoldIntrinsicDimension" },
         "projection": { "$ref": "#/$defs/ManifoldProjection" },
         "trajectory_curvature": { "$ref": "#/$defs/ManifoldCurvature" },
-        "periodicity": { "$ref": "#/$defs/ManifoldPeriodicity" }
+        "periodicity": { "$ref": "#/$defs/ManifoldPeriodicity" },
+        "probe": { "$ref": "#/$defs/ManifoldProbe" }
+      }
+    },
+    "ManifoldProbe": {
+      "type": "object",
+      "description": "Supervised linear-probe result for this cloud: how well the manifold's task scalar is linearly decodable from the activations. See `llm_token_heatmap/probe.py`.",
+      "required": ["scalar", "r2_cv", "r2_full", "n_components", "cv_folds"],
+      "additionalProperties": false,
+      "properties": {
+        "scalar": {
+          "type": "string",
+          "description": "Name of the probed scalar (matches `manifold.scalar.name`)."
+        },
+        "r2_cv": {
+          "type": ["number", "null"],
+          "description": "Cross-validated R² of the scalar decode; null when too few positions to cross-validate."
+        },
+        "r2_full": {
+          "type": ["number", "null"],
+          "description": "In-sample R² of the full-data fit; null when the probe could not be fit."
+        },
+        "n_components": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "PCA rank the cloud was reduced to before regressing."
+        },
+        "cv_folds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of CV folds used (0 when CV was skipped)."
+        }
       }
     },
     "ManifoldPca": {

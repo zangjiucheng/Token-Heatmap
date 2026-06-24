@@ -169,6 +169,7 @@ export interface Manifold {
    * One manifold-analysis entry per analyzed (layer, submodule) cloud.
    */
   layers: ManifoldLayer[];
+  scalar?: ManifoldScalar;
 }
 /**
  * This interface was referenced by `Trace`'s JSON-Schema
@@ -198,6 +199,7 @@ export interface ManifoldLayer {
   projection: ManifoldProjection;
   trajectory_curvature: ManifoldCurvature;
   periodicity: ManifoldPeriodicity;
+  probe?: ManifoldProbe;
 }
 /**
  * This interface was referenced by `Trace`'s JSON-Schema
@@ -260,6 +262,54 @@ export interface ManifoldPeriodicity {
    */
   power: number;
   peak_frequency: number | null;
+}
+/**
+ * Supervised linear-probe result for this cloud: how well the manifold's task scalar is linearly decodable from the activations. See `llm_token_heatmap/probe.py`.
+ *
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ManifoldProbe".
+ */
+export interface ManifoldProbe {
+  /**
+   * Name of the probed scalar (matches `manifold.scalar.name`).
+   */
+  scalar: string;
+  /**
+   * Cross-validated R² of the scalar decode; null when too few positions to cross-validate.
+   */
+  r2_cv: number | null;
+  /**
+   * In-sample R² of the full-data fit; null when the probe could not be fit.
+   */
+  r2_full: number | null;
+  /**
+   * PCA rank the cloud was reduced to before regressing.
+   */
+  n_components: number;
+  /**
+   * Number of CV folds used (0 when CV was skipped).
+   */
+  cv_folds: number;
+}
+/**
+ * The per-position task scalar a supervised probe was fit against (present when `manifold --probe` was used). Lets the web app colour the manifold by the scalar instead of by generation step.
+ *
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ManifoldScalar".
+ */
+export interface ManifoldScalar {
+  /**
+   * Scalar name, e.g. `line_position` (characters since the last newline).
+   */
+  name: string;
+  /**
+   * Generation-step index for each value.
+   */
+  positions: number[];
+  /**
+   * Scalar value at each position, aligned with `positions`.
+   */
+  values: number[];
 }
 /**
  * This interface was referenced by `Trace`'s JSON-Schema

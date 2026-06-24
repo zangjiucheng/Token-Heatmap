@@ -117,6 +117,12 @@ def _load_yaml_config(path: Path) -> dict:
     return out
 
 
+# Built-in probe scalar names, mirrored from `probe.SCALARS`. Kept as a literal
+# here so building the parser never imports numpy (the real registry lives in
+# `llm_token_heatmap.probe` and is loaded lazily inside `run_manifold`).
+_PROBE_SCALARS = ("line_position",)
+
+
 def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
     """Build the top-level argument parser for the `token-heatmap` CLI.
 
@@ -414,6 +420,16 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         type=int,
         default=3,
         help="Number of PCA projection components to keep (default: 3).",
+    )
+    manifold_parser.add_argument(
+        "--probe",
+        choices=sorted(_PROBE_SCALARS),
+        default=None,
+        help=(
+            "Fit a supervised linear probe of a per-position scalar against each "
+            "cloud (reports r2_cv per layer; colours the manifold by the scalar in "
+            "the web app). 'line_position' = characters since the last newline."
+        ),
     )
     manifold_parser.set_defaults(func=run_manifold)
 
@@ -1128,12 +1144,39 @@ def run_manifold(args: argparse.Namespace) -> int:
                 pos_list.append(step_idx)
                 vec_list.append(vector)
 
+    # Optional supervised probe: compute the per-position scalar once (in
+    # generation order) and a step -> value lookup to align with each cloud.
+    scalar_by_step: dict[int, float] | None = None
+    scalar_block: dict[str, Any] | None = None
+    if args.probe:
+        from llm_token_heatmap.probe import SCALARS, linear_probe
+
+        token_texts = [str(s.get("selected", {}).get("token", "")) for s in steps]
+        step_numbers = [int(s["step"]) for s in steps]
+        values = SCALARS[args.probe](token_texts)
+        scalar_by_step = {step_numbers[i]: values[i] for i in range(len(steps))}
+        scalar_block = {
+            "name": args.probe,
+            "positions": step_numbers,
+            "values": [float(v) for v in values],
+        }
+
     layers_out: list[dict[str, Any]] = []
     for (layer, submodule), (positions, vectors) in sorted(collected.items()):
         matrix = np.asarray(vectors, dtype=np.float64)
         if matrix.ndim != 2 or matrix.shape[0] < 2:
             continue  # need at least two positions to have any geometry
         entry = analyze_manifold(matrix, positions=positions, n_components=args.components)
+        if scalar_by_step is not None:
+            cloud_scalar = [scalar_by_step.get(p, 0.0) for p in positions]
+            probe = linear_probe(matrix, cloud_scalar)
+            entry["probe"] = {
+                "scalar": args.probe,
+                "r2_cv": probe["r2_cv"],
+                "r2_full": probe["r2_full"],
+                "n_components": probe["n_components"],
+                "cv_folds": probe["cv_folds"],
+            }
         layers_out.append({"layer": layer, "submodule": submodule, **entry})
 
     if not layers_out:
@@ -1149,6 +1192,8 @@ def run_manifold(args: argparse.Namespace) -> int:
         "n_components": int(args.components),
         "layers": layers_out,
     }
+    if scalar_block is not None:
+        payload["manifold"]["scalar"] = scalar_block
 
     out_path: Path = args.out if args.out is not None else trace_path
     out_path.parent.mkdir(parents=True, exist_ok=True)

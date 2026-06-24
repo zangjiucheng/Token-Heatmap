@@ -129,6 +129,24 @@ def test_cli_serve_argparse_and_missing_dir(tmp_path: Path) -> None:
     assert run_serve(parser.parse_args(["serve", str(tmp_path / "nope")])) == 2
 
 
+def test_cli_manifold_probe_argparse() -> None:
+    """`manifold --probe` accepts a known scalar, defaults to None, and rejects
+    an unknown scalar via argparse choices."""
+    parser, _ = build_parser()
+
+    args = parser.parse_args(
+        ["manifold", "--trace", "t.json", "--probe", "line_position"]
+    )
+    assert args.probe == "line_position"
+    assert args.components == 3
+
+    default = parser.parse_args(["manifold", "--trace", "t.json"])
+    assert default.probe is None
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(["manifold", "--trace", "t.json", "--probe", "nope"])
+
+
 def test_cli_help_lists_attention_flags(capsys: pytest.CaptureFixture[str]) -> None:
     parser, _ = build_parser()
     with pytest.raises(SystemExit) as exc:
