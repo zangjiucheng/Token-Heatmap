@@ -184,13 +184,15 @@ def helix_probe(
     """Test for a *helical* (periodic) encoding of ``scalar``.
 
     A helix encodes a scalar so that, beyond a linear ramp, the activation also
-    carries a circular coordinate ``cos/sin(2π · s / p)``. For each candidate
-    period ``p`` (integers from 2 up to the scalar's range) this measures how
-    decodable that circular coordinate is — the CV R² of a linear probe of
-    ``cos`` and ``sin``, averaged — and returns the best period and its R². High
-    circular R² *together with* a high linear probe is the helix signature; a
-    plain linear ramp gives near-zero circular R² (a linear map can't recover a
-    sinusoid of ``s``).
+    carries a circular coordinate ``cos/sin(2π · s / p)``. The catch: a plain
+    linear ramp aliases onto a period≈range cosine and masquerades as a helix.
+    So this first **removes the linear-scalar direction** from the activation
+    scores and only then measures, per candidate period, how decodable the
+    circular coordinate is *in the residual* (CV R², averaged over cos and sin).
+    A real helix keeps a high residual circular R² at some period; a plain ramp
+    (or a single bend) collapses to near zero once its ramp direction is gone.
+    High residual circular R² together with a high linear probe is the helix
+    signature.
 
     Returns ``{best_period, r2_cv, r2_full, n_periods}`` (Nones when the scalar's
     range or the cloud is too small to resolve a period).
@@ -212,8 +214,19 @@ def helix_probe(
     if z is None:
         return out
 
+    # Project out the linear-scalar (ramp) direction so the circular test sees
+    # only periodic structure orthogonal to the ramp.
+    s_centered = s - float(s.mean())
+    if float((s_centered**2).sum()) > 0:
+        w = _ridge_weights(z, s_centered, ridge)
+        norm = float(np.linalg.norm(w))
+        if norm > 0:
+            u = w / norm
+            z = z - np.outer(z @ u, u)
+
+    # Periods from 3 (period 2 is the Nyquist-trivial alias) up to the range.
     p_max = max(3, int(round(s_range)))
-    candidates = list(range(2, p_max + 1))
+    candidates = list(range(3, p_max + 1))
     if len(candidates) > max_periods:
         candidates = sorted(
             {int(round(p)) for p in np.linspace(2, p_max, max_periods)}
@@ -232,7 +245,7 @@ def helix_probe(
         if best_r2 is None or r2 > best_r2:
             best_r2 = r2
             best_period = p
-    if best_period is None:
+    if best_period is None or best_r2 is None:
         return out
 
     out["best_period"] = float(best_period)

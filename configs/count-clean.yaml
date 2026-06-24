@@ -1,0 +1,18 @@
+# Clean, long counting trace for the helix test — pure fixed-width lines, no
+# prose. The model continues an already-started "0123456789" pattern, so the
+# line-position scalar (column 0-9, resetting each newline) repeats over many
+# lines, giving the residual periodicity / helix test plenty of cycles to
+# resolve (the earlier 3-line trace was far too short).
+model: Qwen/Qwen2.5-7B-Instruct
+prompt: "Continue this exact pattern, one line at a time. Output only these lines and nothing else:\n0123456789\n0123456789\n0123456789\n0123456789\n0123456789\n"
+
+max_new_tokens: 256
+temperature: 0.1
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/count-clean
+
+capture_logit_lens: false

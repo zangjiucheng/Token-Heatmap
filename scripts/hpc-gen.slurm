@@ -38,20 +38,26 @@ OUT="${OUT:-outputs/qwen7b-run}"
 CONFIG="${CONFIG:-configs/example.yaml}"      # supplies prompt + sampling + logit-lens
 # extra trace flags (e.g. override prompt/tokens): EXTRA="--max-new-tokens 96"
 EXTRA="${EXTRA:-}"
+# CAPTURE=full (default) captures attention too; CAPTURE=activations skips the
+# (slow, eager) attention pass — use it for manifold/probe runs that only need
+# activations, especially longer generations.
+CAPTURE="${CAPTURE:-full}"
+ATTN_FLAGS="--capture-attention --attention-layers all --capture-full-attention"
+[ "$CAPTURE" = "activations" ] && ATTN_FLAGS=""
 
-echo "[hpc-gen] job=$SLURM_JOB_ID node=$(hostname) model=$MODEL out=$OUT"
+echo "[hpc-gen] job=$SLURM_JOB_ID node=$(hostname) model=$MODEL out=$OUT capture=$CAPTURE"
 echo "[hpc-gen] GPU:"; nvidia-smi --query-gpu=name,memory.total,memory.used --format=csv,noheader || true
 
-echo "[hpc-gen] [1/2] trace (fp16 on GPU, eager attention)..."
+echo "[hpc-gen] [1/2] trace..."
 # --config supplies prompt/sampling/logit-lens; --model and --out override it.
-# Full attention + activation sidecars so every UI tab (incl. Manifold) populates.
 "$BIN" trace --config "$CONFIG" --model "$MODEL" --out "$OUT" \
-  --capture-attention --attention-layers all --capture-full-attention \
+  $ATTN_FLAGS \
   --capture-activations --capture-full-activations \
   $EXTRA
 
 echo "[hpc-gen] [2/2] manifold analysis..."
-"$BIN" manifold --trace "$OUT/adaptive_token_trace.json"
+# MANIFOLD_EXTRA e.g. "--components 6 --probe line_position"
+"$BIN" manifold --trace "$OUT/adaptive_token_trace.json" ${MANIFOLD_EXTRA:-}
 
 echo "[hpc-gen] DONE -> $OUT"
 echo "[hpc-gen] view it with:  ./scripts/hpc-serve.sh $OUT"
