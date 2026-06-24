@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { rampColor } from './colorRamp';
+import { useThemeTokens } from '@/hooks/useThemeTokens';
 
 export interface ManifoldScatterProps {
   /** PCA scores, one row per position: `coords[i][component]`. */
@@ -51,6 +52,7 @@ export function ManifoldScatter({
   onSelectStep,
   onHoverStep,
 }: ManifoldScatterProps) {
+  const tk = useThemeTokens();
   const points = useMemo(() => {
     const xs = coords.map((row) => row[xComponent] ?? 0);
     const ys = coords.map((row) => row[yComponent] ?? 0);
@@ -108,7 +110,7 @@ export function ManifoldScatter({
             cy={p.y}
             r={isSelected ? 7 : isHovered ? 6 : 4}
             fill={p.color}
-            stroke={isSelected ? '#000' : isHovered ? '#333' : 'none'}
+            stroke={isSelected ? tk.selected : isHovered ? tk.text : 'none'}
             strokeWidth={isSelected ? 2 : 1}
             className="manifold-scatter__point"
             data-testid={`manifold-point-${p.step}`}
