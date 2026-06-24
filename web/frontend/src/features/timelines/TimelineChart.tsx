@@ -8,6 +8,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { TimelineCursor } from './TimelineCursor';
+import { useThemeTokens } from '@/hooks/useThemeTokens';
 import './TimelineChart.css';
 
 export interface TimelineChartProps {
@@ -82,6 +83,7 @@ export function TimelineChart({
   testId,
   stepRange,
 }: TimelineChartProps) {
+  const tk = useThemeTokens();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({
     w: widthProp ?? 400,
@@ -361,7 +363,7 @@ export function TimelineChart({
           plotX={plotX}
           plotY={plotY}
           variant="hover"
-          stroke="#d55e00"
+          stroke={tk.borderStrong}
           testId={testId ? `${testId}-hover-cursor` : 'timeline-hover-cursor'}
         />
         <TimelineCursor
@@ -374,6 +376,7 @@ export function TimelineChart({
           plotX={plotX}
           plotY={plotY}
           variant="selected"
+          stroke={tk.selected}
           testId={testId ? `${testId}-cursor` : 'timeline-cursor'}
         />
 
