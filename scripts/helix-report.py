@@ -64,23 +64,32 @@ def main() -> int:
     # not a repeating coil).
     linear = [r[1] for r in rows if r[1] is not None]
     best_lin = max(linear) if linear else None
+    # Circular structure at an *interior* period (well inside the range — a
+    # period≈range fit is a single bend / ramp alias, not a repeating coil).
     interior = (
         [(r[0], r[3], r[2]) for r in rows
-         if r[3] is not None and r[3] > 0.5 and r[2] is not None and s_range > 0 and r[2] < 0.9 * s_range]
+         if r[3] is not None and r[2] is not None and s_range > 0 and r[2] < 0.9 * s_range]
         if s_range > 0
         else []
     )
+    strong = [t for t in interior if t[1] > 0.5]
+    partial = [t for t in interior if 0.33 < t[1] <= 0.5]
 
     print()
     if best_lin is not None and best_lin > 0.5:
         print(f"• line scalar is LINEARLY encoded (max CV R² = {best_lin:.2f}).")
     else:
         print("• line scalar is NOT clearly encoded linearly.")
-    if interior:
-        layer, circ, period = max(interior, key=lambda x: x[1])
-        print(f"• HELIX-like: residual circular R² = {circ:.2f} at interior period {period:.0f} (layer {layer}).")
+    if strong:
+        layer, circ, period = max(strong, key=lambda x: x[1])
+        print(f"• HELIX: residual circular R² = {circ:.2f} at interior period {period:.0f} (layer {layer}).")
         print("  ⚠ confound: is the scalar decorrelated from token content? A repeating")
         print("    pattern (e.g. '0123456789') fakes a helix via the token manifold.")
+    elif partial:
+        layer, circ, period = max(partial, key=lambda x: x[1])
+        print(f"• PARTIAL / emerging helix: residual circular R² = {circ:.2f} at interior period {period:.0f} (layer {layer}).")
+        print("  above the single-bend baseline but short of a clean helix — consistent")
+        print("  with the structure sharpening with model scale.")
     else:
         print("• no clean helix: residual circular structure is weak or sits at the range")
         print("  boundary (a single bend / ramp alias, not a repeating coil).")
