@@ -9,13 +9,16 @@ on an open model? This is the protocol we used, what we found on
 
 | Claim from the paper | On open models | Evidence |
 | --- | --- | --- |
-| The model **tracks line position / count** | ✅ **yes** | `line_position` linearly decodes from the residual stream at **CV R² ≈ 0.88 (7B) → 0.92 (14B)**, and it survives decorrelating content from column. |
-| It encodes that count **on a helix** (periodic manifold) | ⚠️ **emerges with scale** | After removing the linear ramp: **7B** → residual circular R² ≈ 0.25 at the range *boundary* (a single bend, no helix). **14B** → ≈ **0.48 at an *interior* period ≈ the line width** — a partial / emerging helix. Likely sharper still at Claude‑3.5‑Haiku scale. |
+| The model **tracks line position / count** | ✅ **yes** | `line_position` linearly decodes from the residual stream at **CV R² ≈ 0.89 (7B) → 0.92 (14B) → 0.75 (32B, 4-bit)**, and it survives decorrelating content from column. |
+| It encodes that count **on a helix** (periodic manifold) | ⚠️ **partial, period = line width** | After removing the linear ramp, a circular component appears at an *interior* period **≈ the line width** from 14B on: **7B** 0.25 @ boundary (no helix) · **14B (fp16)** 0.48 @ period 20 · **32B (4-bit)** 0.37 @ period 21. A partial / emerging helix — not yet the clean coil the paper reports at Claude‑3.5‑Haiku scale. |
 
-So both models **count** (linearly). The **helix** is not there at 7B but
-**starts to appear at 14B** (a real interior-period circular component, ~½ as
-strong as the linear ramp) — consistent with the paper's helical representation
-emerging with model scale. The paper's model (Claude 3.5 Haiku) is larger again.
+So all three **count** (linearly). A **helix** is absent at 7B but present from
+14B as a partial circular component whose period is consistently the **line
+width** (~20–21) — the "coils once per line" signature. Strength can't be
+compared cleanly across 14B→32B: 32B had to be **4-bit** (a single GPU can't hold
+32B fp16 under the qos's 1-GPU cap), and quantization noise depresses the fine
+geometry — so 0.37 < 0.48 is most likely the quantization, not a weaker helix.
+A definitive "sharpens with scale" test needs **fp16 32B** (multi-GPU sharding).
 
 ## The instruments (what the toolkit measures)
 
@@ -51,13 +54,17 @@ use a **long** trace, or you get a confounded or aliased "helix".
 | `linebreak.yaml` (count 1–80, ~3 lines) | 7B | decorrelated but **too short** | 0.83 | artifacts (period 3 = token rhythm; period 29 = range) |
 | `count-clean.yaml` (`0123456789` ×13) | 7B | **confounded** (column ≡ digit) | 0.99 | period‑8, residual R² 0.85–0.99 — but this is the **digit‑token manifold**, not counting |
 | `wrap-text.yaml` (hard‑wrapped prose, ~40 lines) | 7B | **decorrelated + long** | 0.88 | residual R² ≈ 0.25 at period≈range → **no counting helix** |
-| `wrap-text.yaml` | **14B** (GPU) | **decorrelated + long** | **0.92** | residual R² ≈ **0.48 at interior period ≈ line width** → **partial / emerging helix** |
+| `wrap-text.yaml` | **14B** (fp16 GPU) | **decorrelated + long** | **0.92** | residual R² ≈ **0.48 at interior period 20 ≈ line width** → **partial / emerging helix** |
+| `wrap-text.yaml` | **32B** (4-bit GPU) | **decorrelated + long** | 0.75 | residual R² ≈ **0.37 at interior period 21 ≈ line width** → partial helix (quantization-depressed) |
 
-Two lessons: (1) once content is decorrelated (`wrap-text`), the gorgeous period‑8
-helix from the repeating‑digit trace **vanishes** — confirming it was the digit
-manifold; (2) scaling 7B → 14B moves the residual circular signal from
-*0.25 at the range boundary* (a bend) to *0.48 at an interior period matching the
-line width* (an emerging coil) — the helix sharpening with scale.
+Three lessons: (1) once content is decorrelated (`wrap-text`), the gorgeous
+period‑8 helix from the repeating‑digit trace **vanishes** — confirming it was
+the digit manifold; (2) from 14B on, the circular signal sits at an interior
+period = the **line width** (~20–21) — the "coils once per line" signature;
+(3) **mind run-on outliers**: the 32B once failed to wrap (a 244-char line),
+which inflated the raw helix R² to a false 0.63 — excluding it with
+`--scalar-max` gave the real 0.37. `helix-report.py` now warns when such an
+outlier is present.
 
 ## Re‑run the protocol
 
@@ -69,6 +76,9 @@ CONFIG=configs/wrap-text.yaml OUT=outputs/wrap-text CAPTURE=activations \
 
 # 2. read the per-layer linear + residual-circular table + verdict
 python3 scripts/helix-report.py outputs/wrap-text/adaptive_token_trace.json
+#    if it warns about a run-on outlier, re-probe excluding it (CPU, no GPU):
+#    token-heatmap manifold --trace outputs/wrap-text/adaptive_token_trace.json \
+#      --components 6 --probe line_position --scalar-max 50
 
 # 3. (optional) look at it: ./scripts/hpc-serve.sh outputs/wrap-text  → Manifold tab
 ```
@@ -163,6 +173,8 @@ node has internet; compute nodes load from cache).
 - **Attention‑circuit analysis** — which heads "twist" the count manifold to
   estimate distance‑to‑boundary. Raw material (per‑head Q/K/V + weights) is
   captured; the analysis isn't built.
-- **Bigger model** — ✅ done at 14B: the residual circular R² rose to ~0.48 at an
-  interior period ≈ the line width (a partial / emerging helix). Next: 32B+
-  (sharded across l40s or 4‑bit) to see whether it sharpens into a clean helix.
+- **Bigger model** — ✅ done at 14B (fp16, 0.48) and 32B (4-bit, 0.37) — a partial
+  helix at the line-width period in both. The remaining gap is a **clean fp16 32B+**
+  (the 4-bit was forced by the qos's 1-GPU cap; quantization likely masks
+  sharpening): shard fp16 across multiple l40s with `device_map="auto"`, which
+  needs both a multi-GPU qos and a runner that auto-detects >1 GPU.
