@@ -7,14 +7,15 @@ on an open model? This is the protocol we used, what we found on
 
 ## TL;DR — the verdict (7B)
 
-| Claim from the paper | On Qwen2.5‑7B | Evidence |
+| Claim from the paper | On open models | Evidence |
 | --- | --- | --- |
-| The model **tracks line position / count** | ✅ **yes** | `line_position` linearly decodes from the residual stream at **CV R² ≈ 0.88** (mid layers), and it survives decorrelating content from column. |
-| It encodes that count **on a helix** (periodic manifold) | ❌ **not detectably** | After removing the linear ramp, the circular coordinate is only weakly decodable (residual R² ≈ 0.25) and at a period equal to the line width (a single bend, not a repeating coil). |
+| The model **tracks line position / count** | ✅ **yes** | `line_position` linearly decodes from the residual stream at **CV R² ≈ 0.88 (7B) → 0.92 (14B)**, and it survives decorrelating content from column. |
+| It encodes that count **on a helix** (periodic manifold) | ⚠️ **emerges with scale** | After removing the linear ramp: **7B** → residual circular R² ≈ 0.25 at the range *boundary* (a single bend, no helix). **14B** → ≈ **0.48 at an *interior* period ≈ the line width** — a partial / emerging helix. Likely sharper still at Claude‑3.5‑Haiku scale. |
 
-So the 7B **counts** (linearly), but doesn't appear to use a **helix** to do it.
-The paper's model is Claude 3.5 Haiku — far larger; helical/Fourier
-representations may need that scale to emerge.
+So both models **count** (linearly). The **helix** is not there at 7B but
+**starts to appear at 14B** (a real interior-period circular component, ~½ as
+strong as the linear ramp) — consistent with the paper's helical representation
+emerging with model scale. The paper's model (Claude 3.5 Haiku) is larger again.
 
 ## The instruments (what the toolkit measures)
 
@@ -45,14 +46,18 @@ scalar), the probe R², and the Helix R².
 The lesson is that **you must decorrelate the scalar from token content**, and
 use a **long** trace, or you get a confounded or aliased "helix".
 
-| Trace (`configs/…`) | content vs column | linear R² | helix |
-| --- | --- | --- | --- |
-| `linebreak.yaml` (count 1–80, ~3 lines) | decorrelated but **too short** | 0.83 (counting region) | artifacts (period 3 = token rhythm; period 29 = range) |
-| `count-clean.yaml` (`0123456789` ×13) | **confounded** (column ≡ digit) | 0.99 | period‑8, residual R² 0.85–0.99 — but this is the **digit‑token manifold**, not counting |
-| `wrap-text.yaml` (hard‑wrapped prose, ~40 lines) | **decorrelated + long** | **0.88** | residual R² ≈ 0.25 at period≈range → **no counting helix** |
+| Trace (`configs/…`) | model | content vs column | linear R² | helix |
+| --- | --- | --- | --- | --- |
+| `linebreak.yaml` (count 1–80, ~3 lines) | 7B | decorrelated but **too short** | 0.83 | artifacts (period 3 = token rhythm; period 29 = range) |
+| `count-clean.yaml` (`0123456789` ×13) | 7B | **confounded** (column ≡ digit) | 0.99 | period‑8, residual R² 0.85–0.99 — but this is the **digit‑token manifold**, not counting |
+| `wrap-text.yaml` (hard‑wrapped prose, ~40 lines) | 7B | **decorrelated + long** | 0.88 | residual R² ≈ 0.25 at period≈range → **no counting helix** |
+| `wrap-text.yaml` | **14B** (GPU) | **decorrelated + long** | **0.92** | residual R² ≈ **0.48 at interior period ≈ line width** → **partial / emerging helix** |
 
-Once content is decorrelated (`wrap-text`), the gorgeous period‑8 helix from the
-repeating‑digit trace **vanishes** — confirming it was the digit manifold.
+Two lessons: (1) once content is decorrelated (`wrap-text`), the gorgeous period‑8
+helix from the repeating‑digit trace **vanishes** — confirming it was the digit
+manifold; (2) scaling 7B → 14B moves the residual circular signal from
+*0.25 at the range boundary* (a bend) to *0.48 at an interior period matching the
+line width* (an emerging coil) — the helix sharpening with scale.
 
 ## Re‑run the protocol
 
@@ -107,22 +112,27 @@ pip install -e /work/j7zang/Token-Heatmap
 With CUDA live, generation is fast (model load ~1 min dominates), so longer
 `wrap-text` traces and bigger models become practical.
 
-### Slurm — RTX‑6000
+### Slurm — running a GPU job (14B verified)
 
 Account `normal`, two relevant QOS:
 
-| QOS | GPUs allowed | mem cap | walltime | note |
+| QOS | GPUs allowed | host‑mem cap | walltime | note |
 | --- | --- | --- | --- | --- |
-| `qos_rtx6000_max` | rtx6000 | 200 G | 1 day | **gpu=1/user** — queues behind an existing rtx6000 job |
 | `normal` | any (incl. l40s, rtx6000) | 30 G | 12 h | l40s nodes are usually idle |
+| `qos_rtx6000_max` | rtx6000 | 200 G | 1 day | **gpu=1/user** — queues behind an existing rtx6000 job |
+
+`scripts/hpc-gen.slurm` already defaults to `--qos=normal --gres=gpu:l40s:1
+--mem=28G`, so a GPU run is just env overrides — point `BIN` at the cu124 venv:
 
 ```bash
-# rtx6000 with headroom (queues if another rtx6000 job is running):
+# 14B on an l40s — this is the exact run used above (device_map keeps host RAM
+# ~28.5 GB, just under the 30 G cap; CUDA generation, ~6 min total).
 BIN=/work/j7zang/th-gpu/bin/token-heatmap \
 CONFIG=configs/wrap-text.yaml OUT=outputs/wrap-14b CAPTURE=activations \
-MANIFOLD_EXTRA="--components 6 --probe line_position" MODEL=Qwen/Qwen2.5-14B-Instruct \
-  sbatch --account=normal --qos=qos_rtx6000_max --gres=gpu:rtx6000:1 --mem=64G --time=02:00:00 \
-         --export=ALL,BIN,CONFIG,OUT,CAPTURE,MANIFOLD_EXTRA,MODEL scripts/hpc-gen.slurm
+MODEL=Qwen/Qwen2.5-14B-Instruct EXTRA="--max-new-tokens 320" \
+MANIFOLD_EXTRA="--components 6 --probe line_position" \
+  sbatch --export=ALL,BIN,CONFIG,OUT,CAPTURE,MODEL,EXTRA,MANIFOLD_EXTRA scripts/hpc-gen.slurm
+# then: python3 scripts/helix-report.py outputs/wrap-14b/adaptive_token_trace.json
 ```
 
 ### Model size vs GPU (fp16)
@@ -130,7 +140,10 @@ MANIFOLD_EXTRA="--components 6 --probe line_position" MODEL=Qwen/Qwen2.5-14B-Ins
 | GPU | VRAM | fits (fp16) |
 | --- | --- | --- |
 | rtx6000 | 24 G | ≤ ~7B |
-| l40s | 48 G | ≤ ~14B |
+| l40s | 48 G | ≤ ~14B (verified; **device_map** streaming required to stay under the 30 G host‑mem cap) |
+
+For 32B+ you need either multiple l40s with `device_map="auto"` (sharded) or
+4‑bit quantization — both possible now that the env is a non‑cu130 torch.
 
 **14B+ does not fit an rtx6000 in fp16** — use an l40s (`--qos=normal
 --gres=gpu:l40s:1 --mem=28G`, but that QOS caps mem at 30 G), or 4‑bit
@@ -150,6 +163,6 @@ node has internet; compute nodes load from cache).
 - **Attention‑circuit analysis** — which heads "twist" the count manifold to
   estimate distance‑to‑boundary. Raw material (per‑head Q/K/V + weights) is
   captured; the analysis isn't built.
-- **Bigger model** — re‑run this exact protocol on 14B+ (per above) and see
-  whether the residual circular R² rises at an interior period (a real helix)
-  rather than collapsing to the token rhythm.
+- **Bigger model** — ✅ done at 14B: the residual circular R² rose to ~0.48 at an
+  interior period ≈ the line width (a partial / emerging helix). Next: 32B+
+  (sharded across l40s or 4‑bit) to see whether it sharpens into a clean helix.
