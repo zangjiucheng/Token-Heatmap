@@ -705,6 +705,53 @@
           "minimum": 0,
           "maximum": 180,
           "description": "Mean angle in degrees between the head's Q vector and the K vector of its top-attended source position, averaged across heads."
+        },
+        "per_head": {
+          "type": "array",
+          "description": "Optional per-head Tier 1 scalars, one entry per attention head (length = attention_metadata.num_attention_heads), ordered by head index. Lets the Layer x Head grid color each head distinctly; absent on older traces, where the grid broadcasts the layer mean across all heads.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "entropy",
+              "self_weight",
+              "bos_weight",
+              "top1_weight",
+              "q_norm",
+              "k_norm",
+              "v_norm"
+            ],
+            "properties": {
+              "entropy": {
+                "type": "number",
+                "description": "This head's attention entropy in nats."
+              },
+              "self_weight": {
+                "type": "number",
+                "description": "This head's attention weight on the current (self) position."
+              },
+              "bos_weight": {
+                "type": "number",
+                "description": "This head's attention weight on the BOS position."
+              },
+              "top1_weight": {
+                "type": "number",
+                "description": "This head's single largest source-position attention weight."
+              },
+              "q_norm": {
+                "type": "number",
+                "description": "L2 norm of this head's current-token Q vector."
+              },
+              "k_norm": {
+                "type": "number",
+                "description": "L2 norm of this head's current-token K vector."
+              },
+              "v_norm": {
+                "type": "number",
+                "description": "L2 norm of this head's current-token V vector."
+              }
+            }
+          }
         }
       }
     },

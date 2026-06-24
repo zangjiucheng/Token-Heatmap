@@ -116,10 +116,24 @@ def test_attention_stats_to_payload_matches_schema() -> None:
         "k_norm",
         "v_norm",
         "qk_alignment_angle",
+        "per_head",
     }
     assert 0.0 <= entry["self_weight"] <= 1.0
     assert 0.0 <= entry["bos_weight"] <= 1.0
     assert entry["entropy"] >= 0.0
+
+    # per_head carries one entry per head with the 7 grid scalars, and the
+    # heads must be genuinely distinct (regression: the inline serializer used
+    # to emit only the layer mean, so the grid broadcast it across all heads).
+    per_head = entry["per_head"]
+    assert len(per_head) == stats.num_attention_heads
+    assert all(
+        set(h) == {"entropy", "self_weight", "bos_weight", "top1_weight", "q_norm", "k_norm", "v_norm"}
+        for h in per_head
+    )
+    assert len({h["self_weight"] for h in per_head}) > 1
+    mean_self = sum(h["self_weight"] for h in per_head) / len(per_head)
+    assert entry["self_weight"] == pytest.approx(mean_self)
 
     # Embed inside a step and validate against the trace schema.
     sample = json.loads(SAMPLE_TRACE_PATH.read_text())

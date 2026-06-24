@@ -103,6 +103,22 @@ def _layer_stats_to_entry(
 
     heads = derived.heads
     n = max(1, len(heads))
+    # Per-head scalars so the Layer x Head grid can color each head distinctly.
+    # Without this the frontend broadcasts the layer mean across all heads, so
+    # every head in a layer renders identically. top1_weight is the head's
+    # single largest source weight (from its own top-k positions).
+    per_head = [
+        {
+            "entropy": float(h.entropy),
+            "self_weight": float(h.self_weight),
+            "bos_weight": float(h.bos_weight),
+            "top1_weight": float(max((w for _, w in h.top_k_positions), default=0.0)),
+            "q_norm": float(h.q_norm),
+            "k_norm": float(h.k_norm),
+            "v_norm": float(h.v_norm),
+        }
+        for h in heads
+    ]
     return {
         "layer": int(layer.layer_idx),
         "entropy": float(sum(h.entropy for h in heads) / n),
@@ -113,6 +129,7 @@ def _layer_stats_to_entry(
         "k_norm": float(sum(h.k_norm for h in heads) / n),
         "v_norm": float(sum(h.v_norm for h in heads) / n),
         "qk_alignment_angle": float(sum(h.qk_alignment_angle_deg for h in heads) / n),
+        "per_head": per_head,
     }
 
 

@@ -445,6 +445,39 @@ export interface AttentionLayerEntry {
    * Mean angle in degrees between the head's Q vector and the K vector of its top-attended source position, averaged across heads.
    */
   qk_alignment_angle: number;
+  /**
+   * Optional per-head Tier 1 scalars, one entry per attention head (length = attention_metadata.num_attention_heads), ordered by head index. Lets the Layer x Head grid color each head distinctly; absent on older traces, where the grid broadcasts the layer mean across all heads.
+   */
+  per_head?: {
+    /**
+     * This head's attention entropy in nats.
+     */
+    entropy: number;
+    /**
+     * This head's attention weight on the current (self) position.
+     */
+    self_weight: number;
+    /**
+     * This head's attention weight on the BOS position.
+     */
+    bos_weight: number;
+    /**
+     * This head's single largest source-position attention weight.
+     */
+    top1_weight: number;
+    /**
+     * L2 norm of this head's current-token Q vector.
+     */
+    q_norm: number;
+    /**
+     * L2 norm of this head's current-token K vector.
+     */
+    k_norm: number;
+    /**
+     * L2 norm of this head's current-token V vector.
+     */
+    v_norm: number;
+  }[];
 }
 /**
  * This interface was referenced by `Trace`'s JSON-Schema
