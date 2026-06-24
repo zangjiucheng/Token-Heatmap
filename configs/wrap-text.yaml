@@ -1,0 +1,20 @@
+# Final helix test: hard-wrap varied prose at a fixed character width, many
+# lines. Unlike the repeating-digit trace (where column == digit), here the
+# token at a given column varies line to line, so line-position is decorrelated
+# from content — the clean way to test for a *counting* helix (the line-break
+# paper's actual task: track accumulated line width independent of what's on the
+# line). The prompt seeds 3 hard-wrapped 24-char lines (words split across
+# lines) and asks the model to continue the same way.
+model: Qwen/Qwen2.5-7B-Instruct
+prompt: "Continue this passage. Each line is hard-wrapped to exactly 24 characters; a word may split across two lines. Output only the wrapped lines and nothing else:\nthe river flows softly p\nast the old stone bridge\n where children play dur\n"
+
+max_new_tokens: 256
+temperature: 0.3
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/wrap-text
+
+capture_logit_lens: false
