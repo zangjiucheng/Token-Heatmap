@@ -83,6 +83,7 @@
   /* Selection — warm amber, reserved for "the step you're inspecting". */
   --color-selected: #b26b05;
   --color-selected-soft: #fbeccd;
+  --color-selected-contrast: #ffffff;
 
   --color-link: var(--color-accent-text);
   --color-focus-ring: var(--color-accent);
@@ -145,6 +146,7 @@
 
   --color-selected: #f4b650;
   --color-selected-soft: #2c2310;
+  --color-selected-contrast: #281e08;
 
   --color-link: var(--color-accent-text);
   --color-focus-ring: var(--color-accent);
