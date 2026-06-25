@@ -161,7 +161,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(220px, 1fr));
   gap: 10px;
-  padding: 0 var(--space-4) 10px;
+  padding: 0 var(--space-4) var(--space-4);
 }
 
 .trace-workspace__timelines .timeline-chart {
