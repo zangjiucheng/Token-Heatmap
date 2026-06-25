@@ -3,9 +3,9 @@
  * No rgb()/hsl()/hex literals are allowed outside this file.
  *
  * Design language: "Probe" — a bench instrument for reading a model's
- * internals. The accent system is sampled from the viridis scientific
- * colormap the data visualisations use, so the chrome and the data share a
- * single identity.
+ * internals. The chrome accent is Claude's warm clay/coral orange; the data
+ * visualisations keep the viridis scientific colormap, so branded chrome reads
+ * clearly against the neutral scientific marks.
  *
  * Categorical palette is Okabe-Ito (color-blind safe, distinguishable for
  * the most common forms of color vision deficiency) and is preserved as-is
@@ -46,16 +46,16 @@
 
   --transition-fast: 120ms cubic-bezier(0.2, 0, 0, 1);
 
-  /* The signature: the viridis colormap, used for the active-lens indicator,
-     the brand mark, and selection accents. Same in both themes. */
+  /* The signature: a warm clay → coral → peach ramp in the Claude family,
+     used for the active-lens indicator, the brand mark, and the hero
+     underline. Same in both themes. */
   --gradient-spectrum: linear-gradient(
     90deg,
-    #440154 0%,
-    #414487 22%,
-    #2a788e 46%,
-    #22a884 68%,
-    #7ad151 86%,
-    #fde725 100%
+    #8f3d20 0%,
+    #b9542f 24%,
+    #d97757 52%,
+    #e89b78 78%,
+    #f3c3a8 100%
   );
 }
 
@@ -72,12 +72,12 @@
   --color-text-muted: #586273;
   --color-text-inverse: #ffffff;
 
-  /* Accent — signal teal sampled from mid-viridis. `accent` is for fills and
-     indicators; `accent-text` is darkened to stay AA on light surfaces. */
-  --color-accent: #109e89;
-  --color-accent-strong: #0a7d6c;
-  --color-accent-soft: #dff3ef;
-  --color-accent-text: #0a7163;
+  /* Accent — Claude clay/coral orange. `accent` is for fills and indicators;
+     `accent-text` is darkened to stay AA (~5.8:1) on light surfaces. */
+  --color-accent: #d97757;
+  --color-accent-strong: #c15f3c;
+  --color-accent-soft: #fbeae1;
+  --color-accent-text: #b4502c;
   --color-accent-contrast: #ffffff;
 
   /* Selection — warm amber, reserved for "the step you're inspecting". */
@@ -138,11 +138,11 @@
   --color-text-muted: #8995a8;
   --color-text-inverse: #0a0e15;
 
-  --color-accent: #35e0c6;
-  --color-accent-strong: #5fe9d3;
-  --color-accent-soft: #102a2a;
-  --color-accent-text: #4fe6cf;
-  --color-accent-contrast: #04140f;
+  --color-accent: #e8916b;
+  --color-accent-strong: #f0a585;
+  --color-accent-soft: #2e1a10;
+  --color-accent-text: #f0a07c;
+  --color-accent-contrast: #2a1206;
 
   --color-selected: #f4b650;
   --color-selected-soft: #2c2310;

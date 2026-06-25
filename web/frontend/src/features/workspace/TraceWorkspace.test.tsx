@@ -70,4 +70,13 @@ describe('TraceWorkspace', () => {
     );
     expect(onToggleInspector).toHaveBeenCalledTimes(1);
   });
+
+  it('collapses the overview timelines, keeping the toggle reachable', async () => {
+    const onToggleTimelines = vi.fn();
+    renderWorkspace({ timelinesOpen: false, onToggleTimelines });
+    // The timelines themselves are hidden, but the toggle bar remains.
+    expect(screen.queryByTestId('spine-timelines')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('overview-toggle'));
+    expect(onToggleTimelines).toHaveBeenCalledTimes(1);
+  });
 });

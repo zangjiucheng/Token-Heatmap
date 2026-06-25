@@ -122,19 +122,42 @@
   overflow: auto;
 }
 
-.trace-workspace__timelines {
+/* Spine timelines — a compact, collapsible strip so they don't dominate the
+   lens. The header bar stays even when collapsed so they're one click away. */
+.trace-workspace__overview {
   flex: none;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(240px, 1fr));
-  gap: 12px;
-  padding: 14px 16px 16px;
   border-top: 1px solid var(--color-border);
   background: var(--color-bg-elevated);
 }
 
+.trace-workspace__overview-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 5px var(--space-4);
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.trace-workspace__overview-toggle:hover {
+  color: var(--color-text);
+}
+
+.trace-workspace__timelines {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 10px;
+  padding: 0 var(--space-4) 10px;
+}
+
 .trace-workspace__timelines .timeline-chart {
   min-width: 0;
-  min-height: 154px;
+  min-height: 92px;
+  padding: 6px 10px;
 }
 
 /* ── Inspector — contextual, collapsible ──────────────────────────────── */

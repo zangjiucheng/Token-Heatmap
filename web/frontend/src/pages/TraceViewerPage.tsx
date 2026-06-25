@@ -57,7 +57,7 @@ function TimelineOverview({
         onSelectStep={onSelectStep}
         onHoverStep={onHoverStep}
         stepRange={stepRange}
-        height={128}
+        height={92}
       />
       <SelectedProbabilityTimeline
         trace={trace}
@@ -66,7 +66,7 @@ function TimelineOverview({
         onSelectStep={onSelectStep}
         onHoverStep={onHoverStep}
         stepRange={stepRange}
-        height={128}
+        height={92}
       />
     </>
   );
@@ -80,6 +80,26 @@ export function TraceViewerPage() {
   const { state, setMode, setLeftOpen, setRightOpen, setTab, setSelectedHead } =
     useViewState();
   const heatmapRef = useRef<HTMLDivElement | null>(null);
+  // The spine timelines are compact but can be collapsed entirely to give the
+  // lens full height. Persisted locally so the choice survives a reload.
+  const [timelinesOpen, setTimelinesOpen] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('llm-heatmap-overview') !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const toggleTimelines = () => {
+    setTimelinesOpen((open) => {
+      const next = !open;
+      try {
+        window.localStorage.setItem('llm-heatmap-overview', next ? '1' : '0');
+      } catch {
+        // ignore — storage unavailable
+      }
+      return next;
+    });
+  };
 
   const totalSteps = trace?.steps.length ?? 0;
   const lastStep = Math.max(0, totalSteps - 1);
@@ -286,6 +306,8 @@ export function TraceViewerPage() {
         railCollapsed={!state.leftOpen}
         inspectorOpen={state.rightOpen}
         onToggleInspector={() => setRightOpen(!state.rightOpen)}
+        timelinesOpen={timelinesOpen}
+        onToggleTimelines={toggleTimelines}
         tokenStrip={
           <GeneratedTokenStrip
             trace={trace}

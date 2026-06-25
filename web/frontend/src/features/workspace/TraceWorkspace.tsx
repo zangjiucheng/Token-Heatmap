@@ -25,6 +25,9 @@ export interface TraceWorkspaceProps {
   inspectorOpen: boolean;
   onToggleInspector: () => void;
   railCollapsed: boolean;
+  /** Whether the spine timelines are expanded. Defaults to true. */
+  timelinesOpen?: boolean;
+  onToggleTimelines?: () => void;
 }
 
 /**
@@ -49,6 +52,8 @@ export function TraceWorkspace({
   inspectorOpen,
   onToggleInspector,
   railCollapsed,
+  timelinesOpen = true,
+  onToggleTimelines,
 }: TraceWorkspaceProps) {
   const selectedLabel =
     selectedStep == null ? 'No step selected' : `Step ${selectedStep}`;
@@ -107,11 +112,30 @@ export function TraceWorkspace({
             {canvas}
           </div>
           <div
-            className="trace-workspace__timelines"
-            aria-label="Trace overview timelines"
-            data-testid="trace-viewer-center-timelines"
+            className="trace-workspace__overview"
+            data-open={timelinesOpen ? 'true' : 'false'}
           >
-            {timelines}
+            <button
+              type="button"
+              className="trace-workspace__overview-toggle"
+              onClick={onToggleTimelines}
+              aria-expanded={timelinesOpen}
+              aria-controls="trace-overview-timelines"
+              data-testid="overview-toggle"
+            >
+              <span className="eyebrow">Overview · entropy &amp; probability</span>
+              <ChevronIcon direction={timelinesOpen ? 'down' : 'up'} />
+            </button>
+            {timelinesOpen ? (
+              <div
+                id="trace-overview-timelines"
+                className="trace-workspace__timelines"
+                aria-label="Trace overview timelines"
+                data-testid="trace-viewer-center-timelines"
+              >
+                {timelines}
+              </div>
+            ) : null}
           </div>
         </section>
 
