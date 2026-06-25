@@ -1,0 +1,36 @@
+# A purpose-built config to *argue* that Direct Logit Attribution + ablation
+# reveal — and causally validate — a real circuit, not just a pretty chart.
+#
+# Design rationale (why each choice makes the argument clean):
+#   - Factual-recall prompt with ONE unambiguous answer (" Paris"): the attributed
+#     target is a definite computation (fact retrieval), so a contribution to it is
+#     meaningful, and a successful ablation is unambiguous.
+#   - Low temperature: the selected token IS the fact, so the "target token" the
+#     attribution explains is well-defined (near-greedy), not a sampling coin-flip.
+#   - Full activations: per-layer AND per-head DLA (needs the o_proj input z + W_O).
+#   - Attention capture: the Attention lens + head context.
+#   - Short generation: the answer is step 0 — the cleanest place to attribute,
+#     because the prompt's last position predicts it directly.
+#
+# Reproduce the trace (HPC):  ./scripts/hpc-run.sh configs/recall-probe.yaml --gpu l40s
+# The causal argument itself is run locally (small model, a few forward passes):
+#   python examples/dla_causal_validation.py
+
+model: Qwen/Qwen2.5-0.5B-Instruct
+prompt: "The capital of France is"
+
+max_new_tokens: 8
+temperature: 0.3
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/recall-probe
+
+capture_logit_lens: true
+lens_layers: all
+lens_top_k: 8
+
+capture_attention: true
+capture_activations: true
