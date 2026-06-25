@@ -38,7 +38,7 @@ source .venv/bin/activate
 
 echo "[setup] Installing core Python package..."
 pip install --upgrade pip
-pip install -e ".[dev,cli,models]"
+pip install -e ".[dev,models]"
 
 if [ -d "web/backend" ]; then
     echo "[setup] Installing web backend (web/backend) into the same venv..."
