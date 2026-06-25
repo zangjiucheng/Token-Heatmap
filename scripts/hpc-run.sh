@@ -264,7 +264,10 @@ fi
 echo "[hpc-run] [4/4] pulling results -> ${LOCAL_OUT}/ ..."
 mkdir -p "$LOCAL_OUT"
 if command -v rsync >/dev/null 2>&1; then
-  rsync -az --info=progress2 -e ssh \
+  # --stats (not --info=progress2): the latter is rsync >=3.1 only, but macOS
+  # ships rsync 2.6.9 — `--stats` prints a portable end-of-transfer summary and
+  # is supported by both old and new rsync.
+  rsync -az --stats -e ssh \
     "${SSH_HOST}:${REMOTE_REPO}/${OUT_REL}/" "${LOCAL_OUT}/"
 else
   scp -q -r "${SSH_HOST}:${REMOTE_REPO}/${OUT_REL}/." "${LOCAL_OUT}/"
