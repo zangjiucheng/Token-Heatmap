@@ -59,6 +59,14 @@ const LENS_PATHS: Record<ViewerTab, React.ReactNode> = {
     </>
   ),
   activations: <path d="M3 12h3l2.5-7 4 14 2.5-7H21" />,
+  'direct-logit-attribution': (
+    <>
+      <path d="M3 21V3" />
+      <rect x="6" y="13" width="3" height="6" rx="0.5" />
+      <rect x="11" y="8" width="3" height="11" rx="0.5" />
+      <rect x="16" y="4" width="3" height="15" rx="0.5" />
+    </>
+  ),
   manifold: (
     <>
       <circle cx="6" cy="8" r="1.4" />

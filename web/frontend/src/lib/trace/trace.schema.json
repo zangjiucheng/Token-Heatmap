@@ -40,6 +40,10 @@
       "$ref": "#/$defs/NeuronAttribution",
       "description": "Trace-level TWERA-style neuron ranking: per captured (layer, submodule), the residual-stream neurons ranked by their expected residual-direct attribution to the realized next token (mean over steps of activation_i * unembedding[target_token, i]). A single-trace approximation of Target-Weighted Expected Residual Attribution (transformer-circuits.pub/2025/attribution-graphs). Present only when the producer captured full activations (`--capture-full-activations`)."
     },
+    "direct_logit_attribution": {
+      "$ref": "#/$defs/DirectLogitAttribution",
+      "description": "Per-step Direct Logit Attribution: the realized next-token logit decomposed into additive contributions from the residual input (embed) and each layer's attention-block (o_proj) and MLP-block (mlp_out) outputs, projected through the unembedding with the final norm folded as a fixed scale (transformer-circuits.pub/2025/attribution-graphs). A per-step `error` reports the unexplained residual. Present only when the producer captured full activations (`--capture-full-activations`)."
+    },
     "metadata": {
       "type": "object",
       "description": "Per-trace metadata: model identity, sampling parameters, and prompt.",
@@ -781,6 +785,109 @@
         "mean_activation": {
           "type": "number",
           "description": "Mean activation of the neuron across the scored steps (the on-distribution 'how active' component)."
+        }
+      }
+    },
+    "DirectLogitAttribution": {
+      "type": "object",
+      "description": "Per-step direct logit attribution of the realized next token, folding the final norm as a fixed scale.",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "description": "Identifier for the decomposition method.",
+          "examples": [
+            "dla_fold_norm"
+          ]
+        },
+        "n_steps": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of generation steps decomposed."
+        },
+        "num_layers": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of decoder layers contributing per step."
+        },
+        "note": {
+          "type": "string",
+          "description": "Human-readable description of the decomposition and its caveats."
+        },
+        "steps": {
+          "type": "array",
+          "description": "One decomposition per generation step.",
+          "items": {
+            "$ref": "#/$defs/DirectLogitAttributionStep"
+          }
+        }
+      }
+    },
+    "DirectLogitAttributionStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step",
+        "total_logit",
+        "layers"
+      ],
+      "properties": {
+        "step": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-indexed generation step this decomposition belongs to."
+        },
+        "target_token_id": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Vocabulary id of the realized next token being attributed."
+        },
+        "total_logit": {
+          "type": "number",
+          "description": "The model's logit for the target token (norm(h_final) · W_U[target])."
+        },
+        "embed": {
+          "type": "number",
+          "description": "Contribution of the residual input (token embedding plus any residual not attributed to a captured block)."
+        },
+        "bias": {
+          "type": "number",
+          "description": "Contribution of the final-norm bias term (0 for RMSNorm models)."
+        },
+        "error": {
+          "type": "number",
+          "description": "Unexplained residual: total_logit minus the summed contributions (final-norm linearization gap; ~0 for RMSNorm models)."
+        },
+        "layers": {
+          "type": "array",
+          "description": "Per-layer attention-block and MLP-block contributions to the target logit.",
+          "items": {
+            "$ref": "#/$defs/DirectLogitAttributionLayer"
+          }
+        }
+      }
+    },
+    "DirectLogitAttributionLayer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "layer",
+        "attn",
+        "mlp"
+      ],
+      "properties": {
+        "layer": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-indexed decoder layer."
+        },
+        "attn": {
+          "type": "number",
+          "description": "Direct contribution of this layer's attention block (o_proj output) to the target logit."
+        },
+        "mlp": {
+          "type": "number",
+          "description": "Direct contribution of this layer's MLP block (mlp_out output) to the target logit."
         }
       }
     },

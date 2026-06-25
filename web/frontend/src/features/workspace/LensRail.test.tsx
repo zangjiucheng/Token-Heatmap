@@ -8,6 +8,7 @@ const ALL_AVAILABLE: LensAvailability = {
   attention: true,
   logitLens: true,
   activations: true,
+  directLogitAttribution: true,
   manifold: true,
 };
 
@@ -15,6 +16,7 @@ const NONE_AVAILABLE: LensAvailability = {
   attention: false,
   logitLens: false,
   activations: false,
+  directLogitAttribution: false,
   manifold: false,
 };
 

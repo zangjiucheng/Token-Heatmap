@@ -21,6 +21,7 @@ import { ActivationsTab } from '@/features/activations';
 import { ManifoldTab } from '@/features/manifold';
 import { ModelTab } from '@/features/model';
 import { OutputTab } from '@/features/output';
+import { DirectLogitAttributionTab } from '@/features/dla';
 import {
   ControlBar,
   HEATMAP_CONTROL_LENSES,
@@ -199,10 +200,13 @@ export function TraceViewerPage() {
       (s) => Array.isArray(s.logit_lens) && s.logit_lens.length > 0,
     );
     const hasManifold = (trace.manifold?.layers?.length ?? 0) > 0;
+    const hasDirectLogitAttribution =
+      (trace.direct_logit_attribution?.steps?.length ?? 0) > 0;
     const availability = {
       attention: hasAttention,
       logitLens: hasLogitLens,
       activations: hasActivations,
+      directLogitAttribution: hasDirectLogitAttribution,
       manifold: hasManifold,
     };
 
@@ -210,6 +214,8 @@ export function TraceViewerPage() {
     if (!hasAttention && activeTab === 'attention') activeTab = 'heatmap';
     if (!hasLogitLens && activeTab === 'logit-lens') activeTab = 'heatmap';
     if (!hasActivations && activeTab === 'activations') activeTab = 'heatmap';
+    if (!hasDirectLogitAttribution && activeTab === 'direct-logit-attribution')
+      activeTab = 'heatmap';
     if (!hasManifold && activeTab === 'manifold') activeTab = 'heatmap';
 
     const traceWithActivations = trace as TraceWithActivations;
@@ -253,6 +259,10 @@ export function TraceViewerPage() {
       );
     } else if (activeTab === 'logit-lens') {
       canvas = <LogitLensTab trace={trace} selectedStep={selectedStep} />;
+    } else if (activeTab === 'direct-logit-attribution') {
+      canvas = (
+        <DirectLogitAttributionTab trace={trace} selectedStep={selectedStep} />
+      );
     } else if (activeTab === 'activations') {
       canvas = (
         <ActivationsTab

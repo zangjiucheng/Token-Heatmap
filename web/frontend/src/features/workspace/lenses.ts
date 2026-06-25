@@ -16,6 +16,7 @@ export type LensAvailabilityKey =
   | 'attention'
   | 'logitLens'
   | 'activations'
+  | 'directLogitAttribution'
   | 'manifold';
 
 export interface LensDef {
@@ -92,6 +93,15 @@ export const LENSES: readonly LensDef[] = [
       'This trace was generated without an ActivationProbe. Re-run the CLI with --capture-activations to inspect activations.',
   },
   {
+    id: 'direct-logit-attribution',
+    label: 'Attribution',
+    group: 'internals',
+    testId: 'direct-logit-attribution-tab',
+    availabilityKey: 'directLogitAttribution',
+    lockedHint:
+      'This trace has no direct logit attribution. Re-run the CLI with --capture-full-activations to decompose each token’s logit by layer.',
+  },
+  {
     id: 'manifold',
     label: 'Manifold',
     group: 'geometry',
@@ -106,6 +116,7 @@ export interface LensAvailability {
   attention: boolean;
   logitLens: boolean;
   activations: boolean;
+  directLogitAttribution: boolean;
   manifold: boolean;
 }
 

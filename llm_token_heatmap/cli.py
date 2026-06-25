@@ -771,7 +771,12 @@ def run_trace(args: argparse.Namespace) -> int:
     # full per-step activation vectors (--capture-full-activations) and the
     # unembedding; skipped otherwise. See llm_token_heatmap.neuron_attribution.
     neuron_attribution = None
+    direct_logit_attribution = None
     if args.capture_full_activations:
+        from llm_token_heatmap.direct_logit_attribution import (
+            compute_direct_logit_attribution,
+        )
+        from llm_token_heatmap.logit_lens import _resolve_final_norm
         from llm_token_heatmap.neuron_attribution import compute_neuron_attribution
 
         out_emb = model.get_output_embeddings()
@@ -785,6 +790,15 @@ def run_trace(args: argparse.Namespace) -> int:
                 target_token_ids=target_ids,
                 unembedding=out_emb.weight,
                 top_n=max(8, int(args.activation_top_k)),
+            )
+            # Direct logit attribution reuses the same captured tensors +
+            # unembedding, folding the model's real final norm. See
+            # docs/epics/01-direct-logit-attribution.md.
+            direct_logit_attribution = compute_direct_logit_attribution(
+                trace=trace,
+                target_token_ids=target_ids,
+                unembedding=out_emb.weight,
+                final_norm=_resolve_final_norm(model),
             )
 
     metadata = {
@@ -825,6 +839,7 @@ def run_trace(args: argparse.Namespace) -> int:
         activation_sidecar_refs=activation_sidecar_refs,
         model_architecture=model_architecture,
         neuron_attribution=neuron_attribution,
+        direct_logit_attribution=direct_logit_attribution,
     )
     json_path = output_dir / "adaptive_token_trace.json"
     json_path.write_text(json.dumps(json_payload, indent=2), encoding="utf-8")

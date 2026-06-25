@@ -274,6 +274,7 @@ def serialize_trace_to_json(
     activation_sidecar_refs: dict[int, str] | None = None,
     model_architecture: dict[str, Any] | None = None,
     neuron_attribution: dict[str, Any] | None = None,
+    direct_logit_attribution: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a JSON-safe payload conforming to ``docs/web/trace.schema.json``.
 
@@ -328,6 +329,8 @@ def serialize_trace_to_json(
         payload["model_architecture"] = model_architecture
     if neuron_attribution is not None:
         payload["neuron_attribution"] = neuron_attribution
+    if direct_logit_attribution is not None:
+        payload["direct_logit_attribution"] = direct_logit_attribution
     return payload
 
 

@@ -16,6 +16,7 @@ export interface Trace {
   manifold?: Manifold;
   model_architecture?: ModelArchitecture;
   neuron_attribution?: NeuronAttribution;
+  direct_logit_attribution?: DirectLogitAttribution;
   /**
    * Per-trace metadata: model identity, sampling parameters, and prompt.
    */
@@ -457,6 +458,86 @@ export interface NeuronAttributionNeuron {
    * Mean activation of the neuron across the scored steps (the on-distribution 'how active' component).
    */
   mean_activation?: number;
+}
+/**
+ * Per-step direct logit attribution of the realized next token, folding the final norm as a fixed scale.
+ *
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "DirectLogitAttribution".
+ */
+export interface DirectLogitAttribution {
+  /**
+   * Identifier for the decomposition method.
+   */
+  method?: string;
+  /**
+   * Number of generation steps decomposed.
+   */
+  n_steps?: number;
+  /**
+   * Number of decoder layers contributing per step.
+   */
+  num_layers?: number;
+  /**
+   * Human-readable description of the decomposition and its caveats.
+   */
+  note?: string;
+  /**
+   * One decomposition per generation step.
+   */
+  steps?: DirectLogitAttributionStep[];
+}
+/**
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "DirectLogitAttributionStep".
+ */
+export interface DirectLogitAttributionStep {
+  /**
+   * Zero-indexed generation step this decomposition belongs to.
+   */
+  step: number;
+  /**
+   * Vocabulary id of the realized next token being attributed.
+   */
+  target_token_id?: number;
+  /**
+   * The model's logit for the target token (norm(h_final) · W_U[target]).
+   */
+  total_logit: number;
+  /**
+   * Contribution of the residual input (token embedding plus any residual not attributed to a captured block).
+   */
+  embed?: number;
+  /**
+   * Contribution of the final-norm bias term (0 for RMSNorm models).
+   */
+  bias?: number;
+  /**
+   * Unexplained residual: total_logit minus the summed contributions (final-norm linearization gap; ~0 for RMSNorm models).
+   */
+  error?: number;
+  /**
+   * Per-layer attention-block and MLP-block contributions to the target logit.
+   */
+  layers: DirectLogitAttributionLayer[];
+}
+/**
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "DirectLogitAttributionLayer".
+ */
+export interface DirectLogitAttributionLayer {
+  /**
+   * Zero-indexed decoder layer.
+   */
+  layer: number;
+  /**
+   * Direct contribution of this layer's attention block (o_proj output) to the target logit.
+   */
+  attn: number;
+  /**
+   * Direct contribution of this layer's MLP block (mlp_out output) to the target logit.
+   */
+  mlp: number;
 }
 /**
  * This interface was referenced by `Trace`'s JSON-Schema
