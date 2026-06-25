@@ -166,20 +166,23 @@ MANIFOLD_EXTRA="--components 6 --probe line_position" \
 # then: python3 scripts/helix-report.py outputs/wrap-14b/adaptive_token_trace.json
 ```
 
-### Model size vs GPU (fp16)
+### Model size vs GPU (bf16)
 
-| GPU | VRAM | fits (fp16) |
-| --- | --- | --- |
-| rtx6000 | 24 G | ≤ ~7B |
-| l40s | 48 G | ≤ ~14B (verified; **device_map** streaming required to stay under the 30 G host‑mem cap) |
+Both GPU types are **48 GB** (verified 2026‑06): the l40s (node gpu‑pt1‑05) and
+the "rtx6000", which is actually an **RTX 6000 Ada (49140 MiB ≈ 48 GB)** on a
+1 TB‑RAM node — *not* the old 24 GB Quadro.
 
-For 32B+ you need either multiple l40s with `device_map="auto"` (sharded) or
-4‑bit quantization — both possible now that the env is a non‑cu130 torch.
+| GPU | VRAM | fits (bf16) | host RAM / walltime (its qos) |
+| --- | --- | --- | --- |
+| l40s | 48 G | ≤ ~14B (device_map streaming) | 30 G / 12 h (qos=normal) |
+| rtx6000 (Ada) | 48 G | ≤ ~14B | **200 G / 1 day** (qos_rtx6000_max) |
 
-**14B+ does not fit an rtx6000 in fp16** — use an l40s (`--qos=normal
---gres=gpu:l40s:1 --mem=28G`, but that QOS caps mem at 30 G), or 4‑bit
-quantization (needs a working bitsandbytes for the installed CUDA — only viable
-once Step 0 gives a non‑cu130 torch). Larger models need a longer `wrap-text`
+The loader uses **bfloat16** on CUDA (fp16 overflows Qwen2.5 → NaN sampling
+crash). 14B bf16 (~28 GB) fits either card; **32B (~64 GB) needs `--4bit`** on a
+single GPU (or multi‑GPU `device_map="auto"` sharding). `scripts/hpc-run.sh`
+picks the GPU/qos for you — `--gpu rtx6000` auto‑selects qos_rtx6000_max (the
+roomier host‑RAM / longer‑walltime queue) and its pre‑flight check refuses a
+run that won't fit before submitting. Larger models need a longer `wrap-text`
 generation (raise `max_new_tokens`) so the helix test has enough line cycles.
 
 Cached on the HPC (no download): Qwen2.5‑0.5B‑Instruct, 3B (base), **7B‑Instruct**,
