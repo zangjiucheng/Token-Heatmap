@@ -179,8 +179,24 @@
 /* ── Model presets ──────────────────────────────────────────────── */
 .node-presets {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.node-preset-group {
+  display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 4px;
+}
+
+.node-preset-family {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  min-width: 3.5em;
 }
 
 .node-preset {

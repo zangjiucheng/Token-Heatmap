@@ -38,13 +38,58 @@ export const DEFAULT_BUILD_CONFIG: BuildConfig = {
   out: 'outputs/run',
 };
 
-/** A handful of commonly-cached HF model ids, surfaced as quick presets. */
-export const MODEL_PRESETS: readonly string[] = [
-  'Qwen/Qwen2.5-0.5B-Instruct',
-  'Qwen/Qwen2.5-7B-Instruct',
-  'Qwen/Qwen2.5-14B-Instruct',
-  'Qwen/Qwen2.5-32B-Instruct',
+/** Quick-pick HF model ids across families. Any HF causal LM works in the box
+ * above (the backend loads via AutoModelForCausalLM); these are just shortcuts.
+ * Grouped by family so the picker reads at a glance. */
+export interface ModelPresetGroup {
+  family: string;
+  models: readonly string[];
+}
+
+export const MODEL_PRESET_GROUPS: readonly ModelPresetGroup[] = [
+  {
+    family: 'Qwen',
+    models: [
+      'Qwen/Qwen2.5-0.5B-Instruct',
+      'Qwen/Qwen2.5-7B-Instruct',
+      'Qwen/Qwen2.5-14B-Instruct',
+      'Qwen/Qwen2.5-32B-Instruct',
+    ],
+  },
+  {
+    family: 'Llama',
+    models: [
+      'meta-llama/Llama-3.2-1B-Instruct',
+      'meta-llama/Llama-3.1-8B-Instruct',
+    ],
+  },
+  {
+    family: 'Mistral',
+    models: ['mistralai/Mistral-7B-Instruct-v0.3'],
+  },
+  {
+    family: 'Gemma',
+    models: ['google/gemma-2-2b-it', 'google/gemma-2-9b-it'],
+  },
+  {
+    family: 'Phi',
+    models: ['microsoft/Phi-3.5-mini-instruct'],
+  },
+  {
+    family: 'SmolLM',
+    models: ['HuggingFaceTB/SmolLM2-1.7B-Instruct'],
+  },
 ];
+
+/** Flat list of all preset ids (kept for back-compat / convenience). */
+export const MODEL_PRESETS: readonly string[] = MODEL_PRESET_GROUPS.flatMap(
+  (g) => g.models,
+);
+
+/** Short label for a model id: drop the "org/" prefix. */
+export function modelShortLabel(modelId: string): string {
+  return modelId.replace(/^[^/]+\//, '');
+}
 
 /** Project the editor config onto the `/trace/generate` request body. */
 export function buildConfigToParams(config: BuildConfig): GenerateParams {

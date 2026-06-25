@@ -7,6 +7,7 @@ import type { ColorRangeValue } from '@/features/controls';
 export type ViewerTab =
   | 'heatmap'
   | 'model'
+  | 'output'
   | 'attention'
   | 'logit-lens'
   | 'activations'
@@ -49,6 +50,7 @@ const VALID_VALUE_COLS: ValueCol[] = ['logprob', 'prob'];
 const VALID_TABS: ViewerTab[] = [
   'heatmap',
   'model',
+  'output',
   'attention',
   'logit-lens',
   'activations',
