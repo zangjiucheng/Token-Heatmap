@@ -22,6 +22,7 @@ This is the local, causal half of the demo; produce a full viewable trace with
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -47,14 +48,25 @@ REPO = Path(__file__).resolve().parent.parent
 def main() -> int:
     config_path = Path(sys.argv[1]) if len(sys.argv) > 1 else REPO / "configs/recall-probe.yaml"
     cfg = yaml.safe_load(config_path.read_text())
-    model_id, prompt = cfg["model"], cfg["prompt"]
-    print(f"config={config_path.name}  model={model_id!r}  prompt={prompt!r}")
+    # MODEL=... overrides the config's model (handy for trying a larger model on a GPU).
+    model_id = os.environ.get("MODEL") or cfg["model"]
+    prompt = cfg["prompt"]
 
     tok = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForCausalLM.from_pretrained(model_id, dtype=torch.float32)
+    use_cuda = torch.cuda.is_available()
+    if use_cuda:
+        dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+        model = AutoModelForCausalLM.from_pretrained(model_id, dtype=dtype, device_map={"": 0})
+    else:
+        model = AutoModelForCausalLM.from_pretrained(model_id, dtype=torch.float32)
     model.eval()
+    device = next(model.parameters()).device
+    print(
+        f"config={config_path.name}  model={model_id!r}  prompt={prompt!r}  "
+        f"device={device}  dtype={next(model.parameters()).dtype}"
+    )
 
-    ids = tok(prompt, return_tensors="pt").input_ids
+    ids = tok(prompt, return_tensors="pt").input_ids.to(device)
     input_ids = ids[0].tolist()
 
     # 1. one forward + full capture (residual_post, mlp_out, o_proj + the o_proj
