@@ -58,7 +58,7 @@ function TimelineOverview({
         onSelectStep={onSelectStep}
         onHoverStep={onHoverStep}
         stepRange={stepRange}
-        height={128}
+        height={190}
       />
       <SelectedProbabilityTimeline
         trace={trace}
@@ -67,7 +67,7 @@ function TimelineOverview({
         onSelectStep={onSelectStep}
         onHoverStep={onHoverStep}
         stepRange={stepRange}
-        height={128}
+        height={190}
       />
     </>
   );

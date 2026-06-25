@@ -166,9 +166,10 @@
 
 .trace-workspace__timelines .timeline-chart {
   min-width: 0;
-  /* Tall enough for the entropy/probability plot + axis labels to read; the
-     strip is collapsible (Overview toggle) when the space isn't wanted. */
-  min-height: 148px;
+  /* The plot height is driven by the chart's `height` prop (≈ height − 42px of
+     plot); this just reserves matching container space. Collapsible via the
+     Overview toggle when the space isn't wanted. */
+  min-height: 200px;
   padding: 8px 10px;
 }
 
