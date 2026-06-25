@@ -9,7 +9,12 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field, model_validator
 
-from llm_token_heatmap.runner import GenerateTraceConfig, generate_trace_payload
+from llm_token_heatmap.runner import (
+    GenerateTraceConfig,
+    IntervenePayloadConfig,
+    generate_trace_payload,
+    intervene_payload,
+)
 from llm_token_heatmap_api import SCHEMA_VERSION
 from llm_token_heatmap_api.config import Settings, get_settings
 from llm_token_heatmap_api.errors import (
@@ -69,6 +74,28 @@ class GenerateRequest(BaseModel):
         if self.max_k < self.min_k:
             raise ValueError("max_k must be >= min_k")
         return self
+
+
+class Intervention(BaseModel):
+    """A single component ablation/scale: which layer block to perturb and how."""
+
+    layer: int = Field(ge=0)
+    component: Literal["attn", "mlp"]
+    op: Literal["zero", "scale"] = "zero"
+    factor: float = 0.0
+
+
+class InterveneRequest(BaseModel):
+    """Parameters for a component-level intervention at one generation step."""
+
+    model: str = Field(min_length=1)
+    prompt: str = ""
+    continuation_token_ids: list[int] = Field(default_factory=list)
+    interventions: list[Intervention] = Field(min_length=1)
+    top_k: int = Field(default=10, ge=1, le=100)
+    target_token_id: int | None = None
+    use_chat_template: bool = False
+    system_prompt: str | None = None
 
 
 def _project_activation_subset(trace: dict[str, Any], label: str) -> dict[str, Any]:
@@ -177,3 +204,37 @@ async def generate_trace(body: GenerateRequest) -> JSONResponse:
     except Exception as exc:  # noqa: BLE001
         raise GenerationError(f"Generation failed: {exc}") from exc
     return _with_schema_header(payload)
+
+
+@router.post("/intervene")
+async def intervene(body: InterveneRequest) -> JSONResponse:
+    """Ablate / scale a model component at one step and return the next-token diff.
+
+    Loads ``body.model`` (reusing the resident-model cache) and runs a baseline
+    plus a patched forward over ``prompt + continuation_token_ids``, perturbing the
+    requested attention/MLP blocks at the final position. Returns the baseline and
+    patched top-k distributions plus a KL / target-prob / top-flip diff.
+
+    Security: like generate, this loads arbitrary models with
+    ``trust_remote_code=True`` — expose only over a trusted channel.
+    """
+    config = IntervenePayloadConfig(
+        model=body.model,
+        prompt=body.prompt,
+        continuation_token_ids=body.continuation_token_ids,
+        interventions=[i.model_dump() for i in body.interventions],
+        top_k=body.top_k,
+        target_token_id=body.target_token_id,
+        use_chat_template=body.use_chat_template,
+        system_prompt=body.system_prompt,
+    )
+    try:
+        payload = await run_in_threadpool(intervene_payload, config)
+    except (OSError, ValueError) as exc:
+        raise GenerationError(
+            f"Could not load or run model {body.model!r}: {exc}",
+            status_code=422,
+        ) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise GenerationError(f"Intervention failed: {exc}") from exc
+    return JSONResponse(content=payload)

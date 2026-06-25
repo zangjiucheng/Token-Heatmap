@@ -24,7 +24,7 @@ activations/attention we already capture. Those are the near-term epics.
 | # | Epic | Paper basis | Effort | Status |
 |---|------|-------------|--------|--------|
 | [01](01-direct-logit-attribution.md) | Direct Logit Attribution lens | Direct logit attribution, "fold the final norm", per-head OV | M | **v1 landed** |
-| [02](02-interventions-ablation.md) | Interventions / ablation (causal validation) | Constrained patching, multiplicative steering | M–L | Planned |
+| [02](02-interventions-ablation.md) | Interventions / ablation (causal validation) | Constrained patching, multiplicative steering | M–L | **v1 landed** |
 | [03](03-attribution-graph.md) | Attribution graph lens | Attribution graphs, pruning, supernodes | L | Planned |
 | [04](04-faithfulness-error-reporting.md) | Faithfulness & error reporting | Error nodes, completeness/replacement scores | S | Planned |
 | [05](05-cross-layer-logit-flow.md) | Cross-layer logit flow | Logit-lens of the selected token; path length | S | Planned |

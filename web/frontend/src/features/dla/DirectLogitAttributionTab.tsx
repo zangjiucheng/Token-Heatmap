@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import type { Trace, DirectLogitAttributionStep } from '@/types/trace';
+import { InterventionPanel } from './InterventionPanel';
 import './DirectLogitAttributionTab.css';
+import './InterventionPanel.css';
 
 export interface DirectLogitAttributionTabProps {
   trace: Trace;
@@ -83,7 +85,8 @@ export function DirectLogitAttributionTab({
     );
   }
 
-  const { sorted, error, maxAbs, total, explained, errorPct, token } = view;
+  const { step, sorted, error, maxAbs, total, explained, errorPct, token } =
+    view;
 
   return (
     <div className="dla-tab" data-testid="direct-logit-attribution-tab-content">
@@ -130,6 +133,8 @@ export function DirectLogitAttributionTab({
           muted
         />
       </ul>
+
+      <InterventionPanel trace={trace} step={step} />
     </div>
   );
 }

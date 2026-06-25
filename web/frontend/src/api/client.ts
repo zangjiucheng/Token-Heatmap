@@ -37,6 +37,51 @@ export interface GenerateParams {
   capture_activations: boolean;
 }
 
+/** One component perturbation for `POST /trace/intervene`. */
+export interface InterventionSpec {
+  layer: number;
+  component: 'attn' | 'mlp';
+  op: 'zero' | 'scale';
+  factor?: number;
+}
+
+/** Body for `POST /trace/intervene`. Mirrors the backend `InterveneRequest`. */
+export interface InterveneParams {
+  model: string;
+  prompt: string;
+  continuation_token_ids: number[];
+  interventions: InterventionSpec[];
+  top_k?: number;
+  target_token_id?: number | null;
+}
+
+export interface InterventionTopToken {
+  token: string;
+  token_id: number;
+  prob: number;
+  logit: number;
+}
+
+export interface InterventionDistribution {
+  top: InterventionTopToken[];
+  target_prob: number;
+  target_logit: number;
+}
+
+export interface InterventionResult {
+  target_token_id: number;
+  target_token: string;
+  baseline: InterventionDistribution;
+  patched: InterventionDistribution;
+  diff: {
+    kl: number;
+    target_prob_delta: number;
+    target_logit_delta: number;
+    top_flips: { rank: number; from_token: string; to_token: string }[];
+  };
+  interventions: InterventionSpec[];
+}
+
 const DEFAULT_BASE_URL = 'http://localhost:8000';
 
 function resolveBaseUrl(explicit?: string): string {
@@ -177,6 +222,33 @@ export class ApiClient {
     }
     const body = await readJson(response);
     return validateTrace(body);
+  }
+
+  /**
+   * `POST /trace/intervene` — ablate / scale a model component at one step and
+   * return the baseline-vs-patched next-token distribution diff. Requires the
+   * live backend (the model is loaded server-side).
+   */
+  async intervene(
+    params: InterveneParams,
+    options: RequestOptions = {},
+  ): Promise<InterventionResult> {
+    let response: Response;
+    try {
+      response = await this.fetchImpl(this.url('/trace/intervene'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+        signal: options.signal,
+      });
+    } catch (cause) {
+      throw mapTransportError(cause);
+    }
+    if (!response.ok) {
+      const body = await readJson(response);
+      throw mapBackendError(response.status, body);
+    }
+    return (await readJson(response)) as InterventionResult;
   }
 }
 

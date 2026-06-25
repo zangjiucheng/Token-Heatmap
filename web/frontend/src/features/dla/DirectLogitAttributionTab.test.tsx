@@ -1,7 +1,17 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setApiClientForTests, type ApiClient } from '@/api/client';
 import type { Trace } from '@/types/trace';
 import { DirectLogitAttributionTab } from './DirectLogitAttributionTab';
+
+// The lens renders the InterventionPanel, which probes backend health. Stub the
+// client so tests don't touch the network (offline hint is shown instead).
+beforeEach(() => {
+  setApiClientForTests({
+    health: vi.fn().mockResolvedValue(false),
+  } as unknown as ApiClient);
+});
+afterEach(() => setApiClientForTests(null));
 
 function makeTrace(withDla = true): Trace {
   const base = {

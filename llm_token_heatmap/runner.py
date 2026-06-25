@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import threading
 from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from llm_token_heatmap.trace_payload import (
@@ -123,6 +123,75 @@ def _load_model_and_tokenizer(model_id: str) -> tuple[Any, Any, str]:
         if use_cuda:
             torch.cuda.empty_cache()
     return entry
+
+
+def _encode_prompt_ids(
+    tokenizer: Any,
+    prompt: str,
+    *,
+    use_chat_template: bool = False,
+    system_prompt: str | None = None,
+) -> list[int]:
+    """Token ids the model saw before step 0 (chat-template aware). Mirrors the
+    backend's ``extract_prompt_token_ids`` so the library stays self-contained."""
+    import torch
+
+    if use_chat_template and getattr(tokenizer, "chat_template", None) is not None:
+        messages: list[dict[str, str]] = []
+        if system_prompt is not None:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        encoded = tokenizer.apply_chat_template(
+            messages, add_generation_prompt=True, return_tensors="pt"
+        )
+        if hasattr(encoded, "input_ids"):
+            encoded = encoded.input_ids
+        elif isinstance(encoded, dict):
+            encoded = encoded["input_ids"]
+    else:
+        out = tokenizer(prompt, return_tensors="pt")
+        encoded = out.input_ids if hasattr(out, "input_ids") else out["input_ids"]
+
+    ids = encoded.flatten().tolist() if torch.is_tensor(encoded) else list(encoded)
+    return [int(i) for i in ids]
+
+
+@dataclass
+class IntervenePayloadConfig:
+    """Inputs for a single component-level intervention / ablation."""
+
+    model: str
+    prompt: str
+    continuation_token_ids: list[int] = field(default_factory=list)
+    interventions: list[dict[str, Any]] = field(default_factory=list)
+    top_k: int = 10
+    target_token_id: int | None = None
+    use_chat_template: bool = False
+    system_prompt: str | None = None
+
+
+def intervene_payload(config: IntervenePayloadConfig) -> dict[str, Any]:
+    """Run a component-level intervention on the (cached) model and return the
+    baseline-vs-patched next-token diff. Reuses the resident-model cache + lock."""
+    from llm_token_heatmap.intervention import run_intervention
+
+    with _GEN_LOCK:
+        model, tokenizer, _device = _load_model_and_tokenizer(config.model)
+        prompt_ids = _encode_prompt_ids(
+            tokenizer,
+            config.prompt,
+            use_chat_template=config.use_chat_template,
+            system_prompt=config.system_prompt,
+        )
+        input_ids = prompt_ids + [int(t) for t in config.continuation_token_ids]
+        return run_intervention(
+            model,
+            input_ids=input_ids,
+            interventions=config.interventions,
+            top_k=config.top_k,
+            target_token_id=config.target_token_id,
+            tokenizer=tokenizer,
+        )
 
 
 def _count_decoder_layers(model: Any) -> int | None:
