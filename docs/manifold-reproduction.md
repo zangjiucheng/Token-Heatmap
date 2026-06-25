@@ -89,6 +89,27 @@ confounded.
 
 ## Running a bigger model (GPU + Slurm)
 
+### TL;DR — one command from the laptop (`scripts/hpc-run.sh`)
+
+The compute is the *only* thing that needs the cluster. From the laptop:
+
+```bash
+# one-time: build the GPU venv on the HPC (idempotent)
+./scripts/hpc-setup.sh
+
+# run on the HPC GPU, then pull EVERYTHING back to ./outputs/<name>/
+./scripts/hpc-run.sh configs/wrap-text.yaml --model Qwen/Qwen2.5-14B-Instruct \
+  --capture activations --probe line_position --extra "--max-new-tokens 320"
+# 32B on one GPU:  add  --4bit
+# auto-open it locally afterwards: add  --serve
+```
+
+It scp's the config up, `sbatch`'s the GPU job, waits, then **rsyncs the whole
+output dir back** so you view it locally with no GPU and no tunnel (drag the
+JSON onto the frontend, or `token-heatmap serve outputs/<name>`). It pairs with
+the web **Build trace** page (`/build`) — *Export YAML* → `hpc-run.sh that.yaml`.
+The rest of this section documents the moving parts it automates.
+
 ### Step 0 — use the GPU env (built + verified ✅)
 
 The default CLI (`/work/j7zang/.local/bin/token-heatmap`) runs everything on
