@@ -27,10 +27,11 @@
 # Common options:
 #   --name NAME          run name -> outputs/NAME locally + on HPC (default: config basename)
 #   --model ID           override the model (e.g. Qwen/Qwen2.5-14B-Instruct)
-#   --gpu l40s|rtx6000   GPU type. Both 48 GB (l40s, RTX 6000 Ada). Default l40s.
-#                        --gpu rtx6000 auto-selects qos_rtx6000_max (200 G mem,
-#                        1-day walltime, 1 GPU/user) unless --qos is given.
-#   --qos QOS            Slurm qos (default: normal for l40s, qos_rtx6000_max for rtx6000)
+#   --gpu rtx6000|l40s   GPU type. Both 48 GB. Default rtx6000 (RTX 6000 Ada),
+#                        which auto-selects qos_rtx6000_max (200 G mem, 1-day
+#                        walltime, 1 GPU/user). --gpu l40s -> qos=normal (30 G,
+#                        12 h), handy when an rtx6000 job is already queued.
+#   --qos QOS            Slurm qos (default: qos_rtx6000_max for rtx6000, normal for l40s)
 #   --mem MEM            host memory (default 28G under qos=normal / 64G under qos_rtx6000_max)
 #   --time HH:MM:SS      walltime (default 01:00:00)
 #   --capture full|activations   full = +attention (slower); activations = manifold-only (default full)
@@ -64,7 +65,7 @@ LOCAL_REPO="$(dirname "$SCRIPT_DIR")"
 CONFIG_LOCAL=""
 NAME=""
 MODEL=""
-GPU="l40s"
+GPU="rtx6000"    # RTX 6000 Ada (48 GB, 1 TB-RAM node, roomier qos); --gpu l40s to switch
 QOS=""           # resolved from --gpu after parsing (see below)
 MEM=""           # resolved from the qos after parsing
 TIME="01:00:00"
@@ -114,10 +115,10 @@ done
 # qos (qos_rtx6000_max) grants 200 G host mem + a 1-day walltime — far roomier
 # than qos=normal's 30 G / 12 h — so default rtx6000 runs onto it.
 if [[ -z "$QOS" ]]; then
-  [[ "$GPU" == "rtx6000" ]] && QOS="qos_rtx6000_max" || QOS="normal"
+  if [[ "$GPU" == "rtx6000" ]]; then QOS="qos_rtx6000_max"; else QOS="normal"; fi
 fi
 if [[ -z "$MEM" ]]; then
-  [[ "$QOS" == "qos_rtx6000_max" ]] && MEM="64G" || MEM="28G"
+  if [[ "$QOS" == "qos_rtx6000_max" ]]; then MEM="64G"; else MEM="28G"; fi
 fi
 
 # Run name: --name, else the config's basename (sans extension).
