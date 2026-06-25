@@ -940,6 +940,22 @@ def _serve_outputs(
             # npm or the frontend dir was unavailable; degrade to files-only.
             start_frontend = False
 
+    # Bind BEFORE announcing, and set allow_reuse_address before the bind (it has
+    # no effect once TCPServer.__init__ has already bound). A port conflict then
+    # gives a clear one-line message instead of a raw OSError traceback printed
+    # after a misleading "Serving …".
+    socketserver.TCPServer.allow_reuse_address = True
+    try:
+        httpd = socketserver.TCPServer(("", port), _CORSHandler)
+    except OSError as exc:
+        if frontend_proc is not None:
+            _terminate_process(frontend_proc)
+        raise SystemExit(
+            f"[token-heatmap] ERROR: could not bind port {port} "
+            f"({getattr(exc, 'strerror', None) or exc}). It's likely already in "
+            f"use — rerun with --port <N> (e.g. --port {port + 1})."
+        ) from exc
+
     print("\n[token-heatmap] Serving output directory …")
     print(f"[token-heatmap] Files: {backend_url}/")
     if start_frontend:
@@ -951,8 +967,7 @@ def _serve_outputs(
     orig_dir = os.getcwd()
     try:
         os.chdir(output_dir)
-        with socketserver.TCPServer(("", port), _CORSHandler) as httpd:
-            httpd.allow_reuse_address = True
+        with httpd:
             if start_frontend and open_browser:
                 _open_viewer_when_ready(viewer_url, frontend_url)
             try:

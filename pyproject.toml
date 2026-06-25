@@ -5,10 +5,36 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "llm-token-heatmap"
 version = "0.1.0"
-description = "PyTorch component for analyzing LLM inference-time token probability distributions."
+description = "Analyze and visualize how an LLM picks each next token: probabilities, attention, logit-lens, activations, manifold geometry — CLI + web app."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
+authors = [{ name = "Jiucheng Zang", email = "git.jiucheng@gmail.com" }]
+keywords = [
+    "llm",
+    "interpretability",
+    "mechanistic-interpretability",
+    "transformers",
+    "pytorch",
+    "visualization",
+    "attention",
+    "logit-lens",
+    "token-probability",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
 dependencies = [
     "torch>=2.1",
     "torchvision>=0.16",
@@ -25,6 +51,7 @@ dev = [
     "pytest-cov>=4.0",
     "mypy>=1.0",
     "ruff>=0.1",
+    "jsonschema>=4.18",
 ]
 cli = [
     "pyyaml>=5.1",
@@ -39,6 +66,11 @@ docs = [
 
 [project.scripts]
 token-heatmap = "llm_token_heatmap.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/zangjiucheng/Token-Heatmap"
+Repository = "https://github.com/zangjiucheng/Token-Heatmap"
+Issues = "https://github.com/zangjiucheng/Token-Heatmap/issues"
 
 [tool.setuptools.packages.find]
 include = ["llm_token_heatmap*"]
