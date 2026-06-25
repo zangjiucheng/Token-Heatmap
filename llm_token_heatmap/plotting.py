@@ -141,7 +141,24 @@ def _configure_cjk_fallback() -> None:
     matplotlib.rcParams["font.sans-serif"] = current
 
 
+def _disable_math_text() -> None:
+    """Treat ``$`` (and other TeX delimiters) in labels literally.
+
+    Token strings routinely contain ``$``, which matplotlib's mathtext parser
+    otherwise reads as entering math mode — an unmatched ``$`` then raises a
+    ``ParseException`` that aborts the whole figure (and, in the CLI, the run,
+    even though the trace JSON/CSV are already on disk). The ``text.parse_math``
+    rcParam (matplotlib >= 3.5) turns that parsing off so ``$`` renders as a
+    plain character.
+    """
+    try:
+        matplotlib.rcParams["text.parse_math"] = False
+    except (KeyError, ValueError):  # older matplotlib without the rcParam
+        pass
+
+
 _configure_cjk_fallback()
+_disable_math_text()
 
 
 def _ensure_parent(path: str | Path) -> Path:

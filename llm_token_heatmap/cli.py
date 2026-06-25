@@ -829,33 +829,48 @@ def run_trace(args: argparse.Namespace) -> int:
     json_path = output_dir / "adaptive_token_trace.json"
     json_path.write_text(json.dumps(json_payload, indent=2), encoding="utf-8")
 
-    plot_adaptive_heatmap(
-        df,
-        value_col="logprob",
-        save_path=output_dir / "adaptive_heatmap.png",
-    )
-    plot_selected_probability(df, save_path=output_dir / "selected_probability.png")
-    plot_entropy(df, save_path=output_dir / "entropy.png")
+    # Plots are a secondary convenience — the JSON/CSV above are the product.
+    # A single matplotlib hiccup (a '$' or an exotic glyph in a token label)
+    # must never abort the run after the data is written, nor block the
+    # downstream `manifold` step. Degrade to a warning instead.
+    try:
+        plot_adaptive_heatmap(
+            df,
+            value_col="logprob",
+            save_path=output_dir / "adaptive_heatmap.png",
+        )
+        plot_selected_probability(df, save_path=output_dir / "selected_probability.png")
+        plot_entropy(df, save_path=output_dir / "entropy.png")
 
-    if attention_probe is not None and trace:
-        first_with_stats = next((e for e in trace if e.get("_attention_stats") is not None), None)
-        if first_with_stats is not None:
-            derived = compute_attention_stats(
-                first_with_stats["_attention_stats"], top_k=args.attention_top_k
+        if attention_probe is not None and trace:
+            first_with_stats = next(
+                (e for e in trace if e.get("_attention_stats") is not None), None
             )
-            plot_attention_layer_head_grid(
-                derived,
-                value="entropy",
-                save_path=output_dir / "attention_layer_head_grid.png",
-            )
+            if first_with_stats is not None:
+                derived = compute_attention_stats(
+                    first_with_stats["_attention_stats"], top_k=args.attention_top_k
+                )
+                plot_attention_layer_head_grid(
+                    derived,
+                    value="entropy",
+                    save_path=output_dir / "attention_layer_head_grid.png",
+                )
 
-    if logit_lens is not None and trace:
-        first_with_lens = next((e for e in trace if "logit_lens" in e), None)
-        if first_with_lens is not None:
-            plot_logit_lens(first_with_lens, tokenizer, save_path=output_dir / "logit_lens.png")
-            plot_logit_lens_selected_rank(
-                trace, tokenizer, save_path=output_dir / "selected_rank_heatmap.png"
-            )
+        if logit_lens is not None and trace:
+            first_with_lens = next((e for e in trace if "logit_lens" in e), None)
+            if first_with_lens is not None:
+                plot_logit_lens(
+                    first_with_lens, tokenizer, save_path=output_dir / "logit_lens.png"
+                )
+                plot_logit_lens_selected_rank(
+                    trace, tokenizer, save_path=output_dir / "selected_rank_heatmap.png"
+                )
+    except Exception as exc:  # noqa: BLE001 — plots must not fail the run after JSON is written.
+        print(
+            f"[token-heatmap] WARNING: plot generation failed "
+            f"({type(exc).__name__}: {exc}); the trace JSON/CSV were still written.",
+            file=sys.stderr,
+        )
 
     print(f"Wrote outputs to {output_dir}/")
 

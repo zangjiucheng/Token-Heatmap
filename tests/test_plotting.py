@@ -83,6 +83,23 @@ def test_plot_heatmap_with_annotations(synthetic_df, tmp_path):
     plt.close(fig)
 
 
+def test_plot_heatmap_tolerates_dollar_and_exotic_glyphs(tmp_path):
+    """A '$' in a token label used to crash matplotlib's mathtext parser
+    (ParseException) and abort the whole run. With text.parse_math disabled it
+    must render literally; exotic/control glyphs only warn."""
+    df = _synthetic_dataframe(num_steps=2, k_used=2)
+    # Inject the exact troublemakers from the field report: a bare '$', a
+    # fullwidth question mark / digit, a tab and a carriage return.
+    df.loc[0, "token"] = "$5"
+    df.loc[1, "token"] = "？９\t\r"
+    save_path = tmp_path / "dollar.png"
+    fig = plot_adaptive_heatmap(
+        df, value_col="logprob", save_path=save_path, annotate=True
+    )
+    assert save_path.stat().st_size > 0
+    plt.close(fig)
+
+
 def test_plot_heatmap_rejects_unknown_value_col(synthetic_df):
     with pytest.raises(ValueError):
         plot_adaptive_heatmap(synthetic_df, value_col="not_a_column")
