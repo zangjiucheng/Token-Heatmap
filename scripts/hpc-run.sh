@@ -40,6 +40,7 @@
 #   --no-sync            don't `git pull` the HPC repo first
 #   --no-pull            leave outputs on the HPC (don't rsync back)
 #   --setup              build/verify the GPU venv on the HPC first (one-time)
+#   --force              skip the pre-flight "won't fit in VRAM" size check
 #
 # Everything is also env-overridable: SSH_HOST, REMOTE_REPO, REMOTE_BIN_GPU,
 # LOCAL_VIEW_PORT, FRONTEND_PORT, POLL_SECONDS.
@@ -74,6 +75,7 @@ DO_PULL=1
 DO_SERVE=0
 DO_SETUP=0
 FOUR_BIT=0
+FORCE=0
 
 die() { echo "error: $*" >&2; exit 2; }
 
@@ -95,6 +97,7 @@ while [[ $# -gt 0 ]]; do
     --no-sync)     DO_SYNC=0; shift ;;
     --no-pull)     DO_PULL=0; shift ;;
     --setup)       DO_SETUP=1; shift ;;
+    --force)       FORCE=1; shift ;;
     -h|--help)     sed -n '2,55p' "$0"; exit 0 ;;
     -*)            die "unknown flag '$1'" ;;
     *)             [[ -z "$CONFIG_LOCAL" ]] && CONFIG_LOCAL="$1" || die "unexpected arg '$1'"; shift ;;
@@ -120,6 +123,35 @@ LOCAL_OUT="${LOCAL_REPO}/${OUT_REL}"
 # Manifold extra flags (probe).
 MANIFOLD_EXTRA=""
 [[ -n "$PROBE" ]] && MANIFOLD_EXTRA="--components 6 --probe ${PROBE}"
+
+# --- pre-flight VRAM heuristic ---------------------------------------------
+# A 32B model in bf16 (~64 GB) won't fit one l40s (~45 GB); without this guard
+# you'd queue, load for minutes, then OOM. Estimate from the model id's size
+# tag and refuse a clearly-too-big bf16 run before submitting. Heuristic only —
+# override with --force.
+EFFECTIVE_MODEL="$MODEL"
+if [[ -z "$EFFECTIVE_MODEL" ]]; then  # model comes from the config YAML
+  EFFECTIVE_MODEL="$(grep -iE '^[[:space:]]*model:' "$CONFIG_LOCAL" | head -1 \
+    | sed -E 's/^[^:]*:[[:space:]]*//; s/^["'"'"']//; s/["'"'"']?[[:space:]]*$//')"
+fi
+SIZE_B="$(printf '%s' "$EFFECTIVE_MODEL" | grep -oiE '[0-9]+(\.[0-9]+)?[bB]' | head -1 | sed -E 's/[bB]$//')"
+if [[ -n "$SIZE_B" && "$FORCE" != 1 ]]; then
+  case "$GPU" in
+    rtx6000) VRAM=24 ;;
+    *)       VRAM=45 ;;   # l40s (and a safe default)
+  esac
+  # bytes/param ×100: bf16=200, NF4 4-bit≈65 (weights + overhead).
+  BPP=200; [[ "$FOUR_BIT" == 1 ]] && BPP=65
+  EST=$(( ${SIZE_B%.*} * BPP / 100 ))            # integer GB; sub-1B floors to 0
+  if [[ "$EST" -gt $(( VRAM * 92 / 100 )) ]]; then
+    if [[ "$FOUR_BIT" == 1 ]]; then
+      die "model '${EFFECTIVE_MODEL}' (~${SIZE_B}B) is ~${EST} GB even in 4-bit — too big for one ${GPU} (~${VRAM} GB). Pick a smaller --model or shard across GPUs. (override: --force)"
+    fi
+    die "model '${EFFECTIVE_MODEL}' (~${SIZE_B}B) is ~${EST} GB in bf16 — won't fit one ${GPU} (~${VRAM} GB). Add --4bit (fits ~32B), pick a smaller --model, or override with --force."
+  elif [[ "$EST" -gt $(( VRAM * 80 / 100 )) ]]; then
+    echo "[hpc-run] ⚠ ${EFFECTIVE_MODEL} (~${EST} GB) is close to the ${GPU} limit (~${VRAM} GB) — may OOM under load."
+  fi
+fi
 
 echo "[hpc-run] host=${SSH_HOST}  name=${NAME}  gpu=${GPU}  qos=${QOS}  capture=${CAPTURE}"
 echo "[hpc-run] config(local)=${CONFIG_LOCAL}  ->  ${OUT_REL}  (manifold=$([[ $DO_MANIFOLD == 1 ]] && echo on || echo off))"
