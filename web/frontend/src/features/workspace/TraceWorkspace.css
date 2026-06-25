@@ -232,7 +232,8 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--space-4);
+  /* A little extra room on the right so content doesn't hug the window edge. */
+  padding: var(--space-4) var(--space-5) var(--space-4) var(--space-4);
 }
 
 @media (max-width: 860px) {
