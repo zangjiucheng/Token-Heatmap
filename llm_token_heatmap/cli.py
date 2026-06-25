@@ -19,6 +19,9 @@ from llm_token_heatmap.trace_payload import (
     build_model_architecture as _build_model_architecture_summary,
 )
 from llm_token_heatmap.trace_payload import (
+    selected_token_payload as _selected_token_payload,
+)
+from llm_token_heatmap.trace_payload import (
     serialize_trace_to_json as _serialize_trace_to_json,
 )
 
@@ -764,6 +767,26 @@ def run_trace(args: argparse.Namespace) -> int:
 
     model_architecture = _build_model_architecture_summary(model, dtype=dtype)
 
+    # TWERA-style neuron attribution (a single-trace approximation). Needs the
+    # full per-step activation vectors (--capture-full-activations) and the
+    # unembedding; skipped otherwise. See llm_token_heatmap.neuron_attribution.
+    neuron_attribution = None
+    if args.capture_full_activations:
+        from llm_token_heatmap.neuron_attribution import compute_neuron_attribution
+
+        out_emb = model.get_output_embeddings()
+        if out_emb is not None and getattr(out_emb, "weight", None) is not None:
+            target_ids = [
+                int(_selected_token_payload(entry["raw"], tokenizer)["token_id"])
+                for entry in trace
+            ]
+            neuron_attribution = compute_neuron_attribution(
+                trace=trace,
+                target_token_ids=target_ids,
+                unembedding=out_emb.weight,
+                top_n=max(8, int(args.activation_top_k)),
+            )
+
     metadata = {
         "model": args.model,
         "prompt": args.prompt,
@@ -801,6 +824,7 @@ def run_trace(args: argparse.Namespace) -> int:
         activation_metadata=activation_metadata,
         activation_sidecar_refs=activation_sidecar_refs,
         model_architecture=model_architecture,
+        neuron_attribution=neuron_attribution,
     )
     json_path = output_dir / "adaptive_token_trace.json"
     json_path.write_text(json.dumps(json_payload, indent=2), encoding="utf-8")

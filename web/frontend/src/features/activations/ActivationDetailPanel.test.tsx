@@ -1,7 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ActivationDetailPanel } from './ActivationDetailPanel';
-import { FIXTURE_SUBMODULES, makeActivationTrace } from './testFixtures';
+import {
+  FIXTURE_SUBMODULES,
+  makeActivationTrace,
+  makeActivationTraceWithTwera,
+} from './testFixtures';
 
 describe('ActivationDetailPanel', () => {
   it('renders the empty state when no cell is selected', () => {
@@ -63,5 +67,41 @@ describe('ActivationDetailPanel', () => {
     expect(
       screen.getByTestId('activation-detail-panel-title'),
     ).toHaveTextContent('Step 2 · L1');
+  });
+
+  it('renders the whole-trace TWERA ranking in twera mode', () => {
+    render(
+      <ActivationDetailPanel
+        trace={makeActivationTraceWithTwera()}
+        submodule="resid_post"
+        selectedStep={0}
+        selectedLayer={0}
+        rankingMode="twera"
+      />,
+    );
+    expect(
+      screen.getByTestId('activation-detail-panel-title'),
+    ).toHaveTextContent('Whole trace · TWERA · L0 · resid_post');
+    // Ranked neurons come from neuron_attribution, not the per-step top_neurons.
+    const row0 = screen.getByTestId('activation-twera-neuron-0');
+    expect(row0.getAttribute('data-neuron-index')).toBe('12');
+    expect(row0.getAttribute('data-neuron-twera')).toBe('0.74');
+  });
+
+  it('prompts to re-run when twera mode is selected but no attribution exists', () => {
+    render(
+      <ActivationDetailPanel
+        trace={makeActivationTrace()}
+        submodule="resid_post"
+        selectedStep={0}
+        selectedLayer={0}
+        rankingMode="twera"
+      />,
+    );
+    const panel = screen.getByTestId('activation-detail-panel');
+    expect(panel.className).toContain('activation-detail-panel--empty');
+    expect(
+      screen.getByText(/--capture-full-activations/),
+    ).toBeInTheDocument();
   });
 });

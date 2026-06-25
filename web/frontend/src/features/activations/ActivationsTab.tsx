@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { TraceWithActivations } from '@/types/activation';
 import { ActivationHeatmap } from './ActivationHeatmap';
-import { ActivationDetailPanel } from './ActivationDetailPanel';
+import {
+  ActivationDetailPanel,
+  type NeuronRankingMode,
+} from './ActivationDetailPanel';
 import {
   ACTIVATION_METRICS,
   ACTIVATION_METRIC_LABELS,
@@ -32,6 +35,11 @@ export function ActivationsTab({
   const [submodule, setSubmodule] = useState<string>(submodules[0] ?? '');
   const [metric, setMetric] = useState<ActivationMetric>('l2_norm');
   const [selectedLayer, setSelectedLayer] = useState<number | null>(null);
+  const [rankingMode, setRankingMode] = useState<NeuronRankingMode>('step');
+
+  // The whole-trace TWERA ranking is only present when the producer captured
+  // full activations; the toggle is hidden otherwise.
+  const hasTwera = (trace.neuron_attribution?.layers?.length ?? 0) > 0;
 
   // If the producer changes which submodules are captured (extremely unlikely
   // within a single trace, but cheap to guard) keep the selector valid.
@@ -113,6 +121,23 @@ export function ActivationsTab({
             ))}
           </select>
         </div>
+        {hasTwera ? (
+          <div className="activations-tab__control">
+            <label htmlFor="activation-ranking-select">Neuron ranking</label>
+            <select
+              id="activation-ranking-select"
+              value={rankingMode}
+              onChange={(e) =>
+                setRankingMode(e.target.value as NeuronRankingMode)
+              }
+              data-testid="activation-ranking-select"
+              title="Per-step ranks neurons by |activation| at the clicked cell; TWERA ranks them by their average contribution to the realized next token across the whole trace."
+            >
+              <option value="step">Per-step · |value|</option>
+              <option value="twera">Whole-trace · TWERA</option>
+            </select>
+          </div>
+        ) : null}
       </div>
       <div className="activations-tab__heatmap">
         <ActivationHeatmap
@@ -132,6 +157,7 @@ export function ActivationsTab({
           submodule={submodule}
           selectedStep={selectedStep}
           selectedLayer={effectiveSelectedLayer}
+          rankingMode={rankingMode}
         />
       </div>
     </div>

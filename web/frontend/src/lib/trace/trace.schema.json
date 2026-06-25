@@ -36,6 +36,10 @@
       "$ref": "#/$defs/ModelArchitecture",
       "description": "Self-contained structural summary of the model read straight from `model.config` (+ a parameter count) at trace time, so the web Model tab can render an architecture overview without any capture flags. Every field is best-effort/optional; absent only on producers that predate it."
     },
+    "neuron_attribution": {
+      "$ref": "#/$defs/NeuronAttribution",
+      "description": "Trace-level TWERA-style neuron ranking: per captured (layer, submodule), the residual-stream neurons ranked by their expected residual-direct attribution to the realized next token (mean over steps of activation_i * unembedding[target_token, i]). A single-trace approximation of Target-Weighted Expected Residual Attribution (transformer-circuits.pub/2025/attribution-graphs). Present only when the producer captured full activations (`--capture-full-activations`)."
+    },
     "metadata": {
       "type": "object",
       "description": "Per-trace metadata: model identity, sampling parameters, and prompt.",
@@ -697,6 +701,86 @@
             "float32",
             "bfloat16"
           ]
+        }
+      }
+    },
+    "NeuronAttribution": {
+      "type": "object",
+      "description": "Trace-level TWERA-style neuron attribution. A single-trace approximation of Target-Weighted Expected Residual Attribution (transformer-circuits.pub/2025/attribution-graphs/methods.html): residual-direct path, final LayerNorm omitted.",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "description": "Identifier for the scoring method.",
+          "examples": [
+            "twera_approx"
+          ]
+        },
+        "n_steps": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of generation steps the expectation was averaged over."
+        },
+        "note": {
+          "type": "string",
+          "description": "Human-readable description of the score and its caveats."
+        },
+        "layers": {
+          "type": "array",
+          "description": "One ranked-neuron list per captured (layer, submodule).",
+          "items": {
+            "$ref": "#/$defs/NeuronAttributionLayer"
+          }
+        }
+      }
+    },
+    "NeuronAttributionLayer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "layer",
+        "submodule",
+        "neurons"
+      ],
+      "properties": {
+        "layer": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-indexed decoder layer."
+        },
+        "submodule": {
+          "type": "string",
+          "description": "Captured submodule whose residual-basis output was scored (e.g. resid_post, mlp_out, o_proj)."
+        },
+        "neurons": {
+          "type": "array",
+          "description": "Top neurons by descending TWERA score.",
+          "items": {
+            "$ref": "#/$defs/NeuronAttributionNeuron"
+          }
+        }
+      }
+    },
+    "NeuronAttributionNeuron": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "twera"
+      ],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-indexed neuron position within the hidden dimension."
+        },
+        "twera": {
+          "type": "number",
+          "description": "Mean over steps of activation_i * unembedding[target_token, i] — the neuron's expected residual-direct attribution to the realized next token."
+        },
+        "mean_activation": {
+          "type": "number",
+          "description": "Mean activation of the neuron across the scored steps (the on-distribution 'how active' component)."
         }
       }
     },

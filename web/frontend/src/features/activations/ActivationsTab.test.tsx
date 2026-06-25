@@ -6,6 +6,7 @@ import {
   FIXTURE_NUM_STEPS,
   FIXTURE_SUBMODULES,
   makeActivationTrace,
+  makeActivationTraceWithTwera,
   makeTraceWithoutActivations,
 } from './testFixtures';
 import type { TraceWithActivations } from '@/types/activation';
@@ -101,6 +102,47 @@ describe('ActivationsTab', () => {
     expect(
       screen.getByTestId('activation-detail-panel-title'),
     ).toHaveTextContent('Step 1 · L2');
+  });
+
+  it('hides the ranking toggle when there is no TWERA attribution', () => {
+    render(
+      <ActivationsTab
+        trace={makeActivationTrace()}
+        selectedStep={null}
+        onSelectStep={() => {}}
+        hoveredStep={null}
+        onHoverStep={() => {}}
+      />,
+    );
+    expect(
+      screen.queryByTestId('activation-ranking-select'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('toggles the detail panel to the whole-trace TWERA ranking', () => {
+    render(
+      <ActivationsTab
+        trace={makeActivationTraceWithTwera()}
+        selectedStep={0}
+        onSelectStep={() => {}}
+        hoveredStep={null}
+        onHoverStep={() => {}}
+      />,
+    );
+    const ranking = screen.getByTestId(
+      'activation-ranking-select',
+    ) as HTMLSelectElement;
+    // Pick layer 0 so the TWERA lookup resolves.
+    fireEvent.click(screen.getByTestId('activation-cell-0-0'));
+    fireEvent.change(ranking, { target: { value: 'twera' } });
+    expect(
+      screen.getByTestId('activation-detail-panel-title'),
+    ).toHaveTextContent('TWERA');
+    expect(
+      screen.getByTestId('activation-twera-neuron-0').getAttribute(
+        'data-neuron-index',
+      ),
+    ).toBe('12');
   });
 
   it('hovering a cell drives onHoverStep', () => {

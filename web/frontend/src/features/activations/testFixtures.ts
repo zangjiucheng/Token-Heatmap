@@ -98,6 +98,36 @@ export function makeActivationTrace(): TraceWithActivations {
   };
 }
 
+/** An activation trace augmented with a whole-trace TWERA neuron ranking, as
+ * produced by `token-heatmap trace --capture-full-activations`. */
+export function makeActivationTraceWithTwera(): TraceWithActivations {
+  const trace = makeActivationTrace();
+  return {
+    ...trace,
+    neuron_attribution: {
+      method: 'twera_approx',
+      n_steps: NUM_STEPS,
+      note: 'fixture',
+      layers: [
+        {
+          layer: 0,
+          submodule: 'resid_post',
+          neurons: [
+            { index: 12, twera: 0.74, mean_activation: 1.1 },
+            { index: 3, twera: 0.41, mean_activation: 0.9 },
+            { index: 27, twera: 0.18, mean_activation: 0.2 },
+          ],
+        },
+        {
+          layer: 1,
+          submodule: 'resid_post',
+          neurons: [{ index: 5, twera: 0.6, mean_activation: 0.8 }],
+        },
+      ],
+    },
+  };
+}
+
 export function makeTraceWithoutActivations(): Trace {
   const trace = makeActivationTrace();
   return {

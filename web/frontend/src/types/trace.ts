@@ -15,6 +15,7 @@ export interface Trace {
   activation_metadata?: ActivationMetadata;
   manifold?: Manifold;
   model_architecture?: ModelArchitecture;
+  neuron_attribution?: NeuronAttribution;
   /**
    * Per-trace metadata: model identity, sampling parameters, and prompt.
    */
@@ -396,6 +397,66 @@ export interface ModelArchitecture {
    * Parameter / compute dtype at trace time.
    */
   dtype?: string;
+}
+/**
+ * Trace-level TWERA-style neuron attribution. A single-trace approximation of Target-Weighted Expected Residual Attribution (transformer-circuits.pub/2025/attribution-graphs/methods.html): residual-direct path, final LayerNorm omitted.
+ *
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "NeuronAttribution".
+ */
+export interface NeuronAttribution {
+  /**
+   * Identifier for the scoring method.
+   */
+  method?: string;
+  /**
+   * Number of generation steps the expectation was averaged over.
+   */
+  n_steps?: number;
+  /**
+   * Human-readable description of the score and its caveats.
+   */
+  note?: string;
+  /**
+   * One ranked-neuron list per captured (layer, submodule).
+   */
+  layers?: NeuronAttributionLayer[];
+}
+/**
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "NeuronAttributionLayer".
+ */
+export interface NeuronAttributionLayer {
+  /**
+   * Zero-indexed decoder layer.
+   */
+  layer: number;
+  /**
+   * Captured submodule whose residual-basis output was scored (e.g. resid_post, mlp_out, o_proj).
+   */
+  submodule: string;
+  /**
+   * Top neurons by descending TWERA score.
+   */
+  neurons: NeuronAttributionNeuron[];
+}
+/**
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "NeuronAttributionNeuron".
+ */
+export interface NeuronAttributionNeuron {
+  /**
+   * Zero-indexed neuron position within the hidden dimension.
+   */
+  index: number;
+  /**
+   * Mean over steps of activation_i * unembedding[target_token, i] — the neuron's expected residual-direct attribution to the realized next token.
+   */
+  twera: number;
+  /**
+   * Mean activation of the neuron across the scored steps (the on-distribution 'how active' component).
+   */
+  mean_activation?: number;
 }
 /**
  * This interface was referenced by `Trace`'s JSON-Schema
