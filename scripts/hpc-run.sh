@@ -27,9 +27,11 @@
 # Common options:
 #   --name NAME          run name -> outputs/NAME locally + on HPC (default: config basename)
 #   --model ID           override the model (e.g. Qwen/Qwen2.5-14B-Instruct)
-#   --gpu l40s|rtx6000   GPU type (default l40s; 14B+ needs l40s)
-#   --qos QOS            Slurm qos (default normal)
-#   --mem MEM            host memory (default 28G; qos=normal caps at 30G)
+#   --gpu l40s|rtx6000   GPU type. Both 48 GB (l40s, RTX 6000 Ada). Default l40s.
+#                        --gpu rtx6000 auto-selects qos_rtx6000_max (200 G mem,
+#                        1-day walltime, 1 GPU/user) unless --qos is given.
+#   --qos QOS            Slurm qos (default: normal for l40s, qos_rtx6000_max for rtx6000)
+#   --mem MEM            host memory (default 28G under qos=normal / 64G under qos_rtx6000_max)
 #   --time HH:MM:SS      walltime (default 01:00:00)
 #   --capture full|activations   full = +attention (slower); activations = manifold-only (default full)
 #   --probe SCALAR       add a supervised manifold probe (e.g. line_position)
@@ -63,8 +65,8 @@ CONFIG_LOCAL=""
 NAME=""
 MODEL=""
 GPU="l40s"
-QOS="normal"
-MEM="28G"
+QOS=""           # resolved from --gpu after parsing (see below)
+MEM=""           # resolved from the qos after parsing
 TIME="01:00:00"
 CAPTURE="full"
 PROBE=""
@@ -107,6 +109,17 @@ done
 [[ -n "$CONFIG_LOCAL" ]] || die "usage: hpc-run.sh <config.yaml> [options]   (see --help)"
 [[ -f "$CONFIG_LOCAL" ]] || die "config file not found: $CONFIG_LOCAL"
 
+# Resolve the qos/mem from the GPU when not given explicitly. The rtx6000 cards
+# are RTX 6000 Ada (48 GB, same as l40s) on a 1 TB-RAM node, and their dedicated
+# qos (qos_rtx6000_max) grants 200 G host mem + a 1-day walltime — far roomier
+# than qos=normal's 30 G / 12 h — so default rtx6000 runs onto it.
+if [[ -z "$QOS" ]]; then
+  [[ "$GPU" == "rtx6000" ]] && QOS="qos_rtx6000_max" || QOS="normal"
+fi
+if [[ -z "$MEM" ]]; then
+  [[ "$QOS" == "qos_rtx6000_max" ]] && MEM="64G" || MEM="28G"
+fi
+
 # Run name: --name, else the config's basename (sans extension).
 if [[ -z "$NAME" ]]; then
   NAME="$(basename "$CONFIG_LOCAL")"; NAME="${NAME%.*}"
@@ -137,8 +150,8 @@ fi
 SIZE_B="$(printf '%s' "$EFFECTIVE_MODEL" | grep -oiE '[0-9]+(\.[0-9]+)?[bB]' | head -1 | sed -E 's/[bB]$//')"
 if [[ -n "$SIZE_B" && "$FORCE" != 1 ]]; then
   case "$GPU" in
-    rtx6000) VRAM=24 ;;
-    *)       VRAM=45 ;;   # l40s (and a safe default)
+    rtx6000) VRAM=47 ;;   # RTX 6000 Ada — 48 GB (NOT the old 24 GB Quadro)
+    *)       VRAM=45 ;;   # l40s — 46 GB (and a safe default)
   esac
   # bytes/param ×100: bf16=200, NF4 4-bit≈65 (weights + overhead).
   BPP=200; [[ "$FOUR_BIT" == 1 ]] && BPP=65

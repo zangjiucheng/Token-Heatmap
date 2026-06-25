@@ -207,13 +207,18 @@ def write_sidecar(
     for layer_idx in captured_layers:
         layer = stats.layers[layer_idx]
         weights = _to_dense_weights(layer.attention_weights, capture_full=True)
-        arrays[f"layer_{layer_idx}_attention_weights"] = weights.numpy().astype(np.float32)
+        # Cast to float32 *before* .numpy(): numpy has no bfloat16 dtype, so a
+        # bf16 tensor (the default on modern bf16-native models) would raise
+        # "unsupported ScalarType BFloat16". `.float()` upcasts bf16/fp16 → f32.
+        arrays[f"layer_{layer_idx}_attention_weights"] = (
+            weights.detach().float().cpu().numpy()
+        )
         if layer.q_last is not None:
-            arrays[f"layer_{layer_idx}_q_last"] = layer.q_last.cpu().numpy().astype(np.float32)
+            arrays[f"layer_{layer_idx}_q_last"] = layer.q_last.detach().float().cpu().numpy()
         if layer.k_last is not None:
-            arrays[f"layer_{layer_idx}_k_last"] = layer.k_last.cpu().numpy().astype(np.float32)
+            arrays[f"layer_{layer_idx}_k_last"] = layer.k_last.detach().float().cpu().numpy()
         if layer.v_last is not None:
-            arrays[f"layer_{layer_idx}_v_last"] = layer.v_last.cpu().numpy().astype(np.float32)
+            arrays[f"layer_{layer_idx}_v_last"] = layer.v_last.detach().float().cpu().numpy()
 
     np.savez_compressed(out_path, **arrays)
     return out_path

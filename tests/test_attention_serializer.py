@@ -174,6 +174,27 @@ def test_sidecar_round_trip(tmp_path: Path) -> None:
     assert torch.allclose(roundtripped, original, atol=1e-5)
 
 
+def test_sidecar_round_trip_bfloat16(tmp_path: Path) -> None:
+    """bf16 tensors (the default on bf16-native GPUs) must serialize. numpy has
+    no bfloat16 dtype, so the writer has to upcast to float32 before .numpy() —
+    a regression guard for "Got unsupported ScalarType BFloat16"."""
+    stats = _build_synthetic_stats()
+    for layer in stats.layers.values():
+        layer.attention_weights = layer.attention_weights.to(torch.bfloat16)
+        layer.q_last = layer.q_last.to(torch.bfloat16)
+        layer.k_last = layer.k_last.to(torch.bfloat16)
+        layer.v_last = layer.v_last.to(torch.bfloat16)
+
+    out = write_sidecar(stats, tmp_path / "attention.0", step=0)
+    payload = read_sidecar(out)
+
+    Draft202012Validator(_load_schema(SIDECAR_SCHEMA_PATH)).validate(payload)
+    roundtripped = torch.tensor(payload["layers"][0]["attention_weights"])
+    original = stats.layers[0].attention_weights.float()
+    # bf16 has ~3 decimal digits of precision; compare loosely.
+    assert torch.allclose(roundtripped, original, atol=1e-2)
+
+
 def test_sidecar_round_trip_without_qkv(tmp_path: Path) -> None:
     """capture_qkv=False traces still round-trip; q/k/v_last are null."""
 
