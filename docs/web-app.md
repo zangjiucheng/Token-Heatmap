@@ -4,6 +4,15 @@ A React + Vite SPA backed by a FastAPI service. Use the CLI or the Python
 library to *generate* traces from a model; the web app is for loading and
 exploring traces that already exist.
 
+## The lens workspace
+
+The trace viewer is organized into three roles: a **generation spine** (the
+token strip + entropy / selected-probability timelines, always visible), a
+**lens rail** on the left grouping the views into **Generation / Internals /
+Geometry**, and a **resizable inspector** on the right for the selected step's
+detail. Each lens is one way of looking at the same generation; lenses that need
+a capture flag are shown but locked until the trace carries that data.
+
 ## What you can do in the UI
 
 - Drop a CSV or JSON trace file → view the interactive heatmap
@@ -14,10 +23,11 @@ exploring traces that already exist.
 - Filter the step range, adjust the color range
 - Hover the heatmap → step detail panel and timeline cursors follow
 - Click a generated token in the strip above the heatmap to jump to that step
-- **Attention tab** — layer × head attention grids and Q/K/V stats (requires `--capture-attention`)
-- **Logit Lens tab** — per-layer top-k next-token predictions (requires `--capture-logit-lens`)
-- **Activations tab** — per-layer activation summary stats (requires `--capture-activations`)
-- **Manifold tab** — 2-D PCA projection of the activation cloud (coloured by step) plus participation ratio, intrinsic dimension, curvature, periodicity, and a variance-spectrum scree plot (requires `token-heatmap manifold`; see [`cli.md`](cli.md#manifold-analysis))
+- **Attention lens** — layer × head attention grids and Q/K/V stats (requires `--capture-attention`)
+- **Logit Lens lens** — per-layer top-k next-token predictions (requires `--capture-logit-lens`)
+- **Activations lens** — per-layer activation summary stats, with a per-step ↔ whole-trace TWERA neuron ranking (requires `--capture-activations`)
+- **Attribution lens** — **direct logit attribution**: the selected token's logit decomposed into per-layer attention (`o_proj`) and MLP (`mlp_out`) contributions (orange promotes, blue suppresses) with an explicit *unexplained* bar; expand an attention bar to see **per-head** contributions. Each component/head has an **ablate** button that re-runs the model with that part zeroed and shows the next-token distribution change — KL, target-probability delta, top-token flips — turning the attribution into a causal experiment (decomposition requires `--capture-full-activations`; ablation requires the live backend)
+- **Manifold lens** — 2-D PCA projection of the activation cloud (coloured by step) plus participation ratio, intrinsic dimension, curvature, periodicity, and a variance-spectrum scree plot (requires `token-heatmap manifold`; see [`cli.md`](cli.md#manifold-analysis))
 - Export the current trace as CSV or the current heatmap as PNG
 - Persist view state in the URL — share a link to a specific view
 
@@ -148,7 +158,7 @@ adds an SPA fallback route so every non-API path returns `index.html`. If
 | Layer | Tech | Serves |
 |---|---|---|
 | Python library | `llm_token_heatmap` | generation, probes, serialization |
-| Backend | FastAPI (`web/backend/`) | `/health`, `/schema`, `/trace/convert-csv`, `/trace/diff`, `/outputs/{path}`, SPA (when `dist/` present) |
+| Backend | FastAPI (`web/backend/`) | `/health`, `/schema`, `/trace/generate`, `/trace/intervene`, `/trace/convert-csv`, `/trace/diff`, `/outputs/{path}`, SPA (when `dist/` present) |
 | Frontend | React + Vite (`web/frontend/`) | interactive trace viewer |
 
 Key backend endpoints:
@@ -157,9 +167,15 @@ Key backend endpoints:
 |---|---|---|
 | `GET` | `/health` | liveness |
 | `GET` | `/schema` | canonical `trace.schema.json` |
+| `POST` | `/trace/generate` | run a model server-side and return a trace |
+| `POST` | `/trace/intervene` | ablate / scale a layer block or attention head and diff the next-token distribution |
 | `POST` | `/trace/convert-csv` | CSV → JSON trace |
 | `POST` | `/trace/diff` | compare two activation traces |
 | `GET` | `/outputs/{path}` | serve files from `LLM_HEATMAP_OUTPUT_DIR` |
+
+> Both `/trace/generate` and `/trace/intervene` load arbitrary models with
+> `trust_remote_code=True`. Expose them only over a trusted channel (e.g. an SSH
+> tunnel), never the public internet.
 
 The trace JSON contract is the same for the CLI, example scripts, and backend —
 they all go through `llm_token_heatmap.trace_payload.serialize_trace_to_json`,

@@ -178,7 +178,11 @@ token-heatmap trace \
 
 Add `--capture-full-activations` to also write `activations/activation.<step>.npz`
 (full hidden-state tensors) and embed `activation_sidecar_ref` pointers in the
-JSON trace. Implies `--capture-activations`.
+JSON trace. It additionally embeds, **inline** in the trace, the **TWERA neuron
+ranking** and **Direct Logit Attribution** — each generated token's logit
+decomposed into per-layer attention (`o_proj`) and MLP (`mlp_out`) contributions,
+expandable to **per attention head** — which the web app's Activations and
+Attribution lenses read. Implies `--capture-activations`.
 
 | Flag                         | Meaning                                                                                                                                                                             |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

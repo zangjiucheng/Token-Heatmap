@@ -2,11 +2,14 @@
 
 A PyTorch toolkit for analyzing and visualizing how a causal language model
 picks each next token during generation. Captures per-step probability
-distributions, attention, logit-lens, and activations; analyzes the activation
-geometry (PCA / intrinsic dimension / a TWERA-style neuron ranking); exports to
-CSV / JSON; renders static heatmaps; and ships with an interactive React web app
-— including a visual **node-based config builder** — for drill-down exploration.
-Works with any HuggingFace causal LM (Qwen, Llama, Mistral, Gemma, Phi, …).
+distributions, attention, logit-lens, and activations; **decomposes each token's
+logit into per-layer — and per attention head — contributions (direct logit
+attribution)** and lets you **ablate components to causally validate them
+(interventions)**; analyzes the activation geometry (PCA / intrinsic dimension /
+a TWERA-style neuron ranking); exports to CSV / JSON; renders static heatmaps;
+and ships with an interactive React web app — a redesigned **lens workspace**
+plus a visual **node-based config builder** — for drill-down exploration. Works
+with any HuggingFace causal LM (Qwen, Llama, Mistral, Gemma, Phi, …).
 
 ```
 prompt + previous tokens → logits → probabilities → next token
@@ -18,10 +21,10 @@ prompt + previous tokens → logits → probabilities → next token
 
 ## What you get
 
-- **`llm_token_heatmap`** — Python library: `AdaptiveTokenProbe`, a manual generation loop, sampling helpers, CSV/JSON/DataFrame export, attention + logit-lens + activation probes, a self-contained model-architecture summary, TWERA-style neuron attribution, post-hoc manifold geometry, matplotlib heatmaps, and activation diff. Loads on GPU in **bf16** (with optional **`--load-in-4bit`** NF4 for big models).
+- **`llm_token_heatmap`** — Python library: `AdaptiveTokenProbe`, a manual generation loop, sampling helpers, CSV/JSON/DataFrame export, attention + logit-lens + activation probes, a self-contained model-architecture summary, TWERA-style neuron attribution, **direct logit attribution (per-layer + per-head)**, **component / head ablation (causal interventions)**, post-hoc manifold geometry, matplotlib heatmaps, and activation diff. Loads on GPU in **bf16** (with optional **`--load-in-4bit`** NF4 for big models).
 - **`token-heatmap`** — CLI that takes a model + prompt (or a YAML config) and writes a full trace bundle to disk: `trace` (generate + capture) and `manifold` (analyze the activation clouds). Includes `--serve` to view the result in the browser.
-- **`web/backend`** — FastAPI service: `/health`, `/schema`, `/trace/generate` (run a model server-side), `/trace/convert-csv`, `/trace/diff`, `/outputs/{path}`. Also serves the pre-built frontend when `web/frontend/dist/` exists.
-- **`web/frontend`** — React + Vite SPA. Tabs: **Token Heatmap**, **Model** (architecture overview), **Output** (complete generated-text render), **Attention**, **Logit Lens**, **Activations** (with a per-step ↔ whole-trace **TWERA** neuron ranking toggle), **Manifold** (3-D rotatable cloud + probe/helix readouts); plus step detail, entropy / selected-probability timelines, CSV/PNG export, and a diff view. A visual node-based **Build** page (`/build`) wires Input→Model→Sampling→Capture→Output and either runs live (`/trace/generate`) or exports the equivalent YAML.
+- **`web/backend`** — FastAPI service: `/health`, `/schema`, `/trace/generate` (run a model server-side), **`/trace/intervene`** (ablate a component/head live and diff the next-token distribution), `/trace/convert-csv`, `/trace/diff`, `/outputs/{path}`. Also serves the pre-built frontend when `web/frontend/dist/` exists.
+- **`web/frontend`** — React + Vite SPA: a **lens workspace** with a grouped lens rail (**Generation / Internals / Geometry**), a persistent generation spine (token strip + entropy / selected-probability timelines), and a resizable inspector. Lenses: **Token Heatmap**, **Model** (architecture overview), **Output** (complete generated-text render), **Attention**, **Logit Lens**, **Activations** (per-step ↔ whole-trace **TWERA** ranking toggle), **Attribution** (**direct logit attribution** — each token's logit split by layer, expandable to **per head**, with one-click **ablation** to causally check each contribution), **Manifold** (3-D rotatable cloud + probe/helix readouts); plus step detail, CSV/PNG export, and a diff view. A visual node-based **Build** page (`/build`) wires Input→Model→Sampling→Capture→Output and either runs live (`/trace/generate`) or exports the equivalent YAML.
 - **`scripts/dev.sh`** — boots backend + frontend together for local development.
 - **`scripts/build-frontend.sh`** — builds the frontend for deployment on servers without Node.js.
 - **`scripts/hpc-run.sh`** — one command from your laptop: do the GPU compute on an HPC (Slurm), then rsync the whole run back so viewing needs no GPU. Companions: `scripts/hpc-setup.sh` (build the GPU venv) and `scripts/hpc-serve.sh` (SSH tunnel + remote file server).

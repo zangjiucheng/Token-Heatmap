@@ -36,6 +36,53 @@ can see how sampling reshapes the distribution.
 | High `selected_rank` | The chosen token wasn't among the top candidates — useful for debugging sampling settings |
 | Big gap between raw and processed `k_used` | Sampling filters are aggressively pruning the natural distribution |
 
+## Direct Logit Attribution (the Attribution lens)
+
+With `--capture-full-activations`, each generated token's logit is decomposed
+into **additive contributions** through the unembedding, with the final norm
+folded as a fixed scale (standard "direct logit attribution"):
+
+```
+logit(target) ≈ embed + Σ_layers ( attn_L + mlp_L ) + error
+```
+
+where `attn_L` is layer `L`'s attention block (`o_proj` output) and `mlp_L` its
+MLP block (`mlp_out`). The **Attribution lens** shows these as diverging bars —
+**orange promotes** the token, **blue suppresses** it — sorted by impact.
+
+- **`error` / unexplained bar** — for RMSNorm models (Qwen / Llama / Mistral / …)
+  the decomposition is exact, so `error ≈ 0`; a large error means the fold-norm
+  linearization or a norm variant isn't fully captured. *Always read it* — it is
+  how much of the logit the bars do **not** explain.
+- **Per-head** — expand an attention bar to split it into per-head
+  contributions, `W_O[:, head] · z_head` folded through the norm. These sum
+  exactly to the layer's `attn` bar, so you can see *which head* wrote the token
+  (induction / name-mover heads, etc.).
+
+This is the **direct (OV) path** only: it explains how information already at the
+final position maps to the logit, not how attention *patterns* formed (QK
+circuits). It is correlational — to confirm a contribution is causal, ablate it.
+
+## Interventions / ablation
+
+The Attribution lens turns each bar into a hypothesis you can test. Click
+**ablate** on a component or head (or pick one in the panel and **Run**) and the
+backend re-runs the forward pass with that block's last-position output zeroed
+(or scaled), then reports how the next-token distribution moved:
+
+| Readout | Meaning |
+| --- | --- |
+| **KL (nats)** | Divergence between the baseline and patched next-token distributions — how much the ablation moved the output overall |
+| **P(target) before → after** | The realized token's probability change; a top contributor's ablation should drop it noticeably |
+| **Top-token flips** | Where the ranked candidates reordered (e.g. `#1 " Paris" → " London"`) |
+
+A faithful attribution predicts the intervention: ablating a high-`attn` head
+should drop the target probability more than a random head. Ablation holds the
+attention *patterns* fixed (it removes a block's write to the residual at the
+analyzed position), and needs the **live backend** — it loads/uses the trace's
+model server-side, so it's available when running via `./scripts/dev.sh` or a
+backend you've port-forwarded, not for purely static file views.
+
 ## Manifold metrics
 
 `token-heatmap manifold` ([CLI](cli.md#manifold-analysis)) treats the captured
