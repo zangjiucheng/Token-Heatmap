@@ -2,7 +2,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px;
+  /* Outer padding is provided by the workspace canvas; keep only the
+     internal gap so it doesn't double up. */
 }
 
 .manifold-tab--empty {

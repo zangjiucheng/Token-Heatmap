@@ -120,6 +120,9 @@
   min-height: 0;
   min-width: 0;
   overflow: auto;
+  /* Breathing room so the active lens doesn't sit flush against the rail,
+     inspector, control bar and timelines that frame it. */
+  padding: var(--space-4);
 }
 
 /* Spine timelines — a compact, collapsible strip so they don't dominate the
