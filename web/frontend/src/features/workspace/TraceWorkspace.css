@@ -166,8 +166,10 @@
 
 .trace-workspace__timelines .timeline-chart {
   min-width: 0;
-  min-height: 92px;
-  padding: 6px 10px;
+  /* Tall enough for the entropy/probability plot + axis labels to read; the
+     strip is collapsible (Overview toggle) when the space isn't wanted. */
+  min-height: 148px;
+  padding: 8px 10px;
 }
 
 /* ── Inspector — contextual, collapsible ──────────────────────────────── */
