@@ -11,10 +11,17 @@ __pycache__/
 .Python
 
 # Build
-build/
+# Anchored to the repo root so it only ignores the Python packaging artifact
+# (`/build/`), not source dirs that happen to be named `build`.
+/build/
 dist/
 site/
 *.egg-info/
+
+# The user's *global* gitignore ignores `build/` everywhere; re-include the
+# frontend's node-editor source feature, which is a real source dir.
+!web/frontend/src/features/build/
+!web/frontend/src/features/build/**
 
 # Testing
 .pytest_cache/

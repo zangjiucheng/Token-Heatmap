@@ -1,0 +1,313 @@
+.node-graph {
+  width: 100%;
+}
+
+/* Horizontal pipeline rail; scrolls on narrow viewports, stacks below the
+   breakpoint. */
+.node-graph__rail {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  overflow-x: auto;
+  padding: var(--space-3) var(--space-1) var(--space-4);
+}
+
+/* ── Node card ──────────────────────────────────────────────────── */
+.build-node {
+  position: relative;
+  flex: 0 0 auto;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.build-node__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.build-node__badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  color: var(--color-accent-contrast);
+  background: var(--color-accent);
+}
+
+.build-node__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  color: var(--color-text);
+}
+
+.build-node__subtitle {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.build-node__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Connection ports on the card edges. */
+.build-node__port {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  border: 2px solid var(--color-surface);
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.build-node__port--in {
+  left: -5px;
+}
+
+.build-node__port--out {
+  right: -5px;
+}
+
+/* ── Connector ──────────────────────────────────────────────────── */
+.build-connector {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.build-connector__svg {
+  width: 44px;
+  height: 16px;
+  overflow: visible;
+}
+
+.build-connector__line {
+  stroke: var(--color-accent);
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+  animation: build-flow 0.8s linear infinite;
+}
+
+.build-connector__head {
+  fill: var(--color-accent);
+}
+
+@keyframes build-flow {
+  to {
+    stroke-dashoffset: -8;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .build-connector__line {
+    animation: none;
+  }
+}
+
+/* ── Fields ─────────────────────────────────────────────────────── */
+.node-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.node-field__label {
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.node-field__input,
+.node-field__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+}
+
+.node-field__textarea {
+  resize: vertical;
+  min-height: 96px;
+  line-height: 1.4;
+}
+
+.node-field__input:focus-visible,
+.node-field__textarea:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.node-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+/* ── Model presets ──────────────────────────────────────────────── */
+.node-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.node-preset {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.node-preset:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.node-preset--active {
+  color: var(--color-accent-text);
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+/* ── Captures ───────────────────────────────────────────────────── */
+.node-captures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.node-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text);
+}
+
+/* ── Actions ────────────────────────────────────────────────────── */
+.node-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.node-action {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+}
+
+.node-action--run {
+  color: var(--color-accent-contrast);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  font-weight: 600;
+}
+
+.node-action--run:hover:not(:disabled) {
+  background: var(--color-accent-strong);
+}
+
+.node-action--export {
+  color: var(--color-text);
+  background: var(--color-bg-muted);
+}
+
+.node-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.node-hint {
+  margin: 0;
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+
+.node-error {
+  margin: 0;
+  font-size: var(--text-2xs);
+  color: var(--color-status-error-fg);
+  background: var(--color-status-error-bg);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+}
+
+/* ── Vertical stack on narrow viewports ─────────────────────────── */
+@media (max-width: 900px) {
+  .node-graph__rail {
+    flex-direction: column;
+    align-items: stretch;
+    overflow-x: visible;
+  }
+
+  .build-node {
+    width: auto;
+  }
+
+  /* Ports read top/bottom when stacked. */
+  .build-node__port--in {
+    left: 50%;
+    top: -5px;
+    transform: translateX(-50%);
+  }
+
+  .build-node__port--out {
+    right: auto;
+    left: 50%;
+    top: auto;
+    bottom: -5px;
+    transform: translateX(-50%);
+  }
+
+  /* Rotate the arrow to point down. */
+  .build-connector {
+    width: 100%;
+    height: 24px;
+  }
+
+  .build-connector__svg {
+    transform: rotate(90deg);
+  }
+}

@@ -14,6 +14,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useTheme } from '@/hooks/useTheme';
 import { useViewState } from '@/hooks/useViewState';
 import { bootstrapTraceSchema } from '@/lib/trace/load';
+import { BuildPage } from '@/pages/BuildPage';
 import { DiffViewerPage } from '@/pages/DiffViewerPage';
 import { LandingPage } from '@/pages/LandingPage';
 import { TraceViewerPage } from '@/pages/TraceViewerPage';
@@ -115,6 +116,7 @@ export default function App() {
         <Routes>
           <Route element={<AppShell />}>
             <Route index element={<LandingPage />} />
+            <Route path="build" element={<BuildPage />} />
             <Route path="trace" element={<TraceViewerPage />} />
             <Route path="trace/:id" element={<TraceViewerPage />} />
             <Route path="diff/:id" element={<DiffViewerPage />} />

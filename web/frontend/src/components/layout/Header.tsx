@@ -24,6 +24,13 @@ export function Header() {
         <button
           type="button"
           className="app-header__button"
+          onClick={() => navigate('/build')}
+        >
+          Build trace
+        </button>
+        <button
+          type="button"
+          className="app-header__button"
           aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
           aria-pressed={theme === 'dark'}
           onClick={toggleTheme}
