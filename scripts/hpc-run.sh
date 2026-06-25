@@ -4,12 +4,17 @@
 #
 #   laptop                         HPC (j7zang-gpu)
 #   ------                         ----------------
-#   config.yaml  --- scp --->      configs/_remote/<name>.yaml
+#   config.yaml  --- scp --->      outputs/<name>/config.yaml
 #                                  sbatch -> GPU node: trace + manifold   (the
 #                                                                          only
 #                                                                          remote
 #                                                                          step)
-#   outputs/<name>/  <-- rsync --  outputs/<name>/   (trace, csv, png, sidecars)
+#   outputs/<name>/  <-- rsync --  outputs/<name>/   (config, slurm log, trace,
+#                                                     csv, png, sidecars)
+#
+# Everything for one run lives in a single self-contained folder,
+# outputs/<name>/ — config, the Slurm log, and all artifacts — both on the HPC
+# and (after the pull) locally. Nothing is scattered across the home dir.
 #
 # After it returns, the whole run is in ./outputs/<name>/ and you view it
 # locally with no GPU and no tunnel (drag the JSON onto the frontend, or
@@ -106,8 +111,8 @@ fi
 # Sanitize to a safe path segment.
 [[ "$NAME" =~ ^[A-Za-z0-9._-]+$ ]] || die "run name '$NAME' has unsafe characters; pass --name with [A-Za-z0-9._-]."
 
-OUT_REL="outputs/${NAME}"                       # relative on both sides
-REMOTE_CONFIG="configs/_remote/${NAME}.yaml"    # where we drop the config on HPC
+OUT_REL="outputs/${NAME}"                       # the one folder a run lives in
+REMOTE_CONFIG="${OUT_REL}/config.yaml"          # config travels inside the run folder
 LOCAL_OUT="${LOCAL_REPO}/${OUT_REL}"
 
 # 4-bit -> append the loader flag to EXTRA.
@@ -130,9 +135,11 @@ echo "[hpc-run] checking the HPC..."
 ssh -o ConnectTimeout=10 "$SSH_HOST" "test -x '${REMOTE_BIN_GPU}'" || die \
   "GPU venv not found at ${REMOTE_BIN_GPU} on ${SSH_HOST}. Build it once: ./scripts/hpc-run.sh ${CONFIG_LOCAL} --setup  (or run ./scripts/hpc-setup.sh)."
 
-# --- 1. ship the config ----------------------------------------------------
+# --- 1. ship the config into the run folder --------------------------------
 echo "[hpc-run] [1/4] uploading config -> ${SSH_HOST}:${REMOTE_REPO}/${REMOTE_CONFIG}"
-ssh "$SSH_HOST" "mkdir -p '${REMOTE_REPO}/configs/_remote'"
+# Create the run folder up front so the config and the Slurm log both land
+# inside it (the Slurm --output path needs the dir to exist before the job).
+ssh "$SSH_HOST" "mkdir -p '${REMOTE_REPO}/${OUT_REL}'"
 scp -q "$CONFIG_LOCAL" "${SSH_HOST}:${REMOTE_REPO}/${REMOTE_CONFIG}"
 
 # --- 2. submit the GPU job (the only remote compute) -----------------------
@@ -160,13 +167,14 @@ ${MANIFOLD_ENV} \
 sbatch --parsable \
   --job-name='th-${NAME}' \
   --qos='${QOS}' --gres='gpu:${GPU}:1' --mem='${MEM}' --time='${TIME}' \
+  --output='${OUT_REL}/slurm-%j.log' \
   --export=ALL,BIN,CONFIG,OUT,CAPTURE,EXTRA,MODEL,MANIFOLD_EXTRA \
   scripts/hpc-gen.slurm
 EOF
 )"
 JOB_ID="$(echo "$JOB_ID" | tr -d '[:space:]')"
 [[ "$JOB_ID" =~ ^[0-9]+$ ]] || die "did not get a numeric Slurm job id back (got: '${JOB_ID}'). Check the HPC repo / venv."
-REMOTE_LOG="${OUT_REL%/*}/hpc-gen-${JOB_ID}.log"   # outputs/hpc-gen-<jobid>.log
+REMOTE_LOG="${OUT_REL}/slurm-${JOB_ID}.log"   # inside the run folder
 echo "[hpc-run] submitted job ${JOB_ID}  (log: ${REMOTE_REPO}/${REMOTE_LOG})"
 
 # --- 3. wait for it (poll squeue; show the latest log line) -----------------
@@ -211,8 +219,8 @@ if command -v rsync >/dev/null 2>&1; then
 else
   scp -q -r "${SSH_HOST}:${REMOTE_REPO}/${OUT_REL}/." "${LOCAL_OUT}/"
 fi
-# Pull the Slurm log alongside the run for provenance.
-scp -q "${SSH_HOST}:${REMOTE_REPO}/${REMOTE_LOG}" "${LOCAL_OUT}/slurm-${JOB_ID}.log" 2>/dev/null || true
+# The Slurm log + config now live inside ${OUT_REL}/, so the pull above already
+# brought them — nothing extra to fetch.
 
 echo "[hpc-run] ✓ done — everything is local now: ${OUT_REL}/"
 ls -1 "$LOCAL_OUT" | sed 's/^/[hpc-run]     /'
