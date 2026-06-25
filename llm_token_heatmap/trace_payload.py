@@ -66,6 +66,71 @@ def _scalar(value: Any) -> Any:
     return value
 
 
+def build_model_architecture(model: Any, *, dtype: Any = None) -> dict[str, Any] | None:
+    """Self-contained architecture summary read straight from ``model.config``.
+
+    Unlike ``attention_metadata`` / ``activation_metadata`` (which only exist
+    when those probes ran), this is captured on every trace so the web "Model"
+    tab can render a structural overview without any capture flags. Every field
+    is best-effort: anything ``model.config`` doesn't expose is simply omitted,
+    so exotic architectures still produce a (possibly partial) block rather than
+    raising. Returns ``None`` when nothing could be read.
+    """
+    cfg = getattr(model, "config", None)
+    arch: dict[str, Any] = {}
+
+    def _put_int(key: str, value: Any) -> None:
+        if value is not None:
+            try:
+                arch[key] = int(value)
+            except (TypeError, ValueError):
+                pass
+
+    if cfg is not None:
+        architectures = getattr(cfg, "architectures", None)
+        if architectures:
+            arch["architecture"] = str(architectures[0])
+        model_type = getattr(cfg, "model_type", None)
+        if model_type:
+            arch["model_type"] = str(model_type)
+        _put_int("num_layers", getattr(cfg, "num_hidden_layers", None))
+        _put_int("hidden_size", getattr(cfg, "hidden_size", None))
+        _put_int("num_attention_heads", getattr(cfg, "num_attention_heads", None))
+        _put_int(
+            "num_key_value_heads",
+            getattr(cfg, "num_key_value_heads", getattr(cfg, "num_attention_heads", None)),
+        )
+        _put_int("head_dim", getattr(cfg, "head_dim", None))
+        _put_int("intermediate_size", getattr(cfg, "intermediate_size", None))
+        _put_int("vocab_size", getattr(cfg, "vocab_size", None))
+        _put_int("max_position_embeddings", getattr(cfg, "max_position_embeddings", None))
+        rope = getattr(cfg, "rope_theta", None)
+        if rope is not None:
+            try:
+                arch["rope_theta"] = float(rope)
+            except (TypeError, ValueError):
+                pass
+        tie = getattr(cfg, "tie_word_embeddings", None)
+        if tie is not None:
+            arch["tie_word_embeddings"] = bool(tie)
+        # Derive head_dim when the config omits it (hidden_size / heads).
+        if "head_dim" not in arch and arch.get("hidden_size") and arch.get("num_attention_heads"):
+            arch["head_dim"] = arch["hidden_size"] // arch["num_attention_heads"]
+
+    # Total parameter count — cheap and the single most useful "how big" number.
+    try:
+        total = sum(int(p.numel()) for p in model.parameters())
+        if total > 0:
+            arch["num_parameters"] = total
+    except Exception:  # noqa: BLE001 — never let a param sweep break serialization
+        pass
+
+    if dtype is not None:
+        arch["dtype"] = str(dtype).replace("torch.", "")
+
+    return arch or None
+
+
 def _seq(value: Any) -> list[Any]:
     """Pull a 1-D list out of either a [batch, K] tensor or a nested list."""
     import torch
@@ -207,6 +272,7 @@ def serialize_trace_to_json(
     prompt: str,
     activation_metadata: dict[str, Any] | None = None,
     activation_sidecar_refs: dict[int, str] | None = None,
+    model_architecture: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a JSON-safe payload conforming to ``docs/web/trace.schema.json``.
 
@@ -257,6 +323,8 @@ def serialize_trace_to_json(
         payload["attention_metadata"] = attention_metadata
     if activation_metadata is not None:
         payload["activation_metadata"] = activation_metadata
+    if model_architecture is not None:
+        payload["model_architecture"] = model_architecture
     return payload
 
 

@@ -32,6 +32,10 @@
       "$ref": "#/$defs/Manifold",
       "description": "Optional manifold analysis of the captured activation clouds — PCA spectrum, participation ratio, TwoNN intrinsic dimension, low-D projection, trajectory curvature, and periodicity — one entry per analyzed (layer, submodule). Produced post-hoc by `token-heatmap manifold` from a trace plus its activation sidecars; absent otherwise. Inspired by transformer-circuits.pub/2025/linebreaks."
     },
+    "model_architecture": {
+      "$ref": "#/$defs/ModelArchitecture",
+      "description": "Self-contained structural summary of the model read straight from `model.config` (+ a parameter count) at trace time, so the web Model tab can render an architecture overview without any capture flags. Every field is best-effort/optional; absent only on producers that predate it."
+    },
     "metadata": {
       "type": "object",
       "description": "Per-trace metadata: model identity, sampling parameters, and prompt.",
@@ -609,6 +613,90 @@
           "items": {
             "$ref": "#/$defs/ActivationLayerEntry"
           }
+        }
+      }
+    },
+    "ModelArchitecture": {
+      "type": "object",
+      "description": "Self-contained structural summary of the traced model, read from `model.config` plus a parameter count. All fields optional/best-effort so partial configs and exotic architectures still validate.",
+      "additionalProperties": false,
+      "properties": {
+        "architecture": {
+          "type": "string",
+          "description": "Model class name from `config.architectures[0]`.",
+          "examples": [
+            "Qwen2ForCausalLM"
+          ]
+        },
+        "model_type": {
+          "type": "string",
+          "description": "HuggingFace `config.model_type`.",
+          "examples": [
+            "qwen2",
+            "llama"
+          ]
+        },
+        "num_layers": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of decoder (transformer) blocks (`config.num_hidden_layers`)."
+        },
+        "hidden_size": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Residual-stream / model dimension (`config.hidden_size`)."
+        },
+        "num_attention_heads": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Query attention heads per layer."
+        },
+        "num_key_value_heads": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Key/value heads per layer (smaller than `num_attention_heads` under Grouped Query Attention)."
+        },
+        "head_dim": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Per-head dimension; derived from hidden_size / heads when the config omits it."
+        },
+        "intermediate_size": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "MLP intermediate (feed-forward) dimension."
+        },
+        "vocab_size": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Vocabulary size of the embedding / unembedding."
+        },
+        "max_position_embeddings": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum context length the position encoding supports."
+        },
+        "rope_theta": {
+          "type": "number",
+          "description": "RoPE base frequency (`config.rope_theta`), when present."
+        },
+        "tie_word_embeddings": {
+          "type": "boolean",
+          "description": "Whether the input embedding and output unembedding weights are tied."
+        },
+        "num_parameters": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total trainable+frozen parameter count summed over `model.parameters()`."
+        },
+        "dtype": {
+          "type": "string",
+          "description": "Parameter / compute dtype at trace time.",
+          "examples": [
+            "float16",
+            "float32",
+            "bfloat16"
+          ]
         }
       }
     },

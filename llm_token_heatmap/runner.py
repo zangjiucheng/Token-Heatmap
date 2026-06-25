@@ -25,7 +25,10 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any
 
-from llm_token_heatmap.trace_payload import serialize_trace_to_json
+from llm_token_heatmap.trace_payload import (
+    build_model_architecture,
+    serialize_trace_to_json,
+)
 
 DEFAULT_ACTIVATION_SUBMODULES: tuple[str, ...] = ("residual_post", "mlp_out", "o_proj")
 
@@ -263,6 +266,11 @@ def generate_trace_payload(config: GenerateTraceConfig) -> dict[str, Any]:
             "capture_logit_lens": bool(config.capture_logit_lens),
         }
 
+        param0 = next(model.parameters(), None)
+        model_architecture = build_model_architecture(
+            model, dtype=getattr(param0, "dtype", None)
+        )
+
         # Strip all private (underscore-prefixed) keys before serialization,
         # exactly as cli.run_trace does.
         trace_for_json = [
@@ -278,4 +286,5 @@ def generate_trace_payload(config: GenerateTraceConfig) -> dict[str, Any]:
             prompt=config.prompt,
             activation_metadata=activation_metadata,
             activation_sidecar_refs=None,
+            model_architecture=model_architecture,
         )

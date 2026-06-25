@@ -16,6 +16,9 @@ from pathlib import Path
 from typing import Any
 
 from llm_token_heatmap.trace_payload import (
+    build_model_architecture as _build_model_architecture_summary,
+)
+from llm_token_heatmap.trace_payload import (
     serialize_trace_to_json as _serialize_trace_to_json,
 )
 
@@ -751,6 +754,8 @@ def run_trace(args: argparse.Namespace) -> int:
             if act_path is not None:
                 activation_sidecar_refs[step_idx] = str(act_path.relative_to(output_dir))
 
+    model_architecture = _build_model_architecture_summary(model, dtype=dtype)
+
     metadata = {
         "model": args.model,
         "prompt": args.prompt,
@@ -787,6 +792,7 @@ def run_trace(args: argparse.Namespace) -> int:
         prompt=args.prompt,
         activation_metadata=activation_metadata,
         activation_sidecar_refs=activation_sidecar_refs,
+        model_architecture=model_architecture,
     )
     json_path = output_dir / "adaptive_token_trace.json"
     json_path.write_text(json.dumps(json_payload, indent=2), encoding="utf-8")

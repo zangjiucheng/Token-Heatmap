@@ -27,6 +27,7 @@ import {
 import { AttentionTab, AttentionHeadPattern, LogitLensTab } from '@/features/attention';
 import { ActivationsTab } from '@/features/activations';
 import { ManifoldTab } from '@/features/manifold';
+import { ModelTab } from '@/features/model';
 import type { Trace } from '@/types/trace';
 import type { TraceWithActivations } from '@/types/activation';
 import './TraceViewerPage.css';
@@ -328,6 +329,20 @@ export function TraceViewerPage() {
         <button
           type="button"
           role="tab"
+          aria-selected={activeTab === 'model'}
+          className={
+            activeTab === 'model'
+              ? 'trace-viewer-center__tab trace-viewer-center__tab--active'
+              : 'trace-viewer-center__tab'
+          }
+          onClick={() => setTab('model')}
+          data-testid="model-tab"
+        >
+          Model
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={activeTab === 'attention'}
           disabled={!hasAttention}
           title={
@@ -432,7 +447,9 @@ export function TraceViewerPage() {
       );
 
     let body: React.ReactNode;
-    if (activeTab === 'attention') {
+    if (activeTab === 'model') {
+      body = <ModelTab trace={trace} />;
+    } else if (activeTab === 'attention') {
       body = (
         <AttentionTab
           trace={trace}

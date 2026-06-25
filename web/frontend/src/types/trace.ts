@@ -14,6 +14,7 @@ export interface Trace {
   attention_metadata?: AttentionMetadata;
   activation_metadata?: ActivationMetadata;
   manifold?: Manifold;
+  model_architecture?: ModelArchitecture;
   /**
    * Per-trace metadata: model identity, sampling parameters, and prompt.
    */
@@ -331,6 +332,70 @@ export interface ManifoldScalar {
    * Scalar value at each position, aligned with `positions`.
    */
   values: number[];
+}
+/**
+ * Self-contained structural summary of the traced model, read from `model.config` plus a parameter count. All fields optional/best-effort so partial configs and exotic architectures still validate.
+ *
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ModelArchitecture".
+ */
+export interface ModelArchitecture {
+  /**
+   * Model class name from `config.architectures[0]`.
+   */
+  architecture?: string;
+  /**
+   * HuggingFace `config.model_type`.
+   */
+  model_type?: string;
+  /**
+   * Number of decoder (transformer) blocks (`config.num_hidden_layers`).
+   */
+  num_layers?: number;
+  /**
+   * Residual-stream / model dimension (`config.hidden_size`).
+   */
+  hidden_size?: number;
+  /**
+   * Query attention heads per layer.
+   */
+  num_attention_heads?: number;
+  /**
+   * Key/value heads per layer (smaller than `num_attention_heads` under Grouped Query Attention).
+   */
+  num_key_value_heads?: number;
+  /**
+   * Per-head dimension; derived from hidden_size / heads when the config omits it.
+   */
+  head_dim?: number;
+  /**
+   * MLP intermediate (feed-forward) dimension.
+   */
+  intermediate_size?: number;
+  /**
+   * Vocabulary size of the embedding / unembedding.
+   */
+  vocab_size?: number;
+  /**
+   * Maximum context length the position encoding supports.
+   */
+  max_position_embeddings?: number;
+  /**
+   * RoPE base frequency (`config.rope_theta`), when present.
+   */
+  rope_theta?: number;
+  /**
+   * Whether the input embedding and output unembedding weights are tied.
+   */
+  tie_word_embeddings?: boolean;
+  /**
+   * Total trainable+frozen parameter count summed over `model.parameters()`.
+   */
+  num_parameters?: number;
+  /**
+   * Parameter / compute dtype at trace time.
+   */
+  dtype?: string;
 }
 /**
  * This interface was referenced by `Trace`'s JSON-Schema
