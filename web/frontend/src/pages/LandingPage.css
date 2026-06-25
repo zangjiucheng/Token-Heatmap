@@ -1,5 +1,10 @@
 .landing-page {
-  min-height: 100%;
+  /* The app shell's <main> is overflow:hidden and each page owns its scroll,
+     so the landing content must scroll within its own full-height box (it was
+     clipped on short viewports / with the secondary cards). */
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--color-bg);
 }
 

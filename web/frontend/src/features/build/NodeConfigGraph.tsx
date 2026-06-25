@@ -1,10 +1,6 @@
 import { BuildNode, PipelineConnector } from './BuildNode';
-import {
-  MODEL_PRESET_GROUPS,
-  isBuildConfigValid,
-  modelShortLabel,
-  type BuildConfig,
-} from './config';
+import { ModelPicker } from './ModelPicker';
+import { isBuildConfigValid, type BuildConfig } from './config';
 import './NodeConfigGraph.css';
 
 export interface NodeConfigGraphProps {
@@ -69,40 +65,13 @@ export function NodeConfigGraph({
 
         {/* 2 · Model */}
         <BuildNode step={2} title="Model" subtitle="HF model id">
-          <label className="node-field">
+          <div className="node-field">
             <span className="node-field__label">Model</span>
-            <input
-              type="text"
-              className="node-field__input"
+            <ModelPicker
               value={config.model}
+              onChange={(model) => onChange({ model })}
               disabled={running}
-              placeholder="Qwen/Qwen2.5-0.5B-Instruct"
-              onChange={(e) => onChange({ model: e.target.value })}
-              data-testid="node-input-model"
             />
-          </label>
-          <div className="node-presets" role="group" aria-label="Model presets">
-            {MODEL_PRESET_GROUPS.map((group) => (
-              <div key={group.family} className="node-preset-group">
-                <span className="node-preset-family">{group.family}</span>
-                {group.models.map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    title={preset}
-                    className={
-                      preset === config.model
-                        ? 'node-preset node-preset--active'
-                        : 'node-preset'
-                    }
-                    disabled={running}
-                    onClick={() => onChange({ model: preset })}
-                  >
-                    {modelShortLabel(preset)}
-                  </button>
-                ))}
-              </div>
-            ))}
           </div>
         </BuildNode>
 

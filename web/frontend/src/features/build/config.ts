@@ -91,6 +91,19 @@ export function modelShortLabel(modelId: string): string {
   return modelId.replace(/^[^/]+\//, '');
 }
 
+/**
+ * Best-effort parameter-size badge parsed from a model id (e.g. "7B", "0.5B",
+ * "mini"). Used to hint how heavy/slow a model is to load and run. Returns null
+ * when no size token is found.
+ */
+export function modelSizeLabel(modelId: string): string | null {
+  const m = modelId.match(/(\d+(?:\.\d+)?)\s*[bB](?![a-zA-Z])/);
+  if (m) return `${m[1]}B`;
+  if (/mini/i.test(modelId)) return 'mini';
+  if (/small/i.test(modelId)) return 'small';
+  return null;
+}
+
 /** Project the editor config onto the `/trace/generate` request body. */
 export function buildConfigToParams(config: BuildConfig): GenerateParams {
   return {

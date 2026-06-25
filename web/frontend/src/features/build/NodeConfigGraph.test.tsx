@@ -59,9 +59,11 @@ describe('NodeConfigGraph', () => {
     expect(screen.getByTestId('node-error')).toHaveTextContent('boom');
   });
 
-  it('selects a model preset on click', async () => {
+  it('selects a model preset from the searchable picker', async () => {
     const user = userEvent.setup();
     const { onChange } = setup({ prompt: 'hi' });
+    // Open the combobox, then pick a preset from the dropdown.
+    await user.click(screen.getByTestId('node-input-model'));
     await user.click(screen.getByText('Qwen2.5-7B-Instruct'));
     expect(onChange).toHaveBeenCalledWith({
       model: 'Qwen/Qwen2.5-7B-Instruct',
