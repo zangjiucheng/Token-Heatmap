@@ -102,6 +102,15 @@ export const LENSES: readonly LensDef[] = [
       'This trace has no direct logit attribution. Re-run the CLI with --capture-full-activations to decompose each token’s logit by layer.',
   },
   {
+    id: 'attribution-graph',
+    label: 'Graph',
+    group: 'internals',
+    testId: 'attribution-graph-tab',
+    availabilityKey: 'directLogitAttribution',
+    lockedHint:
+      'This trace has no attribution data. Re-run the CLI with --capture-full-activations to build the attribution graph.',
+  },
+  {
     id: 'manifold',
     label: 'Manifold',
     group: 'geometry',

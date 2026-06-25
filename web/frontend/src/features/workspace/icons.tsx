@@ -67,6 +67,14 @@ const LENS_PATHS: Record<ViewerTab, React.ReactNode> = {
       <rect x="16" y="4" width="3" height="15" rx="0.5" />
     </>
   ),
+  'attribution-graph': (
+    <>
+      <path d="M7.6 7.1 16 5.4M7.4 16.4 9 8M10.7 16.6 16.3 7" />
+      <circle cx="6" cy="6" r="2.1" />
+      <circle cx="18" cy="5" r="2.1" />
+      <circle cx="9.4" cy="18" r="2.1" />
+    </>
+  ),
   manifold: (
     <>
       <circle cx="6" cy="8" r="1.4" />

@@ -22,6 +22,7 @@ import { ManifoldTab } from '@/features/manifold';
 import { ModelTab } from '@/features/model';
 import { OutputTab } from '@/features/output';
 import { DirectLogitAttributionTab } from '@/features/dla';
+import { AttributionGraphTab } from '@/features/graph';
 import {
   ControlBar,
   HEATMAP_CONTROL_LENSES,
@@ -216,6 +217,8 @@ export function TraceViewerPage() {
     if (!hasActivations && activeTab === 'activations') activeTab = 'heatmap';
     if (!hasDirectLogitAttribution && activeTab === 'direct-logit-attribution')
       activeTab = 'heatmap';
+    if (!hasDirectLogitAttribution && activeTab === 'attribution-graph')
+      activeTab = 'heatmap';
     if (!hasManifold && activeTab === 'manifold') activeTab = 'heatmap';
 
     const traceWithActivations = trace as TraceWithActivations;
@@ -262,6 +265,10 @@ export function TraceViewerPage() {
     } else if (activeTab === 'direct-logit-attribution') {
       canvas = (
         <DirectLogitAttributionTab trace={trace} selectedStep={selectedStep} />
+      );
+    } else if (activeTab === 'attribution-graph') {
+      canvas = (
+        <AttributionGraphTab trace={trace} selectedStep={selectedStep} />
       );
     } else if (activeTab === 'activations') {
       canvas = (

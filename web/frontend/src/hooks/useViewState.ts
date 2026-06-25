@@ -12,6 +12,7 @@ export type ViewerTab =
   | 'logit-lens'
   | 'activations'
   | 'direct-logit-attribution'
+  | 'attribution-graph'
   | 'manifold';
 
 export interface SelectedHead {
@@ -56,6 +57,7 @@ const VALID_TABS: ViewerTab[] = [
   'logit-lens',
   'activations',
   'direct-logit-attribution',
+  'attribution-graph',
   'manifold',
 ];
 

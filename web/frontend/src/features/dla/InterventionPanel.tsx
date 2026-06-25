@@ -6,6 +6,7 @@ import {
 } from '@/api/client';
 import { useBackendHealth } from '@/hooks/useBackendHealth';
 import type { Trace, DirectLogitAttributionStep } from '@/types/trace';
+import './InterventionPanel.css';
 
 export interface PresetTarget {
   layer: number;

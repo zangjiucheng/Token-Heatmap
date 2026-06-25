@@ -1,6 +1,6 @@
 # Epic 03 — Attribution graph lens
 
-**Status:** Planned · **Effort:** L · **Depends on:** [Epic 01](01-direct-logit-attribution.md)
+**Status:** v1 landed on `main` (frontend-only graph over DLA data; feature-level / multi-hop edges await [Epic 06](06-sae-transcoder-features.md)) · **Effort:** L · **Depends on:** [Epic 01](01-direct-logit-attribution.md)
 
 ## Motivation
 

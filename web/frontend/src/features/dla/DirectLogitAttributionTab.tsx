@@ -6,7 +6,6 @@ import type {
 } from '@/types/trace';
 import { InterventionPanel, type PresetTarget } from './InterventionPanel';
 import './DirectLogitAttributionTab.css';
-import './InterventionPanel.css';
 
 export interface DirectLogitAttributionTabProps {
   trace: Trace;
