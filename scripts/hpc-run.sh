@@ -227,7 +227,11 @@ echo "[hpc-run] submitted job ${JOB_ID}  (log: ${REMOTE_REPO}/${REMOTE_LOG})"
 echo "[hpc-run] [3/4] waiting for the GPU job to finish (poll every ${POLL_SECONDS}s; Ctrl+C is safe — the job keeps running)..."
 last_state=""
 while true; do
-  state="$(ssh "$SSH_HOST" bash -lc "squeue -h -j ${JOB_ID} -o '%T' 2>/dev/null" | head -1 || true)"
+  # The remote `bash -lc '…'` must reach the login shell as ONE arg, or ssh
+  # token-joins it and `bash -lc squeue …` runs squeue with no args (dumping a
+  # headered job list that never goes empty -> infinite loop). Quote the whole
+  # `bash -lc '…'` as a single ssh argument.
+  state="$(ssh "$SSH_HOST" "bash -lc 'squeue -h -j ${JOB_ID} -o %T 2>/dev/null'" | head -1 || true)"
   [[ -z "$state" ]] && break   # gone from the queue -> finished
   if [[ "$state" != "$last_state" ]]; then
     echo "[hpc-run]   state: ${state}"
@@ -241,7 +245,7 @@ while true; do
   sleep "$POLL_SECONDS"
 done
 
-FINAL_STATE="$(ssh "$SSH_HOST" bash -lc "sacct -j ${JOB_ID} -n -P -o State 2>/dev/null" | head -1 || true)"
+FINAL_STATE="$(ssh "$SSH_HOST" "bash -lc 'sacct -j ${JOB_ID} -n -P -o State 2>/dev/null'" | head -1 || true)"
 echo "[hpc-run] job ${JOB_ID} finished: ${FINAL_STATE:-unknown}"
 echo "[hpc-run] --- remote log tail -------------------------------------------"
 ssh "$SSH_HOST" "tail -n 12 '${REMOTE_REPO}/${REMOTE_LOG}' 2>/dev/null" || true
