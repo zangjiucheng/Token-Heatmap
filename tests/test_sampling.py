@@ -86,3 +86,35 @@ def test_top_k_constrains_choice():
     for _ in range(20):
         token, _ = sample_next_token(logits, temperature=1.0, top_p=1.0, top_k=2)
         assert int(token[0]) in keep
+
+
+def test_nan_inf_logits_do_not_crash():
+    """A NaN/inf logit (e.g. an fp16 overflow upstream) must not reach
+    multinomial — it would device-side-assert. The guard keeps a finite entry
+    so a valid token is still drawn."""
+    logits = torch.tensor([[float("nan"), float("inf"), 3.0, float("-inf"), 1.0]])
+    token, _ = sample_next_token(logits, temperature=1.0, top_p=1.0, top_k=0)
+    assert token.shape == (1,)
+    assert int(token[0]) >= 0
+
+
+def test_all_nan_row_falls_back_to_greedy():
+    """If every logit in a row is NaN/inf the distribution has no finite mass;
+    the guard falls back to the argmax of the sanitized logits instead of
+    producing an invalid (all-zero) probability vector."""
+    logits = torch.full((1, 8), float("nan"))
+    logits[0, 3] = float("inf")  # the lone 'best' after nan_to_num
+    token, _ = sample_next_token(logits, temperature=1.0, top_p=1.0, top_k=0)
+    assert int(token[0]) == 3
+
+
+def test_batched_partial_nan_row_recovers():
+    """One good row + one all-bad row in the same batch: both yield valid
+    tokens, the bad row via the greedy fallback."""
+    logits = torch.zeros(2, 6)
+    logits[0, 2] = 10.0  # clean row -> argmax 2
+    logits[1] = float("nan")
+    logits[1, 4] = float("inf")  # degenerate row -> fallback 4
+    token, _ = sample_next_token(logits, temperature=1e-4, top_p=1.0, top_k=0)
+    assert int(token[0]) == 2
+    assert int(token[1]) == 4

@@ -33,8 +33,12 @@ set -euo pipefail
 export HF_HOME="${HF_HOME:-/work/j7zang/.cache/huggingface}"
 
 BIN="${BIN:-/work/j7zang/.local/bin/token-heatmap}"
-MODEL="${MODEL:-Qwen/Qwen2.5-7B-Instruct}"   # already cached -> no download
-OUT="${OUT:-outputs/qwen7b-run}"
+# MODEL is OPTIONAL: empty -> use the model declared in the --config YAML.
+# Set it only to override the config (e.g. MODEL=Qwen/Qwen2.5-14B-Instruct).
+MODEL="${MODEL:-}"
+MODEL_FLAG=""
+[ -n "$MODEL" ] && MODEL_FLAG="--model $MODEL"
+OUT="${OUT:-outputs/qwen-run}"
 CONFIG="${CONFIG:-configs/example.yaml}"      # supplies prompt + sampling + logit-lens
 # extra trace flags (e.g. override prompt/tokens): EXTRA="--max-new-tokens 96"
 EXTRA="${EXTRA:-}"
@@ -45,12 +49,13 @@ CAPTURE="${CAPTURE:-full}"
 ATTN_FLAGS="--capture-attention --attention-layers all --capture-full-attention"
 [ "$CAPTURE" = "activations" ] && ATTN_FLAGS=""
 
-echo "[hpc-gen] job=$SLURM_JOB_ID node=$(hostname) model=$MODEL out=$OUT capture=$CAPTURE"
+echo "[hpc-gen] job=$SLURM_JOB_ID node=$(hostname) model=${MODEL:-<from config>} out=$OUT capture=$CAPTURE"
 echo "[hpc-gen] GPU:"; nvidia-smi --query-gpu=name,memory.total,memory.used --format=csv,noheader || true
 
 echo "[hpc-gen] [1/2] trace..."
-# --config supplies prompt/sampling/logit-lens; --model and --out override it.
-"$BIN" trace --config "$CONFIG" --model "$MODEL" --out "$OUT" \
+# --config supplies model/prompt/sampling/logit-lens; --out always overrides,
+# and --model overrides only when MODEL is set (otherwise the config's wins).
+"$BIN" trace --config "$CONFIG" $MODEL_FLAG --out "$OUT" \
   $ATTN_FLAGS \
   --capture-activations --capture-full-activations \
   $EXTRA

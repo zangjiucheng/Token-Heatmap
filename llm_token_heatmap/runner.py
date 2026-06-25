@@ -89,7 +89,13 @@ def _load_model_and_tokenizer(model_id: str) -> tuple[Any, Any, str]:
 
     use_cuda = torch.cuda.is_available()
     device = "cuda" if use_cuda else "cpu"
-    dtype = torch.float16 if use_cuda else torch.float32
+    # Prefer bfloat16 on CUDA: fp16 overflows to inf on modern bf16-native models
+    # (Qwen2.5 etc.), yielding NaN logits that crash multinomial sampling. bf16
+    # keeps fp32's exponent range. See llm_token_heatmap.cli.run_trace.
+    if use_cuda:
+        dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+    else:
+        dtype = torch.float32
 
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
     load_kwargs: dict[str, Any] = {

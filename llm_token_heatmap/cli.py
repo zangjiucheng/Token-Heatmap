@@ -593,7 +593,15 @@ def run_trace(args: argparse.Namespace) -> int:
 
     use_cuda = torch.cuda.is_available()
     device = "cuda" if use_cuda else "cpu"
-    dtype = torch.float16 if use_cuda else torch.float32
+    # Prefer bfloat16 on CUDA. Qwen2.5 (and most modern LLMs) ship in bf16; fp16's
+    # narrow exponent range overflows to inf on their large activations —
+    # especially under the eager attention kernel forced by --capture-attention —
+    # producing NaN logits that make multinomial sampling device-side-assert and
+    # crash the run. bf16 has fp32's exponent range, so it doesn't overflow.
+    if use_cuda:
+        dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+    else:
+        dtype = torch.float32
 
     load_in_4bit = bool(getattr(args, "load_in_4bit", False)) and use_cuda
     print(
@@ -615,7 +623,7 @@ def run_trace(args: argparse.Namespace) -> int:
             load_kwargs["quantization_config"] = BitsAndBytesConfig(
                 load_in_4bit=True,
                 bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_compute_dtype=dtype,
                 bnb_4bit_use_double_quant=True,
             )
         else:

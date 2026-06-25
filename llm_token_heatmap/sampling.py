@@ -81,6 +81,24 @@ def sample_next_token(
     )
 
     probs = torch.softmax(processed_logits, dim=-1)
+
+    # Defensive sanitisation. If an upstream NaN/inf logit slips through (e.g. an
+    # fp16 overflow in the model forward), `probs` contains NaN/inf and
+    # `torch.multinomial` fires a CUDA device-side assert that poisons the whole
+    # CUDA context — every later op then fails. Catch it here: zero out
+    # non-finite/negative mass, and for any row left with no mass fall back to a
+    # greedy pick so generation degrades instead of crashing.
+    if not torch.isfinite(probs).all() or bool((probs < 0).any()):
+        probs = torch.nan_to_num(probs, nan=0.0, posinf=0.0, neginf=0.0).clamp_min(0.0)
+    row_sums = probs.sum(dim=-1, keepdim=True)
+    dead_rows = (row_sums <= 0).squeeze(-1)
+    if bool(dead_rows.any()):
+        fallback = torch.nan_to_num(processed_logits).argmax(dim=-1)
+        probs[dead_rows] = 0.0
+        probs[dead_rows, fallback[dead_rows]] = 1.0
+        row_sums = probs.sum(dim=-1, keepdim=True)
+    probs = probs / row_sums
+
     next_token = torch.multinomial(probs, num_samples=1).squeeze(-1)
 
     return next_token, processed_logits
