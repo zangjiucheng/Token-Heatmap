@@ -4,6 +4,10 @@
   gap: 6px;
 }
 
+.attention-head-pattern__bar {
+  fill: var(--color-accent);
+}
+
 .attention-head-pattern--empty,
 .attention-head-pattern--error {
   padding: 12px;

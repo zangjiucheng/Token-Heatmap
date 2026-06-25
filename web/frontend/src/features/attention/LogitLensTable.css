@@ -53,7 +53,9 @@
 .logit-lens-table__heat-bar {
   position: absolute;
   inset: 0;
-  background: rgba(38, 130, 142, 0.18);
+  /* Coral magnitude bar — semi-transparent so it reads on both themes and
+     stays in the Claude accent family (was a leftover viridis teal). */
+  background: rgba(217, 119, 87, 0.22);
   z-index: 0;
   border-radius: 2px;
 }

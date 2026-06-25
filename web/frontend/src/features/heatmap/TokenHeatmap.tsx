@@ -539,7 +539,9 @@ export function TokenHeatmap({
       const col = hover.cell.step - stepStart;
       const hx = col * plot.cellW;
       const hy = plot.originY + hover.cell.rank * plot.cellH;
-      ctx.strokeStyle = '#1a1d21';
+      // Theme text colour so the hover outline stays visible on warm-charcoal
+      // dark mode (a hardcoded near-black vanished against the dark surface).
+      ctx.strokeStyle = tk.text;
       ctx.lineWidth = 1.5;
       ctx.strokeRect(hx, hy, plot.cellW, plot.cellH);
     }
@@ -553,6 +555,7 @@ export function TokenHeatmap({
     stepStart,
     stepEnd,
     plot,
+    tk.text,
   ]);
 
   // Translate a pointer event into a grid cell. Hit-testing uses the data

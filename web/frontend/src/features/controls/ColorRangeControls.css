@@ -60,7 +60,7 @@
 }
 
 .color-range-controls__input input[aria-invalid='true'] {
-  border-color: var(--color-error, #d33);
+  border-color: var(--color-status-error-fg);
 }
 
 .color-range-controls__input input:disabled {
@@ -74,7 +74,7 @@
 }
 
 .color-range-controls__error {
-  color: var(--color-error, #d33);
+  color: var(--color-status-error-fg);
   font-size: 12px;
   margin: 0;
 }

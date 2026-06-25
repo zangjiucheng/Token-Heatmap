@@ -61,15 +61,16 @@
 
 :root,
 [data-theme='light'] {
-  /* Surface and text */
-  --color-bg: #fbfcfe;
-  --color-bg-elevated: #ffffff;
-  --color-bg-muted: #eef2f7;
+  /* Surface and text — Claude's warm paper. The page is a soft cream, chrome
+     surfaces sit a shade lighter, and cards/inputs stay crisp white. */
+  --color-bg: #f3f1e9;
+  --color-bg-elevated: #faf9f4;
+  --color-bg-muted: #eae7db;
   --color-surface: #ffffff;
-  --color-border: #e2e8f0;
-  --color-border-strong: #aeb9c8;
-  --color-text: #0a0e15;
-  --color-text-muted: #586273;
+  --color-border: #e6e2d4;
+  --color-border-strong: #cbc4b1;
+  --color-text: #2b2823;
+  --color-text-muted: #655f51;
   --color-text-inverse: #ffffff;
 
   /* Accent — Claude clay/coral orange. `accent` is for fills and indicators;
@@ -98,11 +99,12 @@
   --color-status-warning-border: #d4a72c;
 
   /* Skeleton */
-  --color-skeleton: #e3e6ea;
-  --color-skeleton-shine: #f3f5f7;
+  --color-skeleton: #e9e6da;
+  --color-skeleton-shine: #f4f2ea;
 
-  --shadow-panel: 0 1px 2px rgb(10 14 21 / 6%), 0 8px 24px rgb(10 14 21 / 4%);
-  --shadow-pop: 0 6px 28px rgb(10 14 21 / 12%);
+  /* Warm-tinted shadows so elevation reads against the paper. */
+  --shadow-panel: 0 1px 2px rgb(60 50 30 / 7%), 0 8px 24px rgb(60 50 30 / 5%);
+  --shadow-pop: 0 6px 28px rgb(60 50 30 / 13%);
 
   /* Okabe-Ito categorical palette */
   --okabe-black: #000000;
@@ -128,15 +130,17 @@
 }
 
 [data-theme='dark'] {
-  --color-bg: #0a0e15;
-  --color-bg-elevated: #121a27;
-  --color-bg-muted: #1a2433;
-  --color-surface: #121a27;
-  --color-border: #232f41;
-  --color-border-strong: #3a4860;
-  --color-text: #dde4ee;
-  --color-text-muted: #8995a8;
-  --color-text-inverse: #0a0e15;
+  /* Warm charcoal — Claude's dark surface, a brown-leaning near-black rather
+     than a cool blue-black. */
+  --color-bg: #1b1a17;
+  --color-bg-elevated: #242220;
+  --color-bg-muted: #302d28;
+  --color-surface: #242220;
+  --color-border: #38352f;
+  --color-border-strong: #4f4b42;
+  --color-text: #ece7dc;
+  --color-text-muted: #a39c8b;
+  --color-text-inverse: #1b1a17;
 
   --color-accent: #e8916b;
   --color-accent-strong: #f0a585;
@@ -159,11 +163,11 @@
   --color-status-warning-fg: #f3d27a;
   --color-status-warning-border: #7a5a1f;
 
-  --color-skeleton: #1a2433;
-  --color-skeleton-shine: #243044;
+  --color-skeleton: #2c2a25;
+  --color-skeleton-shine: #37342d;
 
-  --shadow-panel: 0 1px 0 rgb(0 0 0 / 40%), 0 12px 32px rgb(0 0 0 / 30%);
-  --shadow-pop: 0 8px 32px rgb(0 0 0 / 50%);
+  --shadow-panel: 0 1px 0 rgb(0 0 0 / 40%), 0 12px 32px rgb(0 0 0 / 35%);
+  --shadow-pop: 0 8px 32px rgb(0 0 0 / 55%);
 
   color-scheme: dark;
 }

@@ -189,7 +189,7 @@ export function AttentionHeadPattern({
                   y={y}
                   width={Math.max(1, barW - 2)}
                   height={h}
-                  fill="#26828e"
+                  className="attention-head-pattern__bar"
                   data-testid={`attention-pattern-bar-${b.position}`}
                   data-position={b.position}
                   data-weight={b.weight}

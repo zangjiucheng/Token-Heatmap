@@ -32,14 +32,14 @@ const TOKEN_VARS: Record<keyof ThemeTokens, string> = {
 };
 
 const FALLBACK: ThemeTokens = {
-  bg: '#ffffff',
+  bg: '#f3f1e9',
   surface: '#ffffff',
-  bgMuted: '#eef2f7',
-  text: '#0a0e15',
-  textMuted: '#586273',
-  border: '#e2e8f0',
-  borderStrong: '#aeb9c8',
-  accent: '#109e89',
+  bgMuted: '#eae7db',
+  text: '#2b2823',
+  textMuted: '#655f51',
+  border: '#e6e2d4',
+  borderStrong: '#cbc4b1',
+  accent: '#d97757',
   selected: '#b26b05',
 };
 
