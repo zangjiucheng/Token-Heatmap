@@ -1,0 +1,29 @@
+# token-heatmap trace config — a small demo for the Attribution / Graph lenses
+# and interventions (Direct Logit Attribution, per-head, ablation).
+#
+# Run on the HPC (compute remote, view locally):
+#   ./scripts/hpc-run.sh configs/dla-demo.yaml --setup --gpu l40s
+#
+# `scripts/hpc-gen.slurm` forces `--capture-activations --capture-full-activations`
+# (+ attention under the default `--capture full`), so the Attribution and Graph
+# lenses, per-head DLA, and ablation all have data. A factual prompt + low-ish
+# temperature keeps the attribution interpretable.
+
+model: Qwen/Qwen2.5-0.5B-Instruct
+prompt: "The capital of France is"
+
+max_new_tokens: 24
+temperature: 0.7
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/dla-demo
+
+capture_logit_lens: true
+lens_layers: all
+lens_top_k: 8
+
+capture_attention: true
+capture_activations: true
