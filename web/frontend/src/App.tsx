@@ -7,6 +7,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
+import { OPEN_KEYMAP_HELP_EVENT } from '@/components/layout/Header';
 import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
 import { KeymapHelpDialog } from '@/components/help/KeymapHelpDialog';
 import { useKeymap } from '@/hooks/useKeymap';
@@ -51,6 +52,13 @@ function GlobalShortcuts() {
 
   const openHelp = useCallback(() => setHelpOpen(true), []);
   const closeHelp = useCallback(() => setHelpOpen(false), []);
+
+  // The header's "?" button lives outside this component's tree, so it asks for
+  // the dialog via a window event rather than a shared context.
+  useEffect(() => {
+    window.addEventListener(OPEN_KEYMAP_HELP_EVENT, openHelp);
+    return () => window.removeEventListener(OPEN_KEYMAP_HELP_EVENT, openHelp);
+  }, [openHelp]);
 
   useKeymap({
     'help.open': openHelp,

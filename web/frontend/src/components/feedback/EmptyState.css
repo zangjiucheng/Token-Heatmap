@@ -6,13 +6,14 @@
   padding: 48px 24px;
 }
 
+/* A single focused column: the primary "open trace" hero, then a row of
+   secondary entry points (build / compare). */
 .empty-state__content {
-  display: grid;
-  grid-template-columns: minmax(320px, 1fr) minmax(280px, 0.72fr);
+  display: flex;
+  flex-direction: column;
   gap: var(--space-4);
-  max-width: 960px;
+  max-width: 880px;
   width: 100%;
-  align-items: stretch;
 }
 
 .empty-state__dropzone {
@@ -26,7 +27,7 @@
 }
 
 .empty-state__dropzone--primary {
-  min-height: 300px;
+  min-height: 280px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -187,6 +188,31 @@
   background: var(--color-bg-muted);
 }
 
+/* ── Secondary entry points ───────────────────────────────────────────── */
+.empty-state__secondary-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.empty-state__card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 168px;
+  padding: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.empty-state__card-desc {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
 .empty-state__subtitle {
   margin: 0 0 8px;
   font-family: var(--font-display);
@@ -195,19 +221,15 @@
   color: var(--color-text);
 }
 
-/* The generate panel spans both grid columns as a full-width row. */
-.empty-state__generate {
-  grid-column: 1 / -1;
-}
-
+/* The diff card doubles as a dropzone, so it picks up the dashed treatment
+   and the drag-highlight. */
 .empty-state__dropzone--diff {
   border-style: dashed;
-  background: var(--color-surface);
-  border-color: var(--color-border);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 24px;
+}
+
+.empty-state__dropzone--diff[data-dragging='true'] {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
 }
 
 @media (max-width: 760px) {
@@ -215,11 +237,11 @@
     padding: 24px 16px;
   }
 
-  .empty-state__content {
-    grid-template-columns: 1fr;
-  }
-
   .empty-state__dropzone--primary {
     min-height: 240px;
+  }
+
+  .empty-state__secondary-row {
+    grid-template-columns: 1fr;
   }
 }

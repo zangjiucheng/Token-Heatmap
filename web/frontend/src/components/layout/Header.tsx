@@ -1,51 +1,80 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
+import {
+  GithubIcon,
+  HelpIcon,
+  MoonIcon,
+  SunIcon,
+} from '@/features/workspace/icons';
 import './Header.css';
 
 const GITHUB_URL = 'https://github.com/zangjiucheng/Token-Heatmap';
 
+/** Open the keyboard-shortcut dialog owned by App's GlobalShortcuts. */
+export const OPEN_KEYMAP_HELP_EVENT = 'token-heatmap:open-keymap-help';
+
+function openKeymapHelp() {
+  window.dispatchEvent(new Event(OPEN_KEYMAP_HELP_EVENT));
+}
+
+function navLinkClass({ isActive }: { isActive: boolean }): string {
+  return isActive
+    ? 'app-header__nav-link app-header__nav-link--active'
+    : 'app-header__nav-link';
+}
+
 export function Header() {
   const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
 
   return (
     <header className="app-header" role="banner">
-      <Link to="/" className="app-header__brand">
-        LLM Token Heatmap
-      </Link>
+      <NavLink to="/" className="app-header__brand" aria-label="Token Heatmap — home">
+        <span className="app-header__mark" aria-hidden="true" />
+        <span className="app-header__brand-text">Token Heatmap</span>
+      </NavLink>
+
       <nav className="app-header__nav" aria-label="Primary">
+        <div className="app-header__segment" role="group" aria-label="Workflow">
+          <NavLink to="/" end className={navLinkClass}>
+            Load
+          </NavLink>
+          <NavLink to="/build" className={navLinkClass}>
+            Build
+          </NavLink>
+        </div>
+      </nav>
+
+      <div className="app-header__utils">
         <button
           type="button"
-          className="app-header__button"
-          onClick={() => navigate('/')}
+          className="app-header__icon-button"
+          onClick={openKeymapHelp}
+          aria-label="Keyboard shortcuts"
+          title="Keyboard shortcuts (?)"
         >
-          Load trace
+          <HelpIcon />
         </button>
         <button
           type="button"
-          className="app-header__button"
-          onClick={() => navigate('/build')}
-        >
-          Build trace
-        </button>
-        <button
-          type="button"
-          className="app-header__button"
+          className="app-header__icon-button"
           aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
           aria-pressed={theme === 'dark'}
+          title="Toggle theme (T)"
           onClick={toggleTheme}
         >
-          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
         <a
-          className="app-header__link"
+          className="app-header__icon-button"
           href={GITHUB_URL}
           target="_blank"
           rel="noreferrer noopener"
+          aria-label="GitHub repository"
+          title="GitHub"
         >
-          GitHub
+          <GithubIcon />
         </a>
-      </nav>
+      </div>
     </header>
   );
 }

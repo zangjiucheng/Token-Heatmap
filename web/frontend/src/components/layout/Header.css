@@ -1,8 +1,7 @@
 .app-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-5);
   padding: 0 var(--space-4);
   height: 52px;
   background: var(--color-bg-elevated);
@@ -22,8 +21,7 @@
 }
 
 /* Signature: the viridis spectrum as a small brand mark. */
-.app-header__brand::before {
-  content: '';
+.app-header__mark {
   width: 18px;
   height: 18px;
   border-radius: var(--radius-xs);
@@ -38,38 +36,81 @@
 .app-header__nav {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
 }
 
-.app-header__button {
+/* Workflow segmented control — a single grouped control with a clear active
+   state, so the toolbox always signals which stage you're in. */
+.app-header__segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.app-header__nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.app-header__nav-link:hover {
+  color: var(--color-text);
+}
+
+.app-header__nav-link--active {
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.app-header__utils {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.app-header__icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   background: transparent;
   color: var(--color-text-muted);
   border: 1px solid transparent;
-  padding: 6px 12px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-weight: 500;
+  text-decoration: none;
   transition:
     color var(--transition-fast),
     background var(--transition-fast),
     border-color var(--transition-fast);
 }
 
-.app-header__button:hover {
+.app-header__icon-button:hover {
   color: var(--color-text);
   background: var(--color-bg-muted);
   border-color: var(--color-border);
 }
 
-.app-header__link {
-  color: var(--color-text-muted);
-  text-decoration: none;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  font-weight: 500;
-  transition: color var(--transition-fast);
-}
+@media (max-width: 560px) {
+  .app-header {
+    gap: var(--space-3);
+  }
 
-.app-header__link:hover {
-  color: var(--color-accent-text);
+  .app-header__brand-text {
+    display: none;
+  }
 }

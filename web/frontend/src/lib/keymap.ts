@@ -107,14 +107,14 @@ export const KEYMAP: ReadonlyArray<KeymapBinding> = [
     id: 'panel.toggleLeft',
     trigger: { key: '[' },
     category: 'layout',
-    description: 'Toggle the left side panel (Controls)',
+    description: 'Collapse / expand the lens rail',
     display: '[',
   },
   {
     id: 'panel.toggleRight',
     trigger: { key: ']' },
     category: 'layout',
-    description: 'Toggle the right side panel (Step detail)',
+    description: 'Toggle the inspector',
     display: ']',
   },
 

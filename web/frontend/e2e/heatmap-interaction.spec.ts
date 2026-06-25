@@ -56,27 +56,33 @@ test.describe('heatmap interaction', () => {
     await expect(page.getByTestId('step-detail-panel-step')).toHaveText(/Step 1/);
   });
 
-  test('collapsing both panels persists across reload; `]` re-expands the right panel', async ({ page }) => {
-    // Collapse both panels via the header chevron buttons.
-    await page.getByTestId('three-pane-left-collapse').click();
-    await page.getByTestId('three-pane-right-collapse').click();
+  test('collapsing the rail and inspector persists across reload; `]` re-opens the inspector', async ({ page }) => {
+    // Collapse the lens rail and the inspector.
+    await page.getByTestId('lens-rail-collapse').click();
+    await page.getByTestId('inspector-collapse').click();
 
-    await expect(page.getByTestId('three-pane-left-expand')).toBeVisible();
-    await expect(page.getByTestId('three-pane-right-expand')).toBeVisible();
+    await expect(page.getByTestId('lens-rail')).toHaveAttribute(
+      'data-collapsed',
+      'true',
+    );
+    await expect(page.getByTestId('inspector-expand')).toBeVisible();
     await expect(page).toHaveURL(/[?&]left=0/);
     await expect(page).toHaveURL(/[?&]right=0/);
 
     await page.reload();
     await expect(page.getByTestId('token-heatmap-plot')).toBeVisible();
-    // Both rails are still showing the "Show" button after reload.
-    await expect(page.getByTestId('three-pane-left-expand')).toBeVisible();
-    await expect(page.getByTestId('three-pane-right-expand')).toBeVisible();
+    // State re-hydrates from the URL after reload.
+    await expect(page.getByTestId('lens-rail')).toHaveAttribute(
+      'data-collapsed',
+      'true',
+    );
+    await expect(page.getByTestId('inspector-expand')).toBeVisible();
 
-    // Press `]` and the right panel re-expands.
+    // Press `]` and the inspector re-opens.
     await page.locator('body').click();
     await page.keyboard.press(']');
-    await expect(page.getByTestId('three-pane-right-collapse')).toBeVisible();
-    await expect(page.getByTestId('three-pane-right-expand')).toBeHidden();
+    await expect(page.getByTestId('inspector-collapse')).toBeVisible();
+    await expect(page.getByTestId('inspector-expand')).toBeHidden();
   });
 
   test('? opens the keyboard help dialog', async ({ page }) => {

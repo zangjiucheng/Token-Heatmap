@@ -1,6 +1,4 @@
 import { useRef, useState, type DragEvent, type ReactNode } from 'react';
-import type { GenerateParams } from '@/api/client';
-import { GenerateForm } from '@/components/forms/GenerateForm';
 import './EmptyState.css';
 
 export interface EmptyStateProps {
@@ -18,11 +16,10 @@ export interface EmptyStateProps {
    */
   onUrlSubmit?: (url: string) => void;
   /**
-   * Called when the user submits the generation form. When provided, a
-   * "Generate" panel is shown so a trace can be produced from a prompt via the
-   * backend instead of loaded from disk/URL.
+   * Called when the user chooses to build a trace. When provided, a "Build a
+   * trace" card links to the visual config builder (which owns generation now).
    */
-  onGenerate?: (params: GenerateParams) => void;
+  onBuild?: () => void;
   title?: string;
   description?: ReactNode;
 }
@@ -32,7 +29,7 @@ export function EmptyState({
   onFileDropped,
   onTwoFilesDropped,
   onUrlSubmit,
-  onGenerate,
+  onBuild,
   title = 'No trace loaded',
   description = (
     <>
@@ -116,6 +113,8 @@ export function EmptyState({
     onTwoFilesDropped(files[0], files[1]);
   };
 
+  const hasSecondary = Boolean(onBuild) || Boolean(onTwoFilesDropped);
+
   return (
     <section className="empty-state" aria-labelledby="empty-state-title">
       <div className="empty-state__content">
@@ -194,49 +193,70 @@ export function EmptyState({
           )}
         </div>
 
-        {onTwoFilesDropped && (
-          <div
-            className="empty-state__dropzone empty-state__dropzone--diff"
-            data-testid="empty-state-diff-dropzone"
-            data-dragging={isDiffDragging ? 'true' : 'false'}
-            onDragOver={handleDiffDragOver}
-            onDragLeave={handleDiffDragLeave}
-            onDrop={handleDiffDrop}
-          >
-            <div className="empty-state__copy">
-              <p className="empty-state__eyebrow">Compare traces</p>
-              <h2 className="empty-state__subtitle">Activation diff</h2>
-              <p className="empty-state__description">
-                Drop two activation-trace JSON files here, or pick two from
-                disk.
-              </p>
-            </div>
-            <div className="empty-state__actions">
-              <button
-                type="button"
-                className="empty-state__secondary"
-                data-testid="empty-state-diff-pick"
-                onClick={() => diffInputRef.current?.click()}
-              >
-                Choose two files…
-              </button>
-              <input
-                ref={diffInputRef}
-                type="file"
-                accept=".json,application/json"
-                multiple
-                className="empty-state__file-input"
-                data-testid="empty-state-diff-input"
-                onChange={handleDiffFileChange}
-                aria-label="Two activation trace files"
-              />
-            </div>
-          </div>
-        )}
+        {hasSecondary && (
+          <div className="empty-state__secondary-row">
+            {onBuild && (
+              <div className="empty-state__card">
+                <div className="empty-state__copy">
+                  <p className="empty-state__eyebrow">Generate</p>
+                  <h2 className="empty-state__subtitle">Build a trace</h2>
+                  <p className="empty-state__card-desc">
+                    Wire a model, prompt and capture flags into a run on the
+                    backend — or export the equivalent YAML for the CLI.
+                  </p>
+                </div>
+                <div className="empty-state__actions">
+                  <button
+                    type="button"
+                    className="empty-state__secondary"
+                    onClick={onBuild}
+                    data-testid="empty-state-build"
+                  >
+                    Open the builder →
+                  </button>
+                </div>
+              </div>
+            )}
 
-        {onGenerate && (
-          <div className="empty-state__generate">
-            <GenerateForm onGenerate={onGenerate} />
+            {onTwoFilesDropped && (
+              <div
+                className="empty-state__card empty-state__dropzone--diff"
+                data-testid="empty-state-diff-dropzone"
+                data-dragging={isDiffDragging ? 'true' : 'false'}
+                onDragOver={handleDiffDragOver}
+                onDragLeave={handleDiffDragLeave}
+                onDrop={handleDiffDrop}
+              >
+                <div className="empty-state__copy">
+                  <p className="empty-state__eyebrow">Compare</p>
+                  <h2 className="empty-state__subtitle">Activation diff</h2>
+                  <p className="empty-state__card-desc">
+                    Drop two activation-trace JSON files here, or pick two from
+                    disk.
+                  </p>
+                </div>
+                <div className="empty-state__actions">
+                  <button
+                    type="button"
+                    className="empty-state__secondary"
+                    data-testid="empty-state-diff-pick"
+                    onClick={() => diffInputRef.current?.click()}
+                  >
+                    Choose two files…
+                  </button>
+                  <input
+                    ref={diffInputRef}
+                    type="file"
+                    accept=".json,application/json"
+                    multiple
+                    className="empty-state__file-input"
+                    data-testid="empty-state-diff-input"
+                    onChange={handleDiffFileChange}
+                    aria-label="Two activation trace files"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

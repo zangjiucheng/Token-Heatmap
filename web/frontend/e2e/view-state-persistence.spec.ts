@@ -30,43 +30,27 @@ test.describe('view state persistence', () => {
     await expect(page.getByTestId('split-heatmap')).toBeVisible();
   });
 
-  test('left gutter drag persists pane widths across a reload', async ({
+  test('inspector collapse persists across a reload via the URL', async ({
     page,
   }) => {
     await gotoLanding(page);
     await loadBundledSample(page);
     await waitForViewerReady(page);
 
-    const gutter = page.getByTestId('three-pane-gutter-left');
-    await gutter.waitFor({ state: 'visible' });
+    // Collapse the inspector — the URL records right=0.
+    await page.getByTestId('inspector-collapse').click();
+    await expect(page).toHaveURL(/[?&]right=0/);
+    await expect(page.getByTestId('inspector-expand')).toBeVisible();
 
-    // Use the keyboard to nudge the gutter so the test is independent of
-    // exact pixel coordinates. Five Shift+ArrowRight nudges widen the left
-    // pane by 5 * 32 = 160 px (default 280 → 440).
-    await gutter.focus();
-    for (let i = 0; i < 5; i += 1) {
-      await page.keyboard.press('Shift+ArrowRight');
-    }
-
-    const widthAfter = await gutter.evaluate(
-      (el) => el.getAttribute('aria-valuenow'),
-    );
-    expect(Number(widthAfter)).toBeGreaterThanOrEqual(440);
-
-    const stored = await page.evaluate(() =>
-      window.localStorage.getItem('token-heatmap.layout.paneWidths'),
-    );
-    expect(stored).not.toBeNull();
-    const parsed = JSON.parse(stored ?? '{}') as { left?: number };
-    expect(parsed.left).toBeGreaterThanOrEqual(440);
+    const urlBefore = page.url();
 
     await page.reload();
-    await waitForViewerReady(page);
+    // The inspector is collapsed, so wait on the plot rather than the full
+    // viewer-ready helper (which expects the step-detail panel to be present).
+    await expect(page.getByTestId('token-heatmap-plot')).toBeVisible();
 
-    const restored = page.getByTestId('three-pane-gutter-left');
-    await restored.waitFor({ state: 'visible' });
-    expect(
-      Number(await restored.evaluate((el) => el.getAttribute('aria-valuenow'))),
-    ).toBeGreaterThanOrEqual(440);
+    // URL is preserved verbatim and the inspector stays collapsed.
+    expect(page.url()).toBe(urlBefore);
+    await expect(page.getByTestId('inspector-expand')).toBeVisible();
   });
 });

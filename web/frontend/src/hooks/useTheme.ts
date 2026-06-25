@@ -13,16 +13,8 @@ function readStored(): Theme | null {
   }
 }
 
-function readSystemPreference(): Theme {
-  if (
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches
-  ) {
-    return 'dark';
-  }
-  return 'light';
-}
+/** The product ships dark-first; light is opt-in via the toggle. */
+const DEFAULT_THEME: Theme = 'dark';
 
 function applyTheme(theme: Theme): void {
   if (typeof document !== 'undefined') {
@@ -38,7 +30,7 @@ export interface UseThemeResult {
 
 export function useTheme(): UseThemeResult {
   const [theme, setThemeState] = useState<Theme>(
-    () => readStored() ?? readSystemPreference(),
+    () => readStored() ?? DEFAULT_THEME,
   );
 
   useEffect(() => {

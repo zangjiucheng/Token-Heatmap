@@ -1,0 +1,27 @@
+.control-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Let the reused controls sit inline; the step-range filter is the widest so
+   give it room to breathe before wrapping. */
+.control-bar .step-range-filter {
+  min-width: 200px;
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+
+.control-bar .export-controls {
+  margin-left: auto;
+}
+
+@media (max-width: 900px) {
+  .control-bar .export-controls {
+    margin-left: 0;
+  }
+}

@@ -12,34 +12,26 @@ function renderViewer(initialEntries: string[] = ['/trace/sample']) {
 }
 
 describe('TraceViewerPage layout', () => {
-  it('renders the center stack inside the scrollable parent pane', async () => {
+  it('renders the lens canvas inside the workspace', async () => {
     renderViewer();
     await waitFor(() => screen.getByTestId('token-heatmap-plot'));
 
-    // jsdom doesn't apply stylesheet rules, so we only verify that the
-    // wrapper carries the expected class. The actual scrolling contract
-    // is owned by `.three-pane__center` (overflow: auto) and exercised
-    // by the e2e suite; `.trace-viewer-center` uses min-height: 100%
-    // (not a fixed height) so content past the viewport flows into the
-    // pane's scrollbar instead of being clipped.
-    const center = screen.getByTestId('trace-viewer-center');
-    expect(center.classList.contains('trace-viewer-center')).toBe(true);
+    // jsdom doesn't apply stylesheet rules, so we only verify the wrapper
+    // carries the expected class. The canvas body owns the scroll contract
+    // (overflow: auto over a definite flex height) — exercised by the e2e suite.
+    const canvas = screen.getByTestId('trace-viewer-center');
+    expect(canvas.classList.contains('trace-workspace__canvas')).toBe(true);
   });
 
-  it('keeps a horizontal scroller on the heatmap for wide traces', async () => {
+  it('gives the lens body its own scroll container', async () => {
     renderViewer();
-    const heatmap = await waitFor(() =>
+    const body = await waitFor(() =>
       screen.getByTestId('trace-viewer-heatmap-container'),
     );
-    // CSS class `.trace-viewer-center__heatmap` now sets only
-    // `overflow-x: auto` — vertical overflow is delegated to the parent
-    // pane so the whole center stack scrolls together.
-    expect(heatmap.classList.contains('trace-viewer-center__heatmap')).toBe(
-      true,
-    );
+    expect(body.classList.contains('trace-workspace__canvas-body')).toBe(true);
   });
 
-  it('renders both timelines as compact plots below the heatmap', async () => {
+  it('renders both timelines as compact plots below the lens', async () => {
     renderViewer();
     await waitFor(() => screen.getByTestId('token-heatmap-plot'));
 
@@ -51,19 +43,26 @@ describe('TraceViewerPage layout', () => {
     expect(
       within(centerTimelines).getByTestId('selected-probability-timeline'),
     ).toBeInTheDocument();
-    expect(screen.queryByTestId('trace-viewer-right-timelines')).toBeNull();
   });
 
-  it('uses the updated side-pane labels', async () => {
+  it('exposes the lens rail and inspector landmarks', async () => {
     renderViewer();
     await waitFor(() => screen.getByTestId('token-heatmap-plot'));
 
     expect(
-      screen.getByRole('complementary', { name: /view settings/i }),
+      screen.getByRole('navigation', { name: /analysis lenses/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('complementary', { name: /inspector/i }),
     ).toBeInTheDocument();
+  });
+
+  it('marks the active lens in the rail', async () => {
+    renderViewer();
+    await waitFor(() => screen.getByTestId('token-heatmap-plot'));
+
+    const heatmapLens = screen.getByTestId('heatmap-tab');
+    expect(heatmapLens).toHaveAttribute('aria-current', 'page');
   });
 
   it('does not show the attention-pattern prompt before a head is selected', async () => {

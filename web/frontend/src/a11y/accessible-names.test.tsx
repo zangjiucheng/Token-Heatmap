@@ -90,42 +90,24 @@ describe('accessible names', () => {
     for (const role of ['button', 'link', 'checkbox', 'radio', 'slider']) {
       assertAllHaveNames(role, container);
     }
-    // Pane gutter separators expose width via aria-valuenow/min/max and must
-    // carry an accessible name describing what they resize.
-    const separators = screen.queryAllByRole('separator', { hidden: true });
-    expect(separators.length).toBeGreaterThan(0);
-    for (const sep of separators) {
-      expect(sep).toHaveAttribute('aria-orientation', 'vertical');
-      const valuenow = sep.getAttribute('aria-valuenow');
-      const valuemin = sep.getAttribute('aria-valuemin');
-      const valuemax = sep.getAttribute('aria-valuemax');
-      expect(Number(valuenow)).toBeGreaterThan(0);
-      expect(Number(valuemin)).toBeGreaterThan(0);
-      expect(Number(valuemax)).toBeGreaterThan(Number(valuemin));
-      expect(accessibleName(sep)).not.toBe('');
-    }
   });
 
-  it('rail buttons have accessible names when both side panels are collapsed', async () => {
+  it('rail and inspector toggles have accessible names when both are collapsed', async () => {
     window.history.replaceState(null, '', '/trace/sample?left=0&right=0');
     const { container } = render(<App />);
     await waitFor(
       () => {
-        const expandLeft = container.querySelector(
-          '[data-testid="three-pane-left-expand"]',
+        const expandInspector = container.querySelector(
+          '[data-testid="inspector-expand"]',
         );
-        const expandRight = container.querySelector(
-          '[data-testid="three-pane-right-expand"]',
-        );
-        expect(expandLeft).not.toBeNull();
-        expect(expandRight).not.toBeNull();
+        expect(expandInspector).not.toBeNull();
       },
       { timeout: 4000 },
     );
     assertAllHaveNames('button', container);
-    // Sanity check: the specific rail buttons resolve by accessible name.
+    // Sanity check: the collapse/expand affordances resolve by accessible name.
     expect(
-      screen.getByRole('button', { name: /show view settings/i }),
+      screen.getByRole('button', { name: /expand lens rail/i }),
     ).toBeTruthy();
     expect(
       screen.getByRole('button', { name: /show inspector/i }),

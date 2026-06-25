@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install CPU PyTorch
+        # The CPU wheels are far smaller than the default CUDA build and are all
+        # the test suite needs (conftest.py builds tiny models — no downloads).
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch torchvision \
+            --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install package + dev extras
+        run: python -m pip install -e ".[dev,models]"
+
+      - name: Lint (ruff, advisory)
+        # Pre-existing lint debt lives outside this gate for now; surfaced but
+        # non-blocking. Flip to a hard gate once the package is ruff-clean.
+        continue-on-error: true
+        run: ruff check llm_token_heatmap tests
+
+      - name: Run tests
+        run: pytest
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web/frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build

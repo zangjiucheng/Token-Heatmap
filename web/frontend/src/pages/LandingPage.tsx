@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { GenerateParams } from '@/api/client';
 import { BackendStatusBanner } from '@/components/feedback/BackendStatusBanner';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
@@ -52,12 +51,6 @@ export function LandingPage() {
     setDismissed(false);
     setPendingNavId('url-loaded');
     await load({ type: 'url', url });
-  };
-
-  const handleGenerate = async (params: GenerateParams) => {
-    setDismissed(false);
-    setPendingNavId('generated');
-    await load({ type: 'generate', params });
   };
 
   const handleFileDropped = async (file: File) => {
@@ -133,7 +126,7 @@ export function LandingPage() {
         onFileDropped={handleFileDropped}
         onTwoFilesDropped={handleTwoFilesDropped}
         onUrlSubmit={handleUrlSubmit}
-        onGenerate={handleGenerate}
+        onBuild={() => navigate('/build')}
       />
     </div>
   );

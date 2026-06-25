@@ -45,14 +45,15 @@ describe('AppShell', () => {
 
   it('theme toggle flips the data-theme attribute and writes to localStorage', async () => {
     renderShell();
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    // Dark is the shipped default.
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
 
     const toggle = screen.getByRole('button', {
-      name: /switch to dark theme/i,
+      name: /switch to light theme/i,
     });
     await userEvent.click(toggle);
 
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-    expect(window.localStorage.getItem('llm-heatmap-theme')).toBe('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    expect(window.localStorage.getItem('llm-heatmap-theme')).toBe('light');
   });
 });
