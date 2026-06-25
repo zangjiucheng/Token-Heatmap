@@ -538,6 +538,24 @@ export interface DirectLogitAttributionLayer {
    * Direct contribution of this layer's MLP block (mlp_out output) to the target logit.
    */
   mlp: number;
+  /**
+   * Optional per-attention-head split of this layer's `attn` contribution (sums to `attn`). Present only when full activations captured the o_proj input. See DirectLogitAttributionHead.
+   */
+  heads?: DirectLogitAttributionHead[];
+}
+/**
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "DirectLogitAttributionHead".
+ */
+export interface DirectLogitAttributionHead {
+  /**
+   * Zero-indexed attention head within the layer.
+   */
+  head: number;
+  /**
+   * Direct contribution of this head (W_O[:,head] @ z_head) to the target logit.
+   */
+  attn: number;
 }
 /**
  * This interface was referenced by `Trace`'s JSON-Schema

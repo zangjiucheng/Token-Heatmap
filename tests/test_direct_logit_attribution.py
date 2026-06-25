@@ -148,3 +148,55 @@ def test_returns_none_without_unembedding():
         trace=[entry], target_token_ids=[0], unembedding=None
     )
     assert out is None
+
+
+def _per_head_entry(hidden, nh, hd, seed):
+    """A one-layer entry whose o_proj output == W_O @ z, so per-head splits sum
+    to the layer attention contribution."""
+    g = torch.Generator().manual_seed(seed)
+    z = torch.randn(nh * hd, generator=g)
+    w_o = torch.randn(hidden, nh * hd, generator=g)
+    attn_out = w_o @ z
+    mlp_out = torch.randn(hidden, generator=g)
+    embed = torch.randn(hidden, generator=g)
+    h = embed + attn_out + mlp_out
+    tensors = {
+        (0, "o_proj"): attn_out,
+        (0, "mlp_out"): mlp_out,
+        (0, "residual_post"): h,
+    }
+    full = SimpleNamespace(layer_tensors=tensors, attn_z={0: z})
+    return {"step": 0, "_activation_full_stats": full}, w_o
+
+
+def test_per_head_contributions_sum_to_layer_attn():
+    hidden, nh, hd, vocab, target = 8, 2, 4, 4, 1
+    entry, w_o = _per_head_entry(hidden, nh, hd, seed=7)
+    w_u = torch.randn(vocab, hidden)
+
+    out = compute_direct_logit_attribution(
+        trace=[entry],
+        target_token_ids=[target],
+        unembedding=w_u,
+        o_proj_weights={0: w_o},
+        num_heads=nh,
+        head_dim=hd,
+    )
+    assert out is not None
+    layer = out["steps"][0]["layers"][0]
+    assert "heads" in layer
+    assert [h["head"] for h in layer["heads"]] == [0, 1]
+    head_sum = sum(h["attn"] for h in layer["heads"])
+    # Per-head contributions reconstruct the layer's attention bar.
+    assert abs(head_sum - layer["attn"]) < 1e-3
+
+
+def test_per_head_absent_without_weights():
+    hidden, nh, hd, vocab = 8, 2, 4, 4
+    entry, _w_o = _per_head_entry(hidden, nh, hd, seed=8)
+    w_u = torch.randn(vocab, hidden)
+    out = compute_direct_logit_attribution(
+        trace=[entry], target_token_ids=[1], unembedding=w_u
+    )
+    assert out is not None
+    assert "heads" not in out["steps"][0]["layers"][0]

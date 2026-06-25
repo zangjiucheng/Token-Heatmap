@@ -40,7 +40,9 @@ export interface GenerateParams {
 /** One component perturbation for `POST /trace/intervene`. */
 export interface InterventionSpec {
   layer: number;
-  component: 'attn' | 'mlp';
+  component: 'attn' | 'mlp' | 'head';
+  /** Required when component === 'head'. */
+  head?: number;
   op: 'zero' | 'scale';
   factor?: number;
 }

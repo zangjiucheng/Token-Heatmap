@@ -128,6 +128,11 @@ class ActivationFullStats:
     hidden_dim: int
     captured_layers: list[int]
     captured_submodules: list[str]
+    # Per-layer o_proj *input* (concatenated per-head attention outputs `z`,
+    # shape [num_heads*head_dim]) at the last position. Captured alongside the
+    # o_proj output when full-capturing, and used for per-head DLA. Empty when
+    # o_proj wasn't among the captured submodules.
+    attn_z: dict[int, torch.Tensor] = field(default_factory=dict)
 
 
 def _resolve_decoder_layers(model: Any) -> list[nn.Module]:
@@ -207,6 +212,10 @@ class ActivationProbe(nn.Module):
         self._hidden_dim: int = 0
         self._last_full_tensors: dict[tuple[int, str], torch.Tensor] = {}
         self._full_tensors_per_position: list[dict[tuple[int, str], torch.Tensor]] = []
+        # o_proj input (`z`) buffers for per-head DLA — captured only under
+        # full-capture, keyed by layer index.
+        self._attn_z_buffers: dict[int, torch.Tensor] = {}
+        self._last_attn_z: dict[int, torch.Tensor] = {}
 
     @property
     def is_attached(self) -> bool:
@@ -358,15 +367,21 @@ class ActivationProbe(nn.Module):
     def _make_hook(self, layer_idx: int, canonical: str):
         key = (layer_idx, canonical)
 
-        def hook(_module: nn.Module, _inputs: Any, output: Any) -> None:
+        def hook(_module: nn.Module, inputs: Any, output: Any) -> None:
             tensor: torch.Tensor | None = None
             if torch.is_tensor(output):
                 tensor = output
             elif isinstance(output, tuple) and output and torch.is_tensor(output[0]):
                 tensor = output[0]
-            if tensor is None:
-                return
-            self._buffers[key] = tensor.detach()
+            if tensor is not None:
+                self._buffers[key] = tensor.detach()
+            # The o_proj input is the concatenated per-head attention output `z`
+            # (pre-W_O), which per-head DLA needs. Capture it only under
+            # full-capture so the default summary path is unaffected.
+            if canonical == "o_proj" and self.config.capture_full and inputs:
+                z = inputs[0] if isinstance(inputs, tuple) else inputs
+                if torch.is_tensor(z):
+                    self._attn_z_buffers[layer_idx] = z.detach()
 
         return hook
 
@@ -425,6 +440,7 @@ class ActivationProbe(nn.Module):
 
         if self.config.capture_full:
             self._last_full_tensors.clear()
+            self._last_attn_z.clear()
         entries: list[ActivationLayerEntry] = []
         for layer_idx in self._target_layers:
             for canonical in self._submodule_keys:
@@ -442,6 +458,13 @@ class ActivationProbe(nn.Module):
                         vec.detach().to(torch.float32).cpu().flatten().clone()
                     )
                 entries.append(self._reduce_vector(vec, layer_idx, canonical))
+        if self.config.capture_full and self._attn_z_buffers:
+            for layer_idx, ztensor in self._attn_z_buffers.items():
+                zvec = self._slice_position(ztensor, -1)
+                self._last_attn_z[int(layer_idx)] = (
+                    zvec.detach().to(torch.float32).cpu().flatten().clone()
+                )
+        self._attn_z_buffers.clear()
         self._buffers.clear()
         return entries
 
@@ -513,6 +536,7 @@ class ActivationProbe(nn.Module):
             hidden_dim=self._hidden_dim,
             captured_layers=captured_layers,
             captured_submodules=list(self._submodule_keys),
+            attn_z=dict(self._last_attn_z),
         )
 
     @property

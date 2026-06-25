@@ -1,6 +1,6 @@
 # Epic 01 — Direct Logit Attribution lens
 
-**Status:** v1 landed on `main` (per-head + runner parity are follow-ups) · **Effort:** M · **Depends on:** `--capture-full-activations`
+**Status:** v1 + per-head (v2) landed on `main` (runner parity remains) · **Effort:** M · **Depends on:** `--capture-full-activations`
 
 ## Motivation
 

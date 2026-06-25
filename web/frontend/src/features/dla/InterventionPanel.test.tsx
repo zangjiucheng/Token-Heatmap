@@ -92,6 +92,45 @@ describe('InterventionPanel', () => {
     );
   });
 
+  it('runs a per-head ablation from a preset', async () => {
+    const { intervene } = stubClient();
+    const stepWithHeads = {
+      ...STEP,
+      layers: [
+        { layer: 0, attn: 0.2, mlp: -0.1 },
+        {
+          layer: 5,
+          attn: 1.4,
+          mlp: 0.3,
+          heads: [
+            { head: 7, attn: 1.0 },
+            { head: 2, attn: 0.4 },
+          ],
+        },
+      ],
+    } as typeof STEP;
+    const { rerender } = render(
+      <InterventionPanel trace={TRACE} step={stepWithHeads} preset={null} />,
+    );
+    // Wait until the backend probe reports healthy (controls visible).
+    await screen.findByTestId('intervention-run');
+    // A per-head "ablate" click arrives as a preset → auto-runs that head.
+    rerender(
+      <InterventionPanel
+        trace={TRACE}
+        step={stepWithHeads}
+        preset={{ layer: 5, component: 'head', head: 7 }}
+      />,
+    );
+    await waitFor(() => expect(intervene).toHaveBeenCalled());
+    expect(intervene.mock.calls[0][0].interventions[0]).toMatchObject({
+      layer: 5,
+      component: 'head',
+      head: 7,
+      op: 'zero',
+    });
+  });
+
   it('shows an offline hint when the backend is unhealthy', async () => {
     stubClient({ health: vi.fn().mockResolvedValue(false) } as Partial<ApiClient>);
     render(<InterventionPanel trace={TRACE} step={STEP} />);

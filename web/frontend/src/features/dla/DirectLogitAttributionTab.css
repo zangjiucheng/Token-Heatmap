@@ -155,3 +155,88 @@
   color: var(--color-text);
   text-align: right;
 }
+
+/* Expandable attention bar — the label becomes a disclosure button. */
+.dla-bar__label--toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dla-bar__label--toggle:hover {
+  color: var(--color-accent-text);
+}
+
+/* Per-head sub-bars, indented under an expanded attention bar. */
+.dla-heads {
+  list-style: none;
+}
+
+.dla-heads__list {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 2px solid var(--color-border);
+}
+
+.dla-head-bar {
+  display: grid;
+  grid-template-columns: 78px 1fr 64px auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.dla-head-bar .dla-bar__track {
+  position: relative;
+  height: 10px;
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-xs);
+}
+
+.dla-head-bar .dla-bar__track::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border-strong);
+}
+
+.dla-head-bar .dla-bar__fill {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  min-width: 1px;
+}
+
+.dla-head-bar .dla-bar__label {
+  font-size: var(--text-2xs);
+}
+
+.dla-head-bar__ablate {
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-accent-text);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dla-head-bar__ablate:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}

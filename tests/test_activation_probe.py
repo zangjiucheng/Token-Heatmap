@@ -203,6 +203,52 @@ def test_activation_probe_summary_stats_on_known_input() -> None:
             assert neuron.value == pytest.approx(0.0, abs=1e-5)
 
 
+def test_activation_probe_captures_attn_z_under_full_capture() -> None:
+    """Full-capture stashes the o_proj *input* (concatenated per-head outputs z)
+    of shape [num_heads*head_dim] per layer, for per-head DLA."""
+
+    model = build_tiny_model(num_hidden_layers=2, num_attention_heads=4, head_dim=4)
+    config = ActivationProbeConfig(
+        layers="all",
+        submodules=["resid_post", "mlp_out", "o_proj"],
+        capture_full=True,
+    )
+    probe = ActivationProbe(config)
+    probe.attach(model)
+    try:
+        with torch.no_grad():
+            model(torch.randint(0, model.config.vocab_size, (1, 5)))
+        probe.capture_step()
+        stats = probe.last_full_stats
+    finally:
+        probe.detach()
+
+    assert stats is not None
+    assert set(stats.attn_z) == {0, 1}
+    assert stats.attn_z[0].shape[0] == 4 * 4  # num_heads * head_dim
+
+
+def test_activation_probe_attn_z_empty_without_o_proj() -> None:
+    """When o_proj isn't a captured submodule, attn_z is empty (per-head DLA off)."""
+
+    model = build_tiny_model(num_hidden_layers=2)
+    config = ActivationProbeConfig(
+        layers="all", submodules=["resid_post"], capture_full=True
+    )
+    probe = ActivationProbe(config)
+    probe.attach(model)
+    try:
+        with torch.no_grad():
+            model(torch.zeros((1, 3), dtype=torch.long))
+        probe.capture_step()
+        stats = probe.last_full_stats
+    finally:
+        probe.detach()
+
+    assert stats is not None
+    assert stats.attn_z == {}
+
+
 def test_activation_probe_summary_stats_field_names_match_schema() -> None:
     schema = json.loads(ACTIVATION_SCHEMA_PATH.read_text())
     layer_entry_def = schema["$defs"]["ActivationLayerEntry"]

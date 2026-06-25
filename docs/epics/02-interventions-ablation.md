@@ -1,6 +1,6 @@
 # Epic 02 — Interventions / ablation (causal validation)
 
-**Status:** v1 landed on `main` (component-level; per-head/neuron are follow-ups) · **Effort:** M–L · **Depends on:** backend model held in memory
+**Status:** v1 + per-head (v2) landed on `main` (per-neuron remains) · **Effort:** M–L · **Depends on:** backend model held in memory
 
 ## Motivation
 

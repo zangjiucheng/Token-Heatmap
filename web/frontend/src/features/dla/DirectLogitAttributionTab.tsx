@@ -1,6 +1,10 @@
-import { useMemo } from 'react';
-import type { Trace, DirectLogitAttributionStep } from '@/types/trace';
-import { InterventionPanel } from './InterventionPanel';
+import { Fragment, useMemo, useState } from 'react';
+import type {
+  Trace,
+  DirectLogitAttributionStep,
+  DirectLogitAttributionHead,
+} from '@/types/trace';
+import { InterventionPanel, type PresetTarget } from './InterventionPanel';
 import './DirectLogitAttributionTab.css';
 import './InterventionPanel.css';
 
@@ -13,6 +17,8 @@ interface Component {
   key: string;
   label: string;
   value: number;
+  layer?: number;
+  heads?: DirectLogitAttributionHead[];
 }
 
 function pickStep(
@@ -29,14 +35,17 @@ function pickStep(
 /**
  * Direct Logit Attribution lens — "why this token?". Decomposes the selected
  * step's realized next-token logit into per-layer attention/MLP contributions
- * (+ the residual input), sorted by impact, with an explicit unexplained-error
- * bar so the faithfulness of the decomposition is visible (epic 01 / 04).
+ * (+ residual input), sorted by impact, with an explicit unexplained-error bar.
+ * Attention bars expand into per-head contributions (when captured), each with
+ * an "ablate" affordance that runs a causal check in the panel below.
  */
 export function DirectLogitAttributionTab({
   trace,
   selectedStep,
 }: DirectLogitAttributionTabProps) {
   const dla = trace.direct_logit_attribution;
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [preset, setPreset] = useState<PresetTarget | null>(null);
 
   const view = useMemo(() => {
     const steps = dla?.steps ?? [];
@@ -45,7 +54,13 @@ export function DirectLogitAttributionTab({
     const components: Component[] = [
       { key: 'embed', label: 'embed', value: step.embed ?? 0 },
       ...step.layers.flatMap((l) => [
-        { key: `L${l.layer}.attn`, label: `L${l.layer} · attn`, value: l.attn },
+        {
+          key: `L${l.layer}.attn`,
+          label: `L${l.layer} · attn`,
+          value: l.attn,
+          layer: l.layer,
+          heads: l.heads,
+        },
         { key: `L${l.layer}.mlp`, label: `L${l.layer} · mlp`, value: l.mlp },
       ]),
     ];
@@ -88,6 +103,14 @@ export function DirectLogitAttributionTab({
   const { step, sorted, error, maxAbs, total, explained, errorPct, token } =
     view;
 
+  const toggleExpand = (key: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
   return (
     <div className="dla-tab" data-testid="direct-logit-attribution-tab-content">
       <header className="dla-tab__header">
@@ -117,15 +140,53 @@ export function DirectLogitAttributionTab({
 
       <p className="dla-tab__note">
         Each bar is a component’s direct contribution to the token’s logit
-        (orange promotes, blue suppresses), folding the final norm. Sorted by
-        impact. Direct/OV path only — it doesn’t explain how attention patterns
-        form.
+        (orange promotes, blue suppresses), folding the final norm. Expand an
+        attention bar to see per-head contributions; “ablate” runs a causal check
+        below. Direct/OV path only — it doesn’t explain how attention patterns form.
       </p>
 
       <ul className="dla-tab__bars" data-testid="dla-bars">
-        {sorted.map((c) => (
-          <Bar key={c.key} label={c.label} value={c.value} maxAbs={maxAbs} />
-        ))}
+        {sorted.map((c) => {
+          const heads = c.heads ?? [];
+          const expandable = heads.length > 0 && c.layer != null;
+          const isOpen = expanded.has(c.key);
+          return (
+            <Fragment key={c.key}>
+              <Bar
+                label={c.label}
+                value={c.value}
+                maxAbs={maxAbs}
+                expandable={expandable}
+                expanded={isOpen}
+                onToggle={expandable ? () => toggleExpand(c.key) : undefined}
+              />
+              {expandable && isOpen ? (
+                <li className="dla-heads" data-testid={`dla-heads-${c.layer}`}>
+                  <ul className="dla-heads__list">
+                    {[...heads]
+                      .sort((a, b) => Math.abs(b.attn) - Math.abs(a.attn))
+                      .map((h) => (
+                        <HeadBar
+                          key={h.head}
+                          layer={c.layer as number}
+                          head={h.head}
+                          value={h.attn}
+                          maxAbs={maxAbs}
+                          onAblate={() =>
+                            setPreset({
+                              layer: c.layer as number,
+                              component: 'head',
+                              head: h.head,
+                            })
+                          }
+                        />
+                      ))}
+                  </ul>
+                </li>
+              ) : null}
+            </Fragment>
+          );
+        })}
         <Bar
           label="unexplained (error)"
           value={error}
@@ -134,7 +195,12 @@ export function DirectLogitAttributionTab({
         />
       </ul>
 
-      <InterventionPanel trace={trace} step={step} />
+      <InterventionPanel
+        trace={trace}
+        step={step}
+        preset={preset}
+        onPresetConsumed={() => setPreset(null)}
+      />
     </div>
   );
 }
@@ -144,19 +210,37 @@ function Bar({
   value,
   maxAbs,
   muted = false,
+  expandable = false,
+  expanded = false,
+  onToggle,
 }: {
   label: string;
   value: number;
   maxAbs: number;
   muted?: boolean;
+  expandable?: boolean;
+  expanded?: boolean;
+  onToggle?: () => void;
 }) {
   const pct = Math.min(100, (Math.abs(value) / maxAbs) * 100);
   const positive = value >= 0;
   return (
     <li className="dla-bar" data-muted={muted ? 'true' : 'false'}>
-      <span className="dla-bar__label" title={label}>
-        {label}
-      </span>
+      {expandable ? (
+        <button
+          type="button"
+          className="dla-bar__label dla-bar__label--toggle"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          title={label}
+        >
+          <span aria-hidden="true">{expanded ? '▾' : '▸'}</span> {label}
+        </button>
+      ) : (
+        <span className="dla-bar__label" title={label}>
+          {label}
+        </span>
+      )}
       <span className="dla-bar__track">
         <span
           className="dla-bar__fill"
@@ -168,6 +252,48 @@ function Bar({
         {value >= 0 ? '+' : ''}
         {value.toFixed(3)}
       </span>
+    </li>
+  );
+}
+
+function HeadBar({
+  layer,
+  head,
+  value,
+  maxAbs,
+  onAblate,
+}: {
+  layer: number;
+  head: number;
+  value: number;
+  maxAbs: number;
+  onAblate: () => void;
+}) {
+  const pct = Math.min(100, (Math.abs(value) / maxAbs) * 100);
+  const positive = value >= 0;
+  return (
+    <li className="dla-head-bar">
+      <span className="dla-bar__label">head {head}</span>
+      <span className="dla-bar__track">
+        <span
+          className="dla-bar__fill"
+          data-sign={positive ? 'pos' : 'neg'}
+          style={{ width: `${pct / 2}%` }}
+        />
+      </span>
+      <span className="dla-bar__value" data-numeric>
+        {value >= 0 ? '+' : ''}
+        {value.toFixed(3)}
+      </span>
+      <button
+        type="button"
+        className="dla-head-bar__ablate"
+        onClick={onAblate}
+        data-testid={`dla-ablate-${layer}-${head}`}
+        title={`Ablate L${layer} head ${head}`}
+      >
+        ablate
+      </button>
     </li>
   );
 }

@@ -32,7 +32,7 @@ def test_intervene_returns_diff_payload(client, monkeypatch) -> None:
     def fake(config):
         assert config.model == "tiny-model"
         assert config.interventions == [
-            {"layer": 1, "component": "attn", "op": "zero", "factor": 0.0}
+            {"layer": 1, "component": "attn", "head": None, "op": "zero", "factor": 0.0}
         ]
         return _CANNED
 
@@ -57,6 +57,30 @@ def test_intervene_forwards_continuation_and_target(client, monkeypatch) -> None
     )
     assert response.status_code == 200, response.text
     assert seen == {"continuation": [10, 11], "target": 42}
+
+
+def test_intervene_forwards_head_component(client, monkeypatch) -> None:
+    seen: dict = {}
+
+    def fake(config):
+        seen["iv"] = config.interventions[0]
+        return _CANNED
+
+    monkeypatch.setattr(trace_routes, "intervene_payload", fake)
+    response = client.post(
+        "/trace/intervene",
+        json=_valid_body(
+            interventions=[{"layer": 5, "component": "head", "head": 7, "op": "zero"}]
+        ),
+    )
+    assert response.status_code == 200, response.text
+    assert seen["iv"] == {
+        "layer": 5,
+        "component": "head",
+        "head": 7,
+        "op": "zero",
+        "factor": 0.0,
+    }
 
 
 def test_intervene_rejects_empty_interventions(client) -> None:

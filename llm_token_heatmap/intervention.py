@@ -60,20 +60,65 @@ def _make_hook(op: str, factor: float) -> Any:
     return hook
 
 
+def _make_pre_hook(op: str, factor: float, head_slice: slice) -> Any:
+    """Forward *pre*-hook on o_proj that zeros / scales one head's slice of the
+    last-position input (the concatenated per-head output `z`), ablating just
+    that head's write to the residual."""
+
+    def hook(_module: Any, args: Any) -> Any:
+        if not args or not hasattr(args[0], "clone"):
+            return None
+        patched = args[0].clone()
+        if op == "scale":
+            patched[..., -1, head_slice] = patched[..., -1, head_slice] * factor
+        else:  # "zero"
+            patched[..., -1, head_slice] = 0
+        return (patched, *args[1:])
+
+    return hook
+
+
+def _head_geometry(model: Any) -> tuple[int, int]:
+    """(num_attention_heads, head_dim) from the model config; (0, 0) if unknown."""
+    cfg = getattr(model, "config", None)
+    num_heads = int(getattr(cfg, "num_attention_heads", 0) or 0)
+    head_dim = getattr(cfg, "head_dim", None)
+    if not head_dim and num_heads:
+        hidden = getattr(cfg, "hidden_size", 0) or 0
+        head_dim = hidden // num_heads if hidden else 0
+    return num_heads, int(head_dim or 0)
+
+
 def _attach(model: Any, interventions: list[dict[str, Any]]) -> list[Any]:
     """Register the intervention hooks; returns handles to remove afterwards."""
     layers = _resolve_decoder_layers(model)
+    num_heads, head_dim = _head_geometry(model)
     handles: list[Any] = []
     for spec in interventions:
         layer_idx = int(spec["layer"])
-        canonical = _COMPONENT_TO_CANONICAL.get(str(spec["component"]))
-        if canonical is None or not (0 <= layer_idx < len(layers)):
+        component = str(spec["component"])
+        if not (0 <= layer_idx < len(layers)):
+            continue
+        op = str(spec.get("op", "zero"))
+        factor = float(spec.get("factor", 0.0))
+        if component == "head":
+            head = int(spec.get("head", -1))
+            if not num_heads or not head_dim or not (0 <= head < num_heads):
+                continue
+            o_proj = _resolve_submodule_target(layers[layer_idx], "o_proj")
+            if o_proj is None:
+                continue
+            sl = slice(head * head_dim, (head + 1) * head_dim)
+            handles.append(
+                o_proj.register_forward_pre_hook(_make_pre_hook(op, factor, sl))
+            )
+            continue
+        canonical = _COMPONENT_TO_CANONICAL.get(component)
+        if canonical is None:
             continue
         target = _resolve_submodule_target(layers[layer_idx], canonical)
         if target is None:
             continue
-        op = str(spec.get("op", "zero"))
-        factor = float(spec.get("factor", 0.0))
         handles.append(target.register_forward_hook(_make_hook(op, factor)))
     return handles
 

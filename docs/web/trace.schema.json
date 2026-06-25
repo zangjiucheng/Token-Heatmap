@@ -670,6 +670,27 @@
         "mlp": {
           "type": "number",
           "description": "Direct contribution of this layer's MLP block (mlp_out output) to the target logit."
+        },
+        "heads": {
+          "type": "array",
+          "description": "Optional per-attention-head split of this layer's `attn` contribution (sums to `attn`). Present only when full activations captured the o_proj input. See DirectLogitAttributionHead.",
+          "items": { "$ref": "#/$defs/DirectLogitAttributionHead" }
+        }
+      }
+    },
+    "DirectLogitAttributionHead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["head", "attn"],
+      "properties": {
+        "head": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-indexed attention head within the layer."
+        },
+        "attn": {
+          "type": "number",
+          "description": "Direct contribution of this head (W_O[:,head] @ z_head) to the target logit."
         }
       }
     },

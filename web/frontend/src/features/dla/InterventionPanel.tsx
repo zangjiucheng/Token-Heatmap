@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   getApiClient,
   type InterventionResult,
@@ -7,51 +7,77 @@ import {
 import { useBackendHealth } from '@/hooks/useBackendHealth';
 import type { Trace, DirectLogitAttributionStep } from '@/types/trace';
 
+export interface PresetTarget {
+  layer: number;
+  component: 'attn' | 'mlp' | 'head';
+  head?: number;
+}
+
 export interface InterventionPanelProps {
   trace: Trace;
   step: DirectLogitAttributionStep;
+  /** When set, the panel selects this target and runs it immediately. */
+  preset?: PresetTarget | null;
+  onPresetConsumed?: () => void;
 }
 
 interface ComponentChoice {
   key: string;
   layer: number;
-  component: 'attn' | 'mlp';
+  component: 'attn' | 'mlp' | 'head';
+  head?: number;
   label: string;
   value: number;
 }
 
+function choiceKey(layer: number, component: string, head?: number): string {
+  return component === 'head' ? `${layer}:head:${head}` : `${layer}:${component}`;
+}
+
 /**
- * Causal validation for the DLA lens: pick a component the attribution ranks,
- * ablate (or scale) its write to the final residual on the live backend, and
- * see the next-token distribution move. The DLA bar is a hypothesis; this tests
- * it. Gated on backend health (the model is loaded server-side).
+ * Causal validation for the DLA lens: pick a component (block or head) the
+ * attribution ranks, ablate / scale its write to the final residual on the live
+ * backend, and see the next-token distribution move. Gated on backend health.
  */
-export function InterventionPanel({ trace, step }: InterventionPanelProps) {
+export function InterventionPanel({
+  trace,
+  step,
+  preset,
+  onPresetConsumed,
+}: InterventionPanelProps) {
   const health = useBackendHealth();
   const online = health.status === 'healthy';
 
-  const choices = useMemo<ComponentChoice[]>(
-    () =>
-      step.layers
-        .flatMap((l) => [
-          {
-            key: `${l.layer}:attn`,
-            layer: l.layer,
-            component: 'attn' as const,
-            label: `L${l.layer} · attn`,
-            value: l.attn,
-          },
-          {
-            key: `${l.layer}:mlp`,
-            layer: l.layer,
-            component: 'mlp' as const,
-            label: `L${l.layer} · mlp`,
-            value: l.mlp,
-          },
-        ])
-        .sort((a, b) => Math.abs(b.value) - Math.abs(a.value)),
-    [step.layers],
-  );
+  const choices = useMemo<ComponentChoice[]>(() => {
+    const out: ComponentChoice[] = [];
+    for (const l of step.layers) {
+      out.push({
+        key: choiceKey(l.layer, 'attn'),
+        layer: l.layer,
+        component: 'attn',
+        label: `L${l.layer} · attn`,
+        value: l.attn,
+      });
+      out.push({
+        key: choiceKey(l.layer, 'mlp'),
+        layer: l.layer,
+        component: 'mlp',
+        label: `L${l.layer} · mlp`,
+        value: l.mlp,
+      });
+      for (const h of l.heads ?? []) {
+        out.push({
+          key: choiceKey(l.layer, 'head', h.head),
+          layer: l.layer,
+          component: 'head',
+          head: h.head,
+          label: `L${l.layer} · head ${h.head}`,
+          value: h.attn,
+        });
+      }
+    }
+    return out.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+  }, [step.layers]);
 
   const [selKey, setSelKey] = useState<string>(() => choices[0]?.key ?? '');
   const [op, setOp] = useState<'zero' | 'scale'>('zero');
@@ -61,8 +87,9 @@ export function InterventionPanel({ trace, step }: InterventionPanelProps) {
 
   const sel = choices.find((c) => c.key === selKey) ?? choices[0];
 
-  const run = async () => {
-    if (!sel) return;
+  const run = async (choice?: ComponentChoice) => {
+    const c = choice ?? sel;
+    if (!c) return;
     setBusy(true);
     setError(null);
     try {
@@ -70,10 +97,11 @@ export function InterventionPanel({ trace, step }: InterventionPanelProps) {
         .filter((s) => s.step < step.step)
         .map((s) => s.selected.token_id);
       const intervention: InterventionSpec = {
-        layer: sel.layer,
-        component: sel.component,
+        layer: c.layer,
+        component: c.component,
         op,
         factor: op === 'scale' ? 2 : 0,
+        ...(c.component === 'head' ? { head: c.head } : {}),
       };
       const res = await getApiClient().intervene({
         model: trace.metadata.model,
@@ -90,6 +118,21 @@ export function InterventionPanel({ trace, step }: InterventionPanelProps) {
       setBusy(false);
     }
   };
+
+  // A per-head "ablate" click from the bars selects + runs that target.
+  useEffect(() => {
+    if (!preset) return;
+    const key = choiceKey(preset.layer, preset.component, preset.head);
+    const found = choices.find((c) => c.key === key);
+    if (found) {
+      setSelKey(found.key);
+      setOp('zero');
+      if (online) void run({ ...found });
+    }
+    onPresetConsumed?.();
+    // Run once per preset change; `run`/`choices` are intentionally omitted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preset]);
 
   return (
     <section

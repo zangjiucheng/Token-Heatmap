@@ -93,12 +93,42 @@ def _true_target_logit(final_norm: Any, h: Any, u: Any, torch: Any, device: Any)
         return None
 
 
+def _per_head_contribs(
+    z: Any,
+    w_o: Any,
+    num_heads: int,
+    head_dim: int,
+    weight_eff: Any,
+    d: Any,
+    u: Any,
+    is_layernorm: bool,
+) -> list[dict[str, Any]]:
+    """Split a layer's attention contribution per head.
+
+    ``z`` is the ``o_proj`` input (concatenated per-head outputs,
+    ``[num_heads*head_dim]``); ``w_o`` is ``o_proj.weight`` (``[hidden, num_heads*head_dim]``).
+    Head ``h``'s residual write is ``w_o[:, slice_h] @ z[slice_h]``; these sum to
+    the layer's full attention contribution.
+    """
+    heads: list[dict[str, Any]] = []
+    for hh in range(num_heads):
+        sl = slice(hh * head_dim, (hh + 1) * head_dim)
+        contrib_vec = w_o[:, sl] @ z[sl]  # [hidden]
+        heads.append(
+            {"head": hh, "attn": _contrib(contrib_vec, weight_eff, d, u, is_layernorm)}
+        )
+    return heads
+
+
 def compute_direct_logit_attribution(
     *,
     trace: list[dict[str, Any]],
     target_token_ids: list[int],
     unembedding: Any,
     final_norm: Any = None,
+    o_proj_weights: dict[int, Any] | None = None,
+    num_heads: int | None = None,
+    head_dim: int | None = None,
 ) -> dict[str, Any] | None:
     """Per-step direct logit attribution of the realized next token.
 
@@ -131,6 +161,10 @@ def compute_direct_logit_attribution(
     weight_eff = (weight + 1.0) if plus_one else weight
     is_layernorm = bias is not None
 
+    per_head_on = bool(o_proj_weights) and bool(num_heads) and bool(head_dim)
+    nh = int(num_heads) if num_heads else 0
+    hd = int(head_dim) if head_dim else 0
+
     steps_out: list[dict[str, Any]] = []
     num_layers = 0
 
@@ -140,6 +174,7 @@ def compute_direct_logit_attribution(
             tensors = getattr(full, "layer_tensors", None) if full is not None else None
             if not tensors or not (0 <= int(tok) < vocab):
                 continue
+            attn_z_map = (getattr(full, "attn_z", None) or {}) if per_head_on else {}
 
             attn: dict[int, Any] = {}
             mlp: dict[int, Any] = {}
@@ -180,7 +215,19 @@ def compute_direct_logit_attribution(
                 m = mlp.get(L)
                 a_c = _contrib(a, weight_eff, d, u, is_layernorm) if a is not None else 0.0
                 m_c = _contrib(m, weight_eff, d, u, is_layernorm) if m is not None else 0.0
-                layers_out.append({"layer": L, "attn": a_c, "mlp": m_c})
+                layer_out: dict[str, Any] = {"layer": L, "attn": a_c, "mlp": m_c}
+                # Per-head split of this layer's attention contribution, when the
+                # o_proj input (z) and weight (W_O) are available.
+                z = attn_z_map.get(L)
+                w_o = o_proj_weights.get(L) if o_proj_weights is not None else None
+                if z is not None and w_o is not None:
+                    zt = z.reshape(-1).to(device=device, dtype=torch.float32)
+                    wt = w_o.to(device=device, dtype=torch.float32)
+                    if zt.shape[0] == nh * hd and wt.shape[1] == nh * hd:
+                        layer_out["heads"] = _per_head_contribs(
+                            zt, wt, nh, hd, weight_eff, d, u, is_layernorm
+                        )
+                layers_out.append(layer_out)
                 explained += a_c + m_c
                 if a is not None:
                     summed = summed + a

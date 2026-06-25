@@ -77,10 +77,11 @@ class GenerateRequest(BaseModel):
 
 
 class Intervention(BaseModel):
-    """A single component ablation/scale: which layer block to perturb and how."""
+    """A single component ablation/scale: which layer block (or head) to perturb."""
 
     layer: int = Field(ge=0)
-    component: Literal["attn", "mlp"]
+    component: Literal["attn", "mlp", "head"]
+    head: int | None = Field(default=None, ge=0)
     op: Literal["zero", "scale"] = "zero"
     factor: float = 0.0
 

@@ -99,3 +99,48 @@ def test_out_of_range_layer_is_ignored_as_noop():
     )
     # No valid hook attached → distribution unchanged.
     assert out["diff"]["kl"] < 1e-6
+
+
+def test_per_head_ablation_changes_distribution():
+    model = build_tiny_model(num_hidden_layers=2, num_attention_heads=4, head_dim=4)
+    model.eval()
+    input_ids = _ids(model, seed=5)
+    out = run_intervention(
+        model,
+        input_ids=input_ids,
+        interventions=[{"layer": 1, "component": "head", "head": 2, "op": "zero"}],
+        top_k=4,
+    )
+    assert out["diff"]["kl"] > 1e-6
+
+
+def test_single_head_differs_from_whole_attn_block():
+    model = build_tiny_model(num_hidden_layers=2, num_attention_heads=4, head_dim=4)
+    model.eval()
+    ids = _ids(model, seed=6)
+    head = run_intervention(
+        model,
+        input_ids=ids,
+        interventions=[{"layer": 1, "component": "head", "head": 0, "op": "zero"}],
+    )
+    block = run_intervention(
+        model,
+        input_ids=ids,
+        interventions=[{"layer": 1, "component": "attn", "op": "zero"}],
+    )
+    # Both move the output, but ablating one head is not the same as the block.
+    assert head["diff"]["kl"] > 1e-6
+    assert block["diff"]["kl"] > 1e-6
+    assert head["diff"]["kl"] != block["diff"]["kl"]
+
+
+def test_out_of_range_head_is_noop():
+    model = build_tiny_model(num_hidden_layers=2, num_attention_heads=4, head_dim=4)
+    model.eval()
+    ids = _ids(model, seed=7)
+    out = run_intervention(
+        model,
+        input_ids=ids,
+        interventions=[{"layer": 1, "component": "head", "head": 99, "op": "zero"}],
+    )
+    assert out["diff"]["kl"] < 1e-6

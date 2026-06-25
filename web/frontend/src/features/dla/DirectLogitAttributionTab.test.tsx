@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setApiClientForTests, type ApiClient } from '@/api/client';
 import type { Trace } from '@/types/trace';
@@ -80,5 +81,20 @@ describe('DirectLogitAttributionTab', () => {
     expect(
       screen.getByTestId('direct-logit-attribution-tab-empty'),
     ).toBeInTheDocument();
+  });
+
+  it('expands an attention bar into per-head sub-bars with ablate', async () => {
+    const user = userEvent.setup();
+    const t = makeTrace();
+    t.direct_logit_attribution!.steps![0].layers[0].heads = [
+      { head: 0, attn: 0.3 },
+      { head: 7, attn: 0.7 },
+    ];
+    render(<DirectLogitAttributionTab trace={t} selectedStep={0} />);
+    // No per-head bars until the attention bar is expanded.
+    expect(screen.queryByTestId('dla-ablate-0-7')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /L0 · attn/i }));
+    expect(screen.getByTestId('dla-ablate-0-7')).toBeInTheDocument();
+    expect(screen.getByTestId('dla-ablate-0-0')).toBeInTheDocument();
   });
 });

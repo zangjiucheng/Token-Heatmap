@@ -773,6 +773,10 @@ def run_trace(args: argparse.Namespace) -> int:
     neuron_attribution = None
     direct_logit_attribution = None
     if args.capture_full_activations:
+        from llm_token_heatmap.activation_probe import (
+            _resolve_decoder_layers,
+            _resolve_submodule_target,
+        )
         from llm_token_heatmap.direct_logit_attribution import (
             compute_direct_logit_attribution,
         )
@@ -791,6 +795,20 @@ def run_trace(args: argparse.Namespace) -> int:
                 unembedding=out_emb.weight,
                 top_n=max(8, int(args.activation_top_k)),
             )
+            # Per-head DLA needs each layer's o_proj weight (W_O) + head geometry.
+            _layers = _resolve_decoder_layers(model)
+            o_proj_weights = {}
+            for _i, _layer in enumerate(_layers):
+                _op = _resolve_submodule_target(_layer, "o_proj")
+                _w = getattr(_op, "weight", None) if _op is not None else None
+                if _w is not None:
+                    o_proj_weights[_i] = _w
+            _cfg = getattr(model, "config", None)
+            _nh = int(getattr(_cfg, "num_attention_heads", 0) or 0)
+            _hd = getattr(_cfg, "head_dim", None)
+            if not _hd and _nh:
+                _hs = getattr(_cfg, "hidden_size", 0) or 0
+                _hd = _hs // _nh if _hs else 0
             # Direct logit attribution reuses the same captured tensors +
             # unembedding, folding the model's real final norm. See
             # docs/epics/01-direct-logit-attribution.md.
@@ -799,6 +817,9 @@ def run_trace(args: argparse.Namespace) -> int:
                 target_token_ids=target_ids,
                 unembedding=out_emb.weight,
                 final_norm=_resolve_final_norm(model),
+                o_proj_weights=o_proj_weights or None,
+                num_heads=_nh or None,
+                head_dim=int(_hd) if _hd else None,
             )
 
     metadata = {
