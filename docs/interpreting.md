@@ -83,6 +83,25 @@ analyzed position), and needs the **live backend** — it loads/uses the trace's
 model server-side, so it's available when running via `./scripts/dev.sh` or a
 backend you've port-forwarded, not for purely static file views.
 
+### Worked example — validating one head
+
+`configs/recall-probe.yaml` is designed to make this concrete: a factual prompt
+("The capital of France is" → ` Paris`) at low temperature with full capture.
+`examples/dla_causal_validation.py` runs the argument on the small model in a few
+forward passes (no GPU). On `Qwen/Qwen2.5-0.5B-Instruct`:
+
+- The decomposition is **exact** — `error ≈ 0`, and the per-head contributions
+  sum to the layer's attention bar to floating point (Δ ≈ 1e-7).
+- DLA isolates one dominant promoter of ` Paris`: **layer 21, head 6**
+  (`attn` ≈ +3.58), far above the rest.
+- **Ablating it** drops `P(" Paris")` 0.302 → 0.232 (Δ −0.070, KL 0.051); a
+  near-zero-DLA **control** head (L1 h3) moves it only −0.002 — **~36× less**.
+  Ablating the whole L21 attention block drops it to 0.097, so head 6 is the
+  largest piece of a layer-21 fact-writing computation.
+
+The attribution *predicted* the intervention — the difference between a
+suggestive chart and a causal claim.
+
 ## Manifold metrics
 
 `token-heatmap manifold` ([CLI](cli.md#manifold-analysis)) treats the captured
