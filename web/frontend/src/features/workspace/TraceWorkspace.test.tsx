@@ -1,7 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TraceWorkspace } from './TraceWorkspace';
+
+beforeEach(() => window.localStorage.clear());
 
 function renderWorkspace(
   overrides: Partial<Parameters<typeof TraceWorkspace>[0]> = {},
@@ -69,6 +71,25 @@ describe('TraceWorkspace', () => {
       screen.getByRole('button', { name: /hide inspector/i }),
     );
     expect(onToggleInspector).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders a resizable inspector gutter and widens via keyboard', () => {
+    renderWorkspace();
+    const root = screen.getByTestId('trace-workspace');
+    // Wider default than before, persisted via --inspector-w.
+    expect(root.style.getPropertyValue('--inspector-w')).toBe('420px');
+    const gutter = screen.getByTestId('inspector-gutter');
+    expect(gutter).toHaveAttribute('role', 'separator');
+    expect(gutter).toHaveAttribute('aria-valuenow', '420');
+    // ArrowRight nudges the inspector wider (and commits).
+    fireEvent.keyDown(gutter, { key: 'ArrowRight' });
+    expect(root.style.getPropertyValue('--inspector-w')).toBe('428px');
+    expect(window.localStorage.getItem('llm-heatmap-inspector-w')).toBe('428');
+  });
+
+  it('hides the resize gutter when the inspector is collapsed', () => {
+    renderWorkspace({ inspectorOpen: false });
+    expect(screen.queryByTestId('inspector-gutter')).not.toBeInTheDocument();
   });
 
   it('collapses the overview timelines, keeping the toggle reachable', async () => {

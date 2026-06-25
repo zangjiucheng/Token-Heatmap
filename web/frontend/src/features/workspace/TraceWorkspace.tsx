@@ -1,6 +1,32 @@
-import type { CSSProperties, ReactNode, RefObject } from 'react';
+import {
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from 'react';
+import { PaneGutter } from '@/components/layout/PaneGutter';
 import { ChevronIcon, InspectorIcon } from './icons';
 import './TraceWorkspace.css';
+
+const INSPECTOR_DEFAULT = 420;
+const INSPECTOR_MIN = 300;
+const INSPECTOR_MAX = 760;
+const INSPECTOR_WIDTH_KEY = 'llm-heatmap-inspector-w';
+
+function clampInspector(w: number): number {
+  return Math.max(INSPECTOR_MIN, Math.min(INSPECTOR_MAX, w));
+}
+
+function readStoredInspectorWidth(): number {
+  try {
+    const raw = window.localStorage.getItem(INSPECTOR_WIDTH_KEY);
+    const v = raw == null ? NaN : Number(raw);
+    return Number.isFinite(v) && v > 0 ? clampInspector(v) : INSPECTOR_DEFAULT;
+  } catch {
+    return INSPECTOR_DEFAULT;
+  }
+}
 
 export interface TraceWorkspaceProps {
   /** Trace identity, shown in the sticky sub-header. */
@@ -58,9 +84,43 @@ export function TraceWorkspace({
   const selectedLabel =
     selectedStep == null ? 'No step selected' : `Step ${selectedStep}`;
 
+  // Inspector is resizable by dragging the gutter on its left edge; the chosen
+  // width persists across reloads. `pendingDelta` tracks an in-progress drag so
+  // we only write to storage on commit.
+  const [inspectorWidth, setInspectorWidth] = useState(readStoredInspectorWidth);
+  const [pendingDelta, setPendingDelta] = useState(0);
+  const widthRef = useRef(inspectorWidth);
+  widthRef.current = inspectorWidth;
+  const effectiveWidth = clampInspector(inspectorWidth + pendingDelta);
+
+  const commitInspectorWidth = () => {
+    setPendingDelta((delta) => {
+      if (delta === 0) return 0;
+      const next = clampInspector(widthRef.current + delta);
+      setInspectorWidth(next);
+      try {
+        window.localStorage.setItem(INSPECTOR_WIDTH_KEY, String(next));
+      } catch {
+        // storage unavailable — keep the in-memory width
+      }
+      return 0;
+    });
+  };
+
+  const resetInspectorWidth = () => {
+    setPendingDelta(0);
+    setInspectorWidth(INSPECTOR_DEFAULT);
+    try {
+      window.localStorage.setItem(INSPECTOR_WIDTH_KEY, String(INSPECTOR_DEFAULT));
+    } catch {
+      // ignore
+    }
+  };
+
   const rootStyle = {
     '--rail-w': railCollapsed ? '56px' : '208px',
-    '--inspector-w': inspectorOpen ? '340px' : '40px',
+    '--inspector-w': inspectorOpen ? `${Math.round(effectiveWidth)}px` : '40px',
+    '--gutter-w': inspectorOpen ? '6px' : '0px',
   } as CSSProperties;
 
   return (
@@ -138,6 +198,22 @@ export function TraceWorkspace({
             ) : null}
           </div>
         </section>
+
+        <div className="trace-workspace__gutter">
+          {inspectorOpen ? (
+            <PaneGutter
+              side="right"
+              width={effectiveWidth}
+              minWidth={INSPECTOR_MIN}
+              maxWidth={INSPECTOR_MAX}
+              label="Resize inspector panel"
+              onResize={(delta) => setPendingDelta((d) => d + delta)}
+              onCommit={commitInspectorWidth}
+              onReset={resetInspectorWidth}
+              testId="inspector-gutter"
+            />
+          ) : null}
+        </div>
 
         <aside
           className="trace-workspace__inspector"

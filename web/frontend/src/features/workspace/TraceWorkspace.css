@@ -90,8 +90,15 @@
 /* ── Body: rail | canvas | inspector ──────────────────────────────────── */
 .trace-workspace__body {
   display: grid;
-  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--inspector-w);
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--gutter-w) var(--inspector-w);
   min-height: 0;
+}
+
+/* Drag handle that resizes the inspector. Zero-width column when the inspector
+   is collapsed (the PaneGutter itself is not rendered then). */
+.trace-workspace__gutter {
+  min-height: 0;
+  min-width: 0;
 }
 
 .trace-workspace__rail-slot {
