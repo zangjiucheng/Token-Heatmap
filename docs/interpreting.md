@@ -102,6 +102,29 @@ forward passes (no GPU). On `Qwen/Qwen2.5-0.5B-Instruct`:
 The attribution *predicted* the intervention — the difference between a
 suggestive chart and a causal claim.
 
+**This single-head crispness is scale-dependent — and that's the honest part.**
+Running the same argument (`MODEL=… examples/dla_causal_validation.py`) up the
+Qwen2.5 family:
+
+| Model | top-head DLA | single-head ablation ΔP | block ablation ΔP |
+| --- | --- | --- | --- |
+| 0.5B | L21 h6 **+3.58** (dominant) | −0.070 (≈36× a control) | −0.206 |
+| 7B | L23 h6 +0.70 | −0.019 (≈4× a control) | −0.160 |
+| 14B | L40 h23 +0.83 (tied with h22) | −0.015 (≈ control, in the noise) | −0.039 |
+
+Two things hold at every scale: the **decomposition stays faithful** (per-head
+sums to the layer bar to floating point; `error` small), and **block-level
+attribution stays causally crisp** (ablating the top attention block always moves
+the answer most). What washes out with size is the *single-head* story: bigger
+models spread fact-writing across many redundant heads, so no one head is
+load-bearing. Two compounding reasons: (1) redundancy/superposition grows with
+scale, and (2) a single-head ablation mixes the head's direct contribution (≈ its
+DLA) with a second-order final-norm rescaling (removing a vector shifts the
+RMSNorm denominator, rescaling all logits) — which dominates the comparison when
+direct contributions are small. So: trust per-head DLA as a *decomposition*;
+reach for **block-level ablation** (or ablating the top-k heads together) when you
+want a crisp causal handle on a larger model.
+
 ## Manifold metrics
 
 `token-heatmap manifold` ([CLI](cli.md#manifold-analysis)) treats the captured
