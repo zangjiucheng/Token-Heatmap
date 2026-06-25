@@ -64,6 +64,7 @@ export function BuildPage() {
   const yamlPreview = useMemo(() => buildConfigToYaml(config), [config]);
 
   return (
+    <div className="build-page-scroll">
     <div className="build-page" data-testid="build-page">
       <header className="build-page__intro">
         <p className="build-page__eyebrow">Build a trace</p>
@@ -97,6 +98,7 @@ export function BuildPage() {
           {yamlPreview}
         </pre>
       </details>
+    </div>
     </div>
   );
 }
