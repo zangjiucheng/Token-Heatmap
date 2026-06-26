@@ -135,17 +135,56 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
     Returns ``(parser, trace_subparser)`` so callers can apply YAML defaults
     directly onto ``trace_subparser`` before the final ``parse_args`` call.
     """
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as _pkg_version
+
+    try:
+        _version = _pkg_version("llm-token-heatmap")
+    except PackageNotFoundError:  # source tree without install metadata
+        _version = "unknown"
+
     parser = argparse.ArgumentParser(
         prog="token-heatmap",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         description=(
-            "Analyze LLM inference-time token probability distributions "
-            "with adaptive top-k tracing and heatmap visualization."
+            "Analyze LLM inference-time token probability distributions with adaptive\n"
+            "top-k tracing, then explore them in the web app's lenses — Heatmap, Logit\n"
+            "Lens, Attention, Direct Logit Attribution (+ per-head), Attribution Graph,\n"
+            "and Manifold — plus interventions/ablation against a live backend."
+        ),
+        epilog=(
+            "command groups:\n"
+            "  generate & analyze   trace, diff, manifold\n"
+            "  view                 serve\n"
+            "  develop & deploy     dev, web build, hpc {setup,run,serve}\n"
+            "\n"
+            "examples:\n"
+            "  token-heatmap trace --config configs/example.yaml --serve --frontend\n"
+            "  token-heatmap trace --config configs/ioi.yaml      # per-head DLA / circuit demo\n"
+            "  token-heatmap dev                                  # backend + frontend for local dev\n"
+            "  token-heatmap serve outputs/ioi                    # view a run you already produced\n"
+            "  token-heatmap hpc run configs/wrap-text.yaml --gpu l40s\n"
+            "\n"
+            "Run `token-heatmap <command> --help` for a command's options.\n"
+            "Configs: configs/README.md   ·   Docs: docs/cli.md"
         ),
     )
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {_version}",
+        help="Show the installed token-heatmap version and exit.",
+    )
+    subparsers = parser.add_subparsers(
+        dest="command",
+        required=True,
+        title="commands",
+        metavar="<command>",
+    )
 
     trace_parser = subparsers.add_parser(
         "trace",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         help="Run the adaptive token probe on a model and write trace + plots.",
         description=(
             "Generate text with the given model and write generated.txt, "
@@ -153,8 +192,33 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "adaptive_heatmap.png, entropy.png, and selected_probability.png "
             "into the output directory."
         ),
+        epilog=(
+            "examples:\n"
+            "  # smallest run — heatmap + logit lens, then open the viewer\n"
+            "  token-heatmap trace --config configs/example.yaml --serve --frontend\n"
+            "\n"
+            "  # everything the Attribution / Graph / Attention lenses + ablation need\n"
+            "  token-heatmap trace --model Qwen/Qwen2.5-0.5B-Instruct \\\n"
+            "      --prompt 'The capital of France is' \\\n"
+            "      --capture-logit-lens --capture-attention --capture-full-attention \\\n"
+            "      --capture-activations --capture-full-activations --serve --frontend\n"
+            "\n"
+            "  # quick CLI-only trace (no web app)\n"
+            "  token-heatmap trace --model Qwen/Qwen2.5-0.5B-Instruct --prompt 'Hello' --max-new-tokens 16\n"
+            "\n"
+            "Most runs are easier to launch from a config (configs/README.md).\n"
+            "Per-head DLA / the Attribution Graph need --capture-full-activations."
+        ),
     )
-    trace_parser.add_argument(
+    model_grp = trace_parser.add_argument_group("model")
+    gen_grp = trace_parser.add_argument_group("generation & sampling")
+    attn_grp = trace_parser.add_argument_group("capture: attention (Attention lens)")
+    lens_grp = trace_parser.add_argument_group("capture: logit lens (Logit Lens)")
+    act_grp = trace_parser.add_argument_group(
+        "capture: activations (Attribution / Graph / Manifold)"
+    )
+    serve_grp = trace_parser.add_argument_group("serve & view")
+    model_grp.add_argument(
         "--config",
         type=Path,
         default=None,
@@ -164,65 +228,65 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "Requires PyYAML (pip install pyyaml)."
         ),
     )
-    trace_parser.add_argument(
+    model_grp.add_argument(
         "--model",
         default=None,
         help="HuggingFace model id or local path (e.g. Qwen/Qwen2.5-0.5B-Instruct).",
     )
-    trace_parser.add_argument(
+    model_grp.add_argument(
         "--load-in-4bit",
         action="store_true",
         help="Load the model in 4-bit NF4 (bitsandbytes) on GPU — fits a 32B on a "
         "single 48 GB GPU. Ignored on CPU. Activations are still captured in fp16.",
     )
-    trace_parser.add_argument(
+    gen_grp.add_argument(
         "--prompt",
         default=None,
         help="Input prompt string for generation.",
     )
-    trace_parser.add_argument(
+    gen_grp.add_argument(
         "--max-new-tokens",
         type=int,
         default=32,
         help="Maximum number of tokens to generate (default: 32).",
     )
-    trace_parser.add_argument(
+    gen_grp.add_argument(
         "--temperature",
         type=float,
         default=0.8,
         help="Sampling temperature (default: 0.8).",
     )
-    trace_parser.add_argument(
+    gen_grp.add_argument(
         "--top-p",
         type=float,
         default=0.95,
         help="Nucleus sampling cutoff (default: 0.95).",
     )
-    trace_parser.add_argument(
+    gen_grp.add_argument(
         "--min-k",
         type=int,
         default=8,
         help="Minimum adaptive top-k (default: 8).",
     )
-    trace_parser.add_argument(
+    gen_grp.add_argument(
         "--max-k",
         type=int,
         default=64,
         help="Maximum adaptive top-k (default: 64).",
     )
-    trace_parser.add_argument(
+    gen_grp.add_argument(
         "--mass-threshold",
         type=float,
         default=0.95,
         help="Cumulative probability mass target for adaptive top-k (default: 0.95).",
     )
-    trace_parser.add_argument(
+    gen_grp.add_argument(
         "--out",
         type=Path,
         default=Path("outputs"),
         help="Output directory (created if missing; default: outputs/).",
     )
-    trace_parser.add_argument(
+    attn_grp.add_argument(
         "--capture-attention",
         action="store_true",
         help=(
@@ -230,7 +294,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "and Q/K/V vectors. Forces eager attention (slow). Off by default."
         ),
     )
-    trace_parser.add_argument(
+    attn_grp.add_argument(
         "--attention-layers",
         type=_parse_layers_spec,
         default="all",
@@ -239,13 +303,13 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "or a comma-separated list of indices, e.g. '0,3,7,11'."
         ),
     )
-    trace_parser.add_argument(
+    attn_grp.add_argument(
         "--attention-top-k",
         type=int,
         default=8,
         help="Top-k attended positions kept inline per head (default: 8).",
     )
-    trace_parser.add_argument(
+    attn_grp.add_argument(
         "--capture-full-attention",
         action="store_true",
         help=(
@@ -254,14 +318,14 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "Q/K/V tensors. Requires --capture-attention."
         ),
     )
-    trace_parser.add_argument(
+    lens_grp.add_argument(
         "--capture-logit-lens",
         action="store_true",
         help=(
             "Attach a LogitLens probe to capture per-layer next-token predictions. Off by default."
         ),
     )
-    trace_parser.add_argument(
+    lens_grp.add_argument(
         "--lens-layers",
         type=_parse_layers_spec,
         default="all",
@@ -270,13 +334,13 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "comma-separated list of indices, e.g. '0,3,7,11'."
         ),
     )
-    trace_parser.add_argument(
+    lens_grp.add_argument(
         "--lens-top-k",
         type=int,
         default=8,
         help="Top-k tokens retained per layer in the logit-lens output (default: 8).",
     )
-    trace_parser.add_argument(
+    act_grp.add_argument(
         "--capture-activations",
         action="store_true",
         help=(
@@ -284,7 +348,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "stats. Off by default."
         ),
     )
-    trace_parser.add_argument(
+    act_grp.add_argument(
         "--activation-layers",
         type=_parse_layers_spec,
         default="all",
@@ -293,7 +357,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "a comma-separated list of indices, e.g. '0,3,7,11'."
         ),
     )
-    trace_parser.add_argument(
+    act_grp.add_argument(
         "--activation-submodules",
         type=_parse_submodules_spec,
         default=list(DEFAULT_ACTIVATION_SUBMODULES),
@@ -304,22 +368,22 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "mlp_out (alias: mlp.down_proj), o_proj."
         ),
     )
-    trace_parser.add_argument(
+    act_grp.add_argument(
         "--activation-top-k",
         type=int,
         default=8,
         help="Top-k highest-magnitude neurons retained per (layer, submodule) (default: 8).",
     )
-    trace_parser.add_argument(
+    act_grp.add_argument(
         "--capture-full-activations",
         action="store_true",
         help=(
             "Write the full per-(layer, submodule) activation vectors to Tier-2 "
             ".npz sidecars (requires --capture-activations). Needed for `token-heatmap "
-            "manifold` analysis."
+            "manifold` analysis and per-head DLA / the Attribution Graph."
         ),
     )
-    trace_parser.add_argument(
+    serve_grp.add_argument(
         "--serve",
         action="store_true",
         help=(
@@ -328,13 +392,13 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "can load the trace via a URL. Press Ctrl+C to stop."
         ),
     )
-    trace_parser.add_argument(
+    serve_grp.add_argument(
         "--port",
         type=int,
         default=8000,
         help="Backend port when --serve is set (default: 8000).",
     )
-    trace_parser.add_argument(
+    serve_grp.add_argument(
         "--frontend-url",
         default="http://localhost:5173",
         help=(
@@ -343,7 +407,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "to this URL's port."
         ),
     )
-    trace_parser.add_argument(
+    serve_grp.add_argument(
         "--frontend",
         action="store_true",
         help=(
@@ -352,7 +416,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "Implies --serve. Press Ctrl+C to stop both."
         ),
     )
-    trace_parser.add_argument(
+    serve_grp.add_argument(
         "--no-open",
         action="store_true",
         help="With --frontend, do not auto-open the viewer in a browser.",
@@ -361,11 +425,17 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
 
     diff_parser = subparsers.add_parser(
         "diff",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         help="Compare two adaptive_token_trace.json files and write a delta trace + plot.",
         description=(
             "Run `compare_activations` on two activation-capturing trace JSON files "
             "and write activation_diff.json + activation_delta.png to the output "
             "directory."
+        ),
+        epilog=(
+            "example:\n"
+            "  token-heatmap diff outputs/a/adaptive_token_trace.json \\\n"
+            "      outputs/b/adaptive_token_trace.json --out outputs/diff --metric cosine"
         ),
     )
     diff_parser.add_argument(
@@ -394,12 +464,18 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
 
     manifold_parser = subparsers.add_parser(
         "manifold",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         help="Add manifold analysis of captured activations to a trace JSON.",
         description=(
             "Read an adaptive_token_trace.json plus its activation sidecars (written "
             "with --capture-full-activations), run PCA / intrinsic-dimension / curvature "
             "/ periodicity analysis per (layer, submodule), and write a `manifold` field "
             "back into the trace so the web app's Manifold tab can render it."
+        ),
+        epilog=(
+            "example:\n"
+            "  token-heatmap manifold --trace outputs/wrap-text/adaptive_token_trace.json \\\n"
+            "      --components 6 --probe line_position"
         ),
     )
     manifold_parser.add_argument(
@@ -458,6 +534,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
 
     serve_parser = subparsers.add_parser(
         "serve",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         help="Serve an existing output directory over HTTP with CORS (no generation).",
         description=(
             "Start a stdlib http.server with CORS headers serving DIR so the frontend "
@@ -465,6 +542,11 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "JSON. Unlike `trace --serve`, this does NOT regenerate — use it to serve a "
             "trace you have already produced (and, optionally, augmented with "
             "`token-heatmap manifold`). Press Ctrl+C to stop."
+        ),
+        epilog=(
+            "examples:\n"
+            "  token-heatmap serve outputs/ioi                 # files only (view via ?trace=… URL)\n"
+            "  token-heatmap serve outputs/ioi --frontend      # also start the viewer + open it"
         ),
     )
     serve_parser.add_argument(
