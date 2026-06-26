@@ -2,9 +2,13 @@
 # Boot the FastAPI backend and the Vite frontend together for local dev.
 #
 # Usage:
-#   ./scripts/dev.sh                          # defaults: backend :8000, frontend :5173
+#   ./scripts/dev.sh                          # backend :8000, frontend :5173
 #   BACKEND_PORT=8765 ./scripts/dev.sh
 #   FRONTEND_PORT=5180 ./scripts/dev.sh       # CORS origin is auto-adjusted
+#
+# If a requested port is already in use (e.g. :8000 taken by another service),
+# dev.sh advances to the next free port and prints the one it lands on — the
+# frontend's API base is wired to match, so it just works.
 #
 # Ctrl+C terminates both processes cleanly.
 
@@ -25,9 +29,30 @@ FRONTEND_DIR="$REPO_ROOT/web/frontend"
 BACKEND_PORT="${BACKEND_PORT:-${LLM_HEATMAP_API_PORT:-8000}}"
 FRONTEND_PORT="${FRONTEND_PORT:-5173}"
 
-# Keep the backend's CORS list in sync with whichever port the frontend
-# actually lands on. If the caller already set LLM_HEATMAP_ALLOWED_ORIGINS,
-# respect it; otherwise scope it to the chosen frontend port.
+# /dev/tcp is built into bash, so this works without lsof/netstat. The connect
+# attempt succeeds iff something is already listening on the port.
+port_in_use() {
+  (echo > "/dev/tcp/127.0.0.1/$1") 2>/dev/null
+}
+next_free_port() {
+  local p="$1"
+  while port_in_use "$p"; do p=$((p + 1)); done
+  printf '%s' "$p"
+}
+
+# Auto-fall-back to the next free port when the requested one is taken (e.g. a
+# default :8000 already used by another service), so dev.sh "just works" instead
+# of erroring. The frontend's API base + CORS are wired to the ports we land on.
+_req_backend="$BACKEND_PORT"; BACKEND_PORT="$(next_free_port "$BACKEND_PORT")"
+[[ "$BACKEND_PORT" != "$_req_backend" ]] && \
+  echo "[dev] backend port $_req_backend in use -> using $BACKEND_PORT"
+_req_frontend="$FRONTEND_PORT"; FRONTEND_PORT="$(next_free_port "$FRONTEND_PORT")"
+[[ "$FRONTEND_PORT" != "$_req_frontend" ]] && \
+  echo "[dev] frontend port $_req_frontend in use -> using $FRONTEND_PORT"
+
+# Keep the backend's CORS list and the frontend's API base in sync with the
+# ports we actually landed on. Respect explicit LLM_HEATMAP_ALLOWED_ORIGINS /
+# VITE_API_BASE_URL overrides if the caller set them.
 export LLM_HEATMAP_ALLOWED_ORIGINS="${LLM_HEATMAP_ALLOWED_ORIGINS:-http://localhost:$FRONTEND_PORT}"
 export VITE_API_BASE_URL="${VITE_API_BASE_URL:-http://localhost:$BACKEND_PORT}"
 
@@ -57,20 +82,6 @@ if ! command -v uvicorn >/dev/null 2>&1; then
 fi
 if ! command -v npm >/dev/null 2>&1; then
   echo "error: 'npm' is not on PATH. Install Node.js 20+ and re-run." >&2
-  exit 1
-fi
-
-# /dev/tcp is built into bash, so this works without lsof/netstat being
-# installed. Connect attempt succeeds iff something is already listening.
-port_in_use() {
-  (echo > "/dev/tcp/127.0.0.1/$1") 2>/dev/null
-}
-if port_in_use "$BACKEND_PORT"; then
-  echo "error: backend port $BACKEND_PORT is already in use." >&2
-  exit 1
-fi
-if port_in_use "$FRONTEND_PORT"; then
-  echo "error: frontend port $FRONTEND_PORT is already in use." >&2
   exit 1
 fi
 
