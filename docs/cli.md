@@ -273,3 +273,122 @@ token-heatmap serve outputs/example-run                     # serves it, CORS, n
 
 On HPC, SSH port-forward the file-server port to your laptop (use a free local
 port — see [`web-app.md`](web-app.md)) before opening the URL.
+
+## Local dev servers (`dev`)
+
+Boot the FastAPI backend (`web/backend`, with `--reload`) and the Vite dev
+server (`web/frontend`) together, with their ports and CORS wired up. Busy ports
+auto-advance to the next free one, and a single `Ctrl+C` tears down both cleanly
+(process groups are killed, so no orphan uvicorn/vite is left listening). Needs
+the venv active (uvicorn) and Node.js 20+ (npm).
+
+```bash
+token-heatmap dev                                            # backend :8000, frontend :5173
+token-heatmap dev --backend-port 8765 --frontend-port 5180   # custom ports
+```
+
+| Flag              | Default | Meaning                                            |
+| ----------------- | ------- | -------------------------------------------------- |
+| `--backend-port`  | `8000`  | Backend (uvicorn) port; auto-advances if busy.     |
+| `--frontend-port` | `5173`  | Frontend (Vite) port; auto-advances if busy.       |
+
+The `BACKEND_PORT` / `FRONTEND_PORT` environment variables still work as
+fallback defaults, but prefer the flags.
+
+## Building the frontend (`web build`)
+
+Run `npm install` + `npm run build` in `web/frontend`. The default empty
+`VITE_API_BASE_URL` makes the SPA use relative API paths (same-origin), so you
+can serve `dist/` straight from the FastAPI backend on a host with no Node.js.
+
+```bash
+token-heatmap web build                                      # output: web/frontend/dist/
+token-heatmap web build --api-base-url http://example:8000   # bake an absolute API URL
+```
+
+| Flag             | Default              | Meaning                                                      |
+| ---------------- | -------------------- | ----------------------------------------------------------- |
+| `--api-base-url` | empty (same-origin)  | API base URL baked into the build.                          |
+
+## HPC: build the GPU venv (`hpc setup`)
+
+Idempotently build the dedicated cu124 torch venv on the HPC so `token-heatmap`
+runs on the GPU instead of silently falling back to CPU.
+
+```bash
+token-heatmap hpc setup            # build/update the GPU venv
+token-heatmap hpc setup --verify   # also run a real GPU matmul check (queues a short srun)
+```
+
+| Flag                | Default                    | Meaning                                         |
+| ------------------- | -------------------------- | ----------------------------------------------- |
+| `--verify`          | off                        | Also run a real GPU matmul check.               |
+| `--ssh-host`        | `j7zang-gpu`               | SSH host alias.                                  |
+| `--remote-repo`     | `/work/j7zang/Token-Heatmap` | Repo checkout on the HPC.                      |
+| `--remote-venv`     | `/work/j7zang/th-gpu`      | GPU venv path.                                  |
+| `--anaconda-python` | _base interpreter_         | Base interpreter used to create the venv.       |
+
+## HPC round-trip (`hpc run`)
+
+One command from your laptop. It uploads the config to the HPC, submits a Slurm
+GPU job (the *only* remote step) that runs `trace` + `manifold`, polls it to
+completion, then rsyncs the whole `outputs/<name>/` folder back — so you view it
+locally with **no GPU and no tunnel** (drag the JSON onto the frontend, or
+`token-heatmap serve outputs/<name>`). A pre-flight check refuses runs that
+won't fit the GPU's VRAM before submitting. Pairs with the Build page (`/build`)
+— *Export YAML* → `token-heatmap hpc run that.yaml`.
+
+```bash
+token-heatmap hpc run configs/wrap-text.yaml --model Qwen/Qwen2.5-14B-Instruct \
+  --capture activations --probe line_position --extra "--max-new-tokens 320"
+# 32B on one GPU: add  --4bit
+# auto-open it locally afterwards: add  --serve
+```
+
+| Flag             | Default                          | Meaning                                                                |
+| ---------------- | -------------------------------- | ---------------------------------------------------------------------- |
+| `config`         | _required_                       | Trace config YAML (its basename is the default run name).              |
+| `--name`         | config basename                  | Run name → `outputs/NAME` locally + on the HPC.                        |
+| `--model`        | _from config_                    | Override the model id.                                                  |
+| `--gpu`          | `rtx6000`                        | GPU type (`rtx6000` or `l40s`); both 48 GB.                            |
+| `--qos`          | `qos_rtx6000_max` / `normal`     | Slurm qos (defaults by GPU type).                                      |
+| `--mem`          | `64G` / `28G`                    | Host memory (default depends on qos).                                  |
+| `--time`         | `01:00:00`                       | Walltime `HH:MM:SS`.                                                    |
+| `--capture`      | `full`                           | `full` = +attention (slower); `activations` = manifold-only.          |
+| `--probe`        | _none_                           | Add a supervised manifold probe scalar (e.g. `line_position`).        |
+| `--extra`        | _none_                           | Extra `trace` flags (e.g. `--max-new-tokens 320`).                    |
+| `--4bit`         | off                              | Load in 4-bit NF4 (for 32B+).                                          |
+| `--serve`        | off                              | After pulling, start a local file server + print the viewer URL.      |
+| `--no-manifold`  | off                              | Skip the manifold pass.                                                |
+| `--no-sync`      | off                              | Don't `git pull` the HPC repo first.                                   |
+| `--no-pull`      | off                              | Leave outputs on the HPC (no rsync back).                              |
+| `--setup`        | off                              | Build/verify the GPU venv on the HPC first (one-time).                 |
+| `--force`        | off                              | Skip the pre-flight "won't fit in VRAM" size check.                   |
+
+Connection / path overrides also exist (`--ssh-host`, `--remote-repo`,
+`--remote-venv`, `--anaconda-python`, `--remote-bin-gpu`, `--local-view-port`,
+`--frontend-port`, `--poll-seconds`); run `token-heatmap hpc run --help` for the
+full list.
+
+## HPC: serve a remote run (`hpc serve`)
+
+Start the `token-heatmap` file server on the HPC and forward it to a local port
+so the local frontend can fetch the trace. One SSH session does both, so a
+single `Ctrl+C` tears down both.
+
+```bash
+token-heatmap hpc serve outputs/wrap-text                    # serve an existing remote run
+token-heatmap hpc serve --gen --config configs/wrap-text.yaml   # regenerate first, then serve
+```
+
+| Flag              | Default                      | Meaning                                            |
+| ----------------- | ---------------------------- | -------------------------------------------------- |
+| `dir`             | _remote run dir_             | Remote run dir to serve.                           |
+| `--gen`           | off                          | Regenerate trace + manifold first, then serve.     |
+| `--config`        | _none_                       | Config used with `--gen`.                          |
+| `--ssh-host`      | `j7zang-gpu`                 | SSH host alias.                                     |
+| `--remote-repo`   | `/work/j7zang/Token-Heatmap` | Repo checkout on the HPC.                           |
+| `--remote-bin`    | `~/.local/bin`               | `token-heatmap` path on the HPC.                   |
+| `--remote-port`   | `8000`                       | File-server port on the HPC.                       |
+| `--local-port`    | `8001`                       | Local forwarded port.                              |
+| `--frontend-port` | `5173`                       | Frontend port for the printed viewer URL.          |

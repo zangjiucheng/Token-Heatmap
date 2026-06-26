@@ -12,7 +12,7 @@
 #   - Short generation: the answer is step 0 — the cleanest place to attribute,
 #     because the prompt's last position predicts it directly.
 #
-# Reproduce the trace (HPC):  ./scripts/hpc-run.sh configs/recall-probe.yaml --gpu l40s
+# Reproduce the trace (HPC):  token-heatmap hpc run configs/recall-probe.yaml --gpu l40s
 # The causal argument itself is run locally (small model, a few forward passes):
 #   python examples/dla_causal_validation.py
 

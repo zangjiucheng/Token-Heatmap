@@ -80,7 +80,7 @@ A faithful attribution predicts the intervention: ablating a high-`attn` head
 should drop the target probability more than a random head. Ablation holds the
 attention *patterns* fixed (it removes a block's write to the residual at the
 analyzed position), and needs the **live backend** — it loads/uses the trace's
-model server-side, so it's available when running via `./scripts/dev.sh` or a
+model server-side, so it's available when running via `token-heatmap dev` or a
 backend you've port-forwarded, not for purely static file views.
 
 ### Worked example — validating one head

@@ -504,6 +504,18 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
     )
     serve_parser.set_defaults(func=run_serve)
 
+    # Operational sub-commands (dev / web build / hpc …) live in
+    # `llm_token_heatmap.commands` so they replace scripts/*.sh without bloating
+    # this module. They import only stdlib, so registering them keeps `--help`
+    # cheap (no torch/numpy pulled in).
+    from llm_token_heatmap.commands import dev as _dev_cmd
+    from llm_token_heatmap.commands import hpc as _hpc_cmd
+    from llm_token_heatmap.commands import web as _web_cmd
+
+    _dev_cmd.register(subparsers)
+    _web_cmd.register(subparsers)
+    _hpc_cmd.register(subparsers)
+
     return parser, trace_parser
 
 
@@ -1390,7 +1402,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     # values as defaults on the trace sub-parser, then do the real parse so
     # that explicit CLI flags always win over config-file values.
     ns, _ = parser.parse_known_args(argv)
-    if getattr(ns, "config", None) is not None:
+    # Only the `trace` sub-command takes a YAML config to preload as defaults.
+    # Other sub-commands (e.g. `hpc run <config>`, `hpc serve --config`) also
+    # have a `config` dest, but theirs is a plain path string handled by their
+    # own run function — don't try to load it here.
+    if getattr(ns, "command", None) == "trace" and getattr(ns, "config", None) is not None:
         yaml_defaults = _load_yaml_config(ns.config)
         trace_parser.set_defaults(**yaml_defaults)
 

@@ -140,16 +140,16 @@ cp .env.example .env
 
 ### End-to-end dev loop
 
-The fastest way to run both services together is the `dev` script at the repo root:
+The fastest way to run both services together is the `dev` subcommand at the repo root:
 
 ```bash
 # from the repo root
-./scripts/dev.sh
+token-heatmap dev
 # backend → http://localhost:8000
 # frontend → http://localhost:5173 (open this in your browser)
 ```
 
-The script terminates both processes cleanly on `Ctrl+C`. Override ports with `BACKEND_PORT=8765 FRONTEND_PORT=4000 ./scripts/dev.sh`.
+It terminates both processes cleanly on `Ctrl+C`. Override ports with `token-heatmap dev --backend-port 8765 --frontend-port 4000`.
 
 ### Regenerating the API client
 

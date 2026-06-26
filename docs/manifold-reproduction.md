@@ -75,12 +75,12 @@ CONFIG=configs/wrap-text.yaml OUT=outputs/wrap-text CAPTURE=activations \
   sbatch --export=ALL,CONFIG,OUT,CAPTURE,MANIFOLD_EXTRA scripts/hpc-gen.slurm
 
 # 2. read the per-layer linear + residual-circular table + verdict
-python3 scripts/helix-report.py outputs/wrap-text/adaptive_token_trace.json
+python3 examples/helix-report.py outputs/wrap-text/adaptive_token_trace.json
 #    if it warns about a run-on outlier, re-probe excluding it (CPU, no GPU):
 #    token-heatmap manifold --trace outputs/wrap-text/adaptive_token_trace.json \
 #      --components 6 --probe line_position --scalar-max 50
 
-# 3. (optional) look at it: ./scripts/hpc-serve.sh outputs/wrap-text  → Manifold tab
+# 3. (optional) look at it: token-heatmap hpc serve outputs/wrap-text  → Manifold tab
 ```
 
 Always sanity‑check `outputs/<run>/generated.txt`: the model must actually
@@ -89,16 +89,16 @@ confounded.
 
 ## Running a bigger model (GPU + Slurm)
 
-### TL;DR — one command from the laptop (`scripts/hpc-run.sh`)
+### TL;DR — one command from the laptop (`token-heatmap hpc run`)
 
 The compute is the *only* thing that needs the cluster. From the laptop:
 
 ```bash
 # one-time: build the GPU venv on the HPC (idempotent)
-./scripts/hpc-setup.sh
+token-heatmap hpc setup
 
 # run on the HPC GPU, then pull EVERYTHING back to ./outputs/<name>/
-./scripts/hpc-run.sh configs/wrap-text.yaml --model Qwen/Qwen2.5-14B-Instruct \
+token-heatmap hpc run configs/wrap-text.yaml --model Qwen/Qwen2.5-14B-Instruct \
   --capture activations --probe line_position --extra "--max-new-tokens 320"
 # 32B on one GPU:  add  --4bit
 # auto-open it locally afterwards: add  --serve
@@ -107,7 +107,7 @@ The compute is the *only* thing that needs the cluster. From the laptop:
 It scp's the config up, `sbatch`'s the GPU job, waits, then **rsyncs the whole
 output dir back** so you view it locally with no GPU and no tunnel (drag the
 JSON onto the frontend, or `token-heatmap serve outputs/<name>`). It pairs with
-the web **Build trace** page (`/build`) — *Export YAML* → `hpc-run.sh that.yaml`.
+the web **Build trace** page (`/build`) — *Export YAML* → `token-heatmap hpc run that.yaml`.
 The rest of this section documents the moving parts it automates.
 
 ### Step 0 — use the GPU env (built + verified ✅)
@@ -163,7 +163,7 @@ CONFIG=configs/wrap-text.yaml OUT=outputs/wrap-14b CAPTURE=activations \
 MODEL=Qwen/Qwen2.5-14B-Instruct EXTRA="--max-new-tokens 320" \
 MANIFOLD_EXTRA="--components 6 --probe line_position" \
   sbatch --export=ALL,BIN,CONFIG,OUT,CAPTURE,MODEL,EXTRA,MANIFOLD_EXTRA scripts/hpc-gen.slurm
-# then: python3 scripts/helix-report.py outputs/wrap-14b/adaptive_token_trace.json
+# then: python3 examples/helix-report.py outputs/wrap-14b/adaptive_token_trace.json
 ```
 
 ### Model size vs GPU (bf16)
@@ -179,7 +179,7 @@ the "rtx6000", which is actually an **RTX 6000 Ada (49140 MiB ≈ 48 GB)** on a
 
 The loader uses **bfloat16** on CUDA (fp16 overflows Qwen2.5 → NaN sampling
 crash). 14B bf16 (~28 GB) fits either card; **32B (~64 GB) needs `--4bit`** on a
-single GPU (or multi‑GPU `device_map="auto"` sharding). `scripts/hpc-run.sh`
+single GPU (or multi‑GPU `device_map="auto"` sharding). `token-heatmap hpc run`
 picks the GPU/qos for you — `--gpu rtx6000` auto‑selects qos_rtx6000_max (the
 roomier host‑RAM / longer‑walltime queue) and its pre‑flight check refuses a
 run that won't fit before submitting. Larger models need a longer `wrap-text`

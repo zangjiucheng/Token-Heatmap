@@ -2,7 +2,7 @@
 # and interventions (Direct Logit Attribution, per-head, ablation).
 #
 # Run on the HPC (compute remote, view locally):
-#   ./scripts/hpc-run.sh configs/dla-demo.yaml --setup --gpu l40s
+#   token-heatmap hpc run configs/dla-demo.yaml --setup --gpu l40s
 #
 # `scripts/hpc-gen.slurm` forces `--capture-activations --capture-full-activations`
 # (+ attention under the default `--capture full`), so the Attribution and Graph

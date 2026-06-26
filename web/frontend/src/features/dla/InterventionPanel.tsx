@@ -152,7 +152,7 @@ export function InterventionPanel({
       {!online ? (
         <p className="intervention-panel__offline" data-testid="intervention-offline">
           Interventions need the live backend (the model is loaded server-side).
-          Start it with <code>./scripts/dev.sh</code>, then{' '}
+          Start it with <code>token-heatmap dev</code>, then{' '}
           <button
             type="button"
             className="intervention-panel__link"

@@ -25,9 +25,9 @@ prompt + previous tokens → logits → probabilities → next token
 - **`token-heatmap`** — CLI that takes a model + prompt (or a YAML config) and writes a full trace bundle to disk: `trace` (generate + capture) and `manifold` (analyze the activation clouds). Includes `--serve` to view the result in the browser.
 - **`web/backend`** — FastAPI service: `/health`, `/schema`, `/trace/generate` (run a model server-side), **`/trace/intervene`** (ablate a component/head live and diff the next-token distribution), `/trace/convert-csv`, `/trace/diff`, `/outputs/{path}`. Also serves the pre-built frontend when `web/frontend/dist/` exists.
 - **`web/frontend`** — React + Vite SPA: a **lens workspace** with a grouped lens rail (**Generation / Internals / Geometry**), a persistent generation spine (token strip + entropy / selected-probability timelines), and a resizable inspector. Lenses: **Token Heatmap**, **Model** (architecture overview), **Output** (complete generated-text render), **Attention**, **Logit Lens**, **Activations** (per-step ↔ whole-trace **TWERA** ranking toggle), **Attribution** (**direct logit attribution** — each token's logit split by layer, expandable to **per head**, with one-click **ablation** to causally check each contribution), **Graph** (the same attribution as a pruned node-link **attribution graph**, click a node to ablate), **Manifold** (3-D rotatable cloud + probe/helix readouts); plus step detail, CSV/PNG export, and a diff view. A visual node-based **Build** page (`/build`) wires Input→Model→Sampling→Capture→Output and either runs live (`/trace/generate`) or exports the equivalent YAML.
-- **`scripts/dev.sh`** — boots backend + frontend together for local development.
-- **`scripts/build-frontend.sh`** — builds the frontend for deployment on servers without Node.js.
-- **`scripts/hpc-run.sh`** — one command from your laptop: do the GPU compute on an HPC (Slurm), then rsync the whole run back so viewing needs no GPU. Companions: `scripts/hpc-setup.sh` (build the GPU venv) and `scripts/hpc-serve.sh` (SSH tunnel + remote file server).
+- **`token-heatmap dev`** — boots the FastAPI backend + Vite frontend together for local development.
+- **`token-heatmap web build`** — builds the frontend for deployment on servers without Node.js.
+- **`token-heatmap hpc run <config>`** — one command from your laptop: do the GPU compute on an HPC (Slurm), then rsync the whole run back so viewing needs no GPU. Companions: `token-heatmap hpc setup` (build the GPU venv) and `token-heatmap hpc serve` (SSH tunnel + remote file server).
 
 ## Documentation
 
@@ -90,7 +90,7 @@ Full CLI flags: [`docs/cli.md`](docs/cli.md). Python equivalent: [`docs/python-a
 **Local machine with Node.js:**
 
 ```bash
-./scripts/dev.sh          # backend :8000, frontend :5173
+token-heatmap dev          # backend :8000, frontend :5173
 ```
 
 Open <http://localhost:5173> and drop `outputs/adaptive_token_trace.json` onto the landing page.
@@ -100,12 +100,12 @@ Open <http://localhost:5173> and drop `outputs/adaptive_token_trace.json` onto t
 ```bash
 # One command from your laptop: scp the config up, run the GPU job on Slurm,
 # then rsync the whole run back to ./outputs/<name>/ — no GPU/tunnel to view.
-./scripts/hpc-setup.sh                      # one-time: build the GPU venv
-./scripts/hpc-run.sh configs/example.yaml   # --gpu, --4bit, --serve, … (see --help)
+token-heatmap hpc setup                      # one-time: build the GPU venv
+token-heatmap hpc run configs/example.yaml   # --gpu, --4bit, --serve, … (see --help)
 ```
 
 It refuses runs that won't fit the GPU's VRAM before submitting, and pairs with
-the Build page (export YAML → `hpc-run.sh that.yaml`). Details + Slurm/qos notes:
+the Build page (export YAML → `token-heatmap hpc run that.yaml`). Details + Slurm/qos notes:
 [`docs/manifold-reproduction.md`](docs/manifold-reproduction.md).
 
 **HPC / server without Node.js (manual):**

@@ -17,7 +17,7 @@ Run (small model, a few CPU/MPS forward passes — no GPU needed):
 
 This is the local, causal half of the demo; produce a full viewable trace with
 ``token-heatmap trace --config configs/recall-probe.yaml --capture-activations
---capture-full-activations`` (or via ``scripts/hpc-run.sh``).
+--capture-full-activations`` (or via ``token-heatmap hpc run``).
 """
 
 from __future__ import annotations

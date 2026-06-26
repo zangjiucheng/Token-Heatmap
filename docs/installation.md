@@ -56,13 +56,13 @@ YAML config (`--config`) works out of the box — `pyyaml` is now a core depende
 
 ```bash
 source .venv/bin/activate     # or: conda activate token-heatmap
-./scripts/dev.sh               # backend :8000, frontend :5173
+token-heatmap dev             # backend :8000, frontend :5173
 ```
 
-Override ports with environment variables:
+Override ports with flags:
 
 ```bash
-BACKEND_PORT=8765 FRONTEND_PORT=5180 ./scripts/dev.sh
+token-heatmap dev --backend-port 8765 --frontend-port 5180
 ```
 
 You can also run the services manually in two terminals:
@@ -126,7 +126,7 @@ For a fully self-contained server (frontend + backend, no Node on any machine):
 
 1. Build the frontend once on any machine with Node.js:
    ```bash
-   ./scripts/build-frontend.sh      # output: web/frontend/dist/
+   token-heatmap web build          # output: web/frontend/dist/
    rsync -av web/frontend/dist/ user@hpc:…/web/frontend/dist/
    ```
 2. On HPC, the backend auto-serves the built frontend:

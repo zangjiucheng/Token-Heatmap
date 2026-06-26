@@ -35,8 +35,8 @@ a capture flag are shown but locked until the trace carries that data.
 ## Running locally (with Node.js)
 
 ```bash
-./scripts/dev.sh                        # backend :8000, frontend :5173
-BACKEND_PORT=8765 FRONTEND_PORT=5180 ./scripts/dev.sh   # custom ports
+token-heatmap dev                        # backend :8000, frontend :5173
+token-heatmap dev --backend-port 8765 --frontend-port 5180   # custom ports
 ```
 
 Or generate a trace and boot the frontend in one command — `--frontend` starts
@@ -129,7 +129,7 @@ port. No Node.js ever needed on the server.
 
 ```bash
 # On your laptop — build (VITE_API_BASE_URL='' → relative/same-origin API calls)
-./scripts/build-frontend.sh
+token-heatmap web build
 
 # Copy to HPC
 rsync -av web/frontend/dist/ user@hpc:/path/to/Token-Heatmap/web/frontend/dist/

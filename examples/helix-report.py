@@ -5,7 +5,7 @@ Run the analysis first:
     token-heatmap manifold --trace <trace>.json --components 6 --probe line_position
 
 then:
-    python3 scripts/helix-report.py <trace>.json [submodule]
+    python3 examples/helix-report.py <trace>.json [submodule]
 
 Prints a per-layer table of the linear probe R² and the residualised circular
 ("helix") R², plus a one-line verdict. Pure stdlib (no numpy/torch) — runs
