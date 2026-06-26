@@ -15,9 +15,10 @@
 
 .activation-heatmap__svg {
   display: block;
-  width: 100%;
+  /* Intrinsic size, left-aligned; shrinks to fit a narrow frame but never
+     upscales the cells into a blurry, centred block. */
+  max-width: 100%;
   height: auto;
-  max-height: 60vh;
   overflow: visible;
 }
 

@@ -153,8 +153,9 @@ export function ActivationHeatmap({
         role="img"
         aria-label={`Layer by step activation heatmap, colored by ${ACTIVATION_METRIC_LABELS[metric]} for submodule ${submodule}`}
         className="activation-heatmap__svg"
+        width={width}
+        height={height}
         viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="xMidYMid meet"
         data-testid="activation-heatmap-svg"
       >
         {Array.from({ length: numSteps }, (_, step) => (

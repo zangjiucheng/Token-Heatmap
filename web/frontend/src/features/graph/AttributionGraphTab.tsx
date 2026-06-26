@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Trace, DirectLogitAttributionStep } from '@/types/trace';
 import { InterventionPanel, type PresetTarget } from '@/features/dla';
 import './AttributionGraphTab.css';
@@ -26,7 +26,7 @@ interface PlacedNode extends GNode {
 }
 
 const TOP_K = 16;
-const W = 920;
+const DEFAULT_W = 900;
 
 function pickStep(
   steps: DirectLogitAttributionStep[],
@@ -63,13 +63,35 @@ export function AttributionGraphTab({
   const dla = trace.direct_logit_attribution;
   const [preset, setPreset] = useState<PresetTarget | null>(null);
 
+  // Lay out at the frame's real pixel width (not a fixed 920 scaled down), so
+  // columns spread to fill, labels don't overlap, and text stays readable.
+  const svgWrapRef = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(DEFAULT_W);
+  useEffect(() => {
+    const el = svgWrapRef.current;
+    if (!el) return undefined;
+    const measure = () =>
+      setWidth(Math.max(320, Math.floor(el.getBoundingClientRect().width)));
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const view = useMemo(() => {
     const steps = dla?.steps ?? [];
     if (steps.length === 0) return null;
     const step = pickStep(steps, selectedStep);
 
     const nodes: GNode[] = [
-      { id: 'embed', label: 'embed', value: step.embed ?? 0, layer: -1, kind: 'embed' },
+      {
+        id: 'embed',
+        label: 'embed',
+        value: step.embed ?? 0,
+        layer: -1,
+        kind: 'embed',
+      },
     ];
     for (const l of step.layers) {
       if (l.heads && l.heads.length > 0) {
@@ -118,7 +140,7 @@ export function AttributionGraphTab({
     const C = layersSorted.length;
     const leftM = 80;
     const rightM = 160;
-    const usableW = W - leftM - rightM;
+    const usableW = width - leftM - rightM;
     const colX = (layer: number) => {
       const idx = layersSorted.indexOf(layer);
       if (C <= 1) return leftM + usableW / 2;
@@ -137,7 +159,7 @@ export function AttributionGraphTab({
     const maxCol = Math.max(1, ...[...byLayer.values()].map((a) => a.length));
     const rowH = 48;
     const topM = 44;
-    const H = Math.max(360, maxCol * rowH + 2 * topM + 30);
+    const H = Math.max(220, maxCol * rowH + 2 * topM + 30);
     const cy = H / 2;
 
     const placed: PlacedNode[] = top.map((n) => {
@@ -154,13 +176,23 @@ export function AttributionGraphTab({
     });
 
     const output = {
-      x: W - rightM / 2,
+      x: width - rightM / 2,
       y: cy,
-      token: trace.steps.find((s) => s.step === step.step)?.selected.token ?? '',
+      token:
+        trace.steps.find((s) => s.step === step.step)?.selected.token ?? '',
     };
 
-    return { step, placed, output, error, maxAbs, totalN, H, total: step.total_logit };
-  }, [dla, selectedStep, trace.steps]);
+    return {
+      step,
+      placed,
+      output,
+      error,
+      maxAbs,
+      totalN,
+      H,
+      total: step.total_logit,
+    };
+  }, [dla, selectedStep, trace.steps, width]);
 
   if (!view) {
     return (
@@ -170,7 +202,8 @@ export function AttributionGraphTab({
       >
         <p>
           No attribution data in this trace. Re-run the CLI with{' '}
-          <code>--capture-full-activations</code> to build the attribution graph.
+          <code>--capture-full-activations</code> to build the attribution
+          graph.
         </p>
       </div>
     );
@@ -180,13 +213,14 @@ export function AttributionGraphTab({
   const outR = 24;
 
   const ablate = (n: PlacedNode) => {
-    if (n.kind === 'head') setPreset({ layer: n.layer, component: 'head', head: n.head });
-    else if (n.kind === 'attn') setPreset({ layer: n.layer, component: 'attn' });
+    if (n.kind === 'head')
+      setPreset({ layer: n.layer, component: 'head', head: n.head });
+    else if (n.kind === 'attn')
+      setPreset({ layer: n.layer, component: 'attn' });
     else if (n.kind === 'mlp') setPreset({ layer: n.layer, component: 'mlp' });
   };
 
-  const edgeWidth = (v: number) =>
-    1 + (Math.abs(v) / maxAbs) * 5;
+  const edgeWidth = (v: number) => 1 + (Math.abs(v) / maxAbs) * 5;
 
   return (
     <div className="graph-tab" data-testid="attribution-graph-tab-content">
@@ -194,7 +228,10 @@ export function AttributionGraphTab({
         <div>
           <p className="eyebrow">Attribution graph</p>
           <h3 className="graph-tab__title">
-            How <code className="graph-tab__token">{JSON.stringify(output.token)}</code>{' '}
+            How{' '}
+            <code className="graph-tab__token">
+              {JSON.stringify(output.token)}
+            </code>{' '}
             is built
           </h3>
         </div>
@@ -207,119 +244,127 @@ export function AttributionGraphTab({
       </header>
 
       <p className="graph-tab__note">
-        Top {placed.length} of {totalN} contributors flow into the token (right).
-        Node size and edge width track the contribution magnitude; orange
-        promotes, blue suppresses. Columns are ordered by layer depth. Click a
-        node to ablate it and validate the edge below.
+        Top {placed.length} of {totalN} contributors flow into the token
+        (right). Node size and edge width track the contribution magnitude;
+        orange promotes, blue suppresses. Columns are ordered by layer depth.
+        Click a node to ablate it and validate the edge below.
       </p>
 
-      <svg
-        className="graph-tab__svg"
-        viewBox={`0 0 ${W} ${H}`}
-        role="img"
-        aria-label="Attribution graph"
-        data-testid="attribution-graph-svg"
-      >
-        {/* Edges */}
-        <g className="graph-tab__edges">
-          {placed.map((n) => (
-            <path
-              key={`e-${n.id}`}
-              className="graph-tab__edge"
-              data-sign={n.value >= 0 ? 'pos' : 'neg'}
-              d={edgePath(n.x + n.r, n.y, output.x - outR, output.y)}
-              style={{ strokeWidth: edgeWidth(n.value) }}
-            />
-          ))}
-          {Math.abs(error) > 1e-6 ? (
-            <path
-              className="graph-tab__edge graph-tab__edge--error"
-              d={edgePath(output.x, output.y + 70, output.x, output.y + outR)}
-              style={{ strokeWidth: edgeWidth(error) }}
-            />
-          ) : null}
-        </g>
-
-        {/* Contributor nodes */}
-        {placed.map((n) => {
-          const ablatable = isAblatable(n.kind);
-          const title = `${n.label}: ${n.value >= 0 ? '+' : ''}${n.value.toFixed(3)}`;
-          return (
-            <g
-              key={n.id}
-              className="graph-tab__node"
-              data-ablatable={ablatable ? 'true' : 'false'}
-              data-testid={`graph-node-${n.id}`}
-              role={ablatable ? 'button' : undefined}
-              tabIndex={ablatable ? 0 : undefined}
-              aria-label={ablatable ? `Ablate ${n.label}` : n.label}
-              onClick={ablatable ? () => ablate(n) : undefined}
-              onKeyDown={
-                ablatable
-                  ? (e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        ablate(n);
-                      }
-                    }
-                  : undefined
-              }
-            >
-              <title>{title}</title>
-              <circle
-                cx={n.x}
-                cy={n.y}
-                r={n.r}
-                className="graph-tab__dot"
+      <div ref={svgWrapRef} className="graph-tab__svg-wrap">
+        <svg
+          className="graph-tab__svg"
+          viewBox={`0 0 ${width} ${H}`}
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label="Attribution graph"
+          data-testid="attribution-graph-svg"
+        >
+          {/* Edges */}
+          <g className="graph-tab__edges">
+            {placed.map((n) => (
+              <path
+                key={`e-${n.id}`}
+                className="graph-tab__edge"
                 data-sign={n.value >= 0 ? 'pos' : 'neg'}
-                data-kind={n.kind}
+                d={edgePath(n.x + n.r, n.y, output.x - outR, output.y)}
+                style={{ strokeWidth: edgeWidth(n.value) }}
+              />
+            ))}
+            {Math.abs(error) > 1e-6 ? (
+              <path
+                className="graph-tab__edge graph-tab__edge--error"
+                d={edgePath(output.x, output.y + 70, output.x, output.y + outR)}
+                style={{ strokeWidth: edgeWidth(error) }}
+              />
+            ) : null}
+          </g>
+
+          {/* Contributor nodes */}
+          {placed.map((n) => {
+            const ablatable = isAblatable(n.kind);
+            const title = `${n.label}: ${n.value >= 0 ? '+' : ''}${n.value.toFixed(3)}`;
+            return (
+              <g
+                key={n.id}
+                className="graph-tab__node"
+                data-ablatable={ablatable ? 'true' : 'false'}
+                data-testid={`graph-node-${n.id}`}
+                role={ablatable ? 'button' : undefined}
+                tabIndex={ablatable ? 0 : undefined}
+                aria-label={ablatable ? `Ablate ${n.label}` : n.label}
+                onClick={ablatable ? () => ablate(n) : undefined}
+                onKeyDown={
+                  ablatable
+                    ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          ablate(n);
+                        }
+                      }
+                    : undefined
+                }
+              >
+                <title>{title}</title>
+                <circle
+                  cx={n.x}
+                  cy={n.y}
+                  r={n.r}
+                  className="graph-tab__dot"
+                  data-sign={n.value >= 0 ? 'pos' : 'neg'}
+                  data-kind={n.kind}
+                />
+                <text
+                  className="graph-tab__label"
+                  x={n.x}
+                  y={n.y + n.r + 13}
+                  textAnchor="middle"
+                >
+                  {n.label}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Error node */}
+          {Math.abs(error) > 1e-6 ? (
+            <g className="graph-tab__node">
+              <title>{`unexplained (error): ${error.toFixed(3)}`}</title>
+              <circle
+                cx={output.x}
+                cy={output.y + 70}
+                r={9}
+                className="graph-tab__dot graph-tab__dot--error"
               />
               <text
                 className="graph-tab__label"
-                x={n.x}
-                y={n.y + n.r + 13}
+                x={output.x}
+                y={output.y + 70 + 22}
                 textAnchor="middle"
               >
-                {n.label}
+                error
               </text>
             </g>
-          );
-        })}
+          ) : null}
 
-        {/* Error node */}
-        {Math.abs(error) > 1e-6 ? (
-          <g className="graph-tab__node">
-            <title>{`unexplained (error): ${error.toFixed(3)}`}</title>
+          {/* Output (target token) */}
+          <g className="graph-tab__output">
             <circle
               cx={output.x}
-              cy={output.y + 70}
-              r={9}
-              className="graph-tab__dot graph-tab__dot--error"
+              cy={output.y}
+              r={outR}
+              className="graph-tab__output-dot"
             />
             <text
-              className="graph-tab__label"
+              className="graph-tab__output-label"
               x={output.x}
-              y={output.y + 70 + 22}
+              y={output.y - outR - 8}
               textAnchor="middle"
             >
-              error
+              {JSON.stringify(output.token)}
             </text>
           </g>
-        ) : null}
-
-        {/* Output (target token) */}
-        <g className="graph-tab__output">
-          <circle cx={output.x} cy={output.y} r={outR} className="graph-tab__output-dot" />
-          <text
-            className="graph-tab__output-label"
-            x={output.x}
-            y={output.y - outR - 8}
-            textAnchor="middle"
-          >
-            {JSON.stringify(output.token)}
-          </text>
-        </g>
-      </svg>
+        </svg>
+      </div>
 
       <InterventionPanel
         trace={trace}

@@ -4,6 +4,10 @@
   gap: 16px;
   /* Outer padding is provided by the workspace canvas; keep only the
      internal gap so it doesn't double up. */
+  /* Drive the body grid off this element's own width (a narrow canvas with the
+     inspector open is far below the viewport width) so the plot + metrics stack
+     instead of overflowing. */
+  container-type: inline-size;
 }
 
 .manifold-tab--empty {
@@ -45,7 +49,9 @@
 
 .manifold-tab__body {
   display: grid;
-  grid-template-columns: minmax(320px, 1fr) minmax(280px, 0.55fr);
+  /* minmax(0, …) (not minmax(320px, …)) so the columns can shrink instead of
+     forcing a 600px-wide grid that overflows a narrow canvas. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.55fr);
   gap: 16px;
   align-items: start;
 }
@@ -60,6 +66,9 @@
 .manifold-scatter {
   width: 100%;
   height: auto;
+  /* Keep the plot from ballooning to full-canvas height when it spans the whole
+     width (stacked layout); it scales down to fit and stays readable. */
+  max-height: 46vh;
   display: block;
 }
 
@@ -219,7 +228,9 @@
   stroke-width: 1.5;
 }
 
-@media (max-width: 860px) {
+/* Stack the plot above the metrics once the canvas itself (not the viewport) is
+   too narrow for a side-by-side layout. */
+@container (max-width: 640px) {
   .manifold-tab__body {
     grid-template-columns: 1fr;
   }
