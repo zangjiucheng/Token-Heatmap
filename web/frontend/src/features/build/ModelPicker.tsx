@@ -1,9 +1,11 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import {
@@ -68,6 +70,28 @@ export function ModelPicker({ value, onChange, disabled }: ModelPickerProps) {
   useEffect(() => {
     setActiveIndex((i) => (i >= flat.length ? flat.length - 1 : i));
   }, [flat.length]);
+
+  // The dropdown is `position: fixed` so it escapes the Build rail's
+  // overflow-x:auto (which clips overflowing descendants, cutting the list off).
+  // Anchor it to the field's rect, tracking scroll/resize while open.
+  const [popStyle, setPopStyle] = useState<CSSProperties | null>(null);
+  useLayoutEffect(() => {
+    if (!open) {
+      setPopStyle(null);
+      return undefined;
+    }
+    const update = () => {
+      const r = rootRef.current?.getBoundingClientRect();
+      if (r) setPopStyle({ top: r.bottom + 4, left: r.left, width: r.width });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [open]);
 
   const select = (model: string) => {
     onChange(model);
@@ -146,7 +170,10 @@ export function ModelPicker({ value, onChange, disabled }: ModelPickerProps) {
       </div>
 
       {open ? (
-        <div className="model-picker__pop">
+        <div
+          className="model-picker__pop"
+          style={popStyle ?? { visibility: 'hidden' }}
+        >
           <p className="model-picker__note">
             Smaller models load &amp; run faster — or paste any Hugging Face
             causal-LM id.
