@@ -23,10 +23,10 @@ describe('route focus management', () => {
     render(<App />);
     await screen.findByRole('heading', { name: /no trace loaded/i });
 
-    // Push the new route — RouteFocusManager runs on location change.
+    // Navigate to the new route — assigning the hash fires `hashchange`, which
+    // HashRouter listens for; RouteFocusManager then runs on the location change.
     act(() => {
-      window.history.pushState(null, '', '/trace/sample');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      window.location.hash = '#/trace/sample';
     });
 
     await waitFor(() => {

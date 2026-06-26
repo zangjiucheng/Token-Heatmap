@@ -7,6 +7,9 @@ export default defineConfig(({ mode }) => {
   const port = Number(env.VITE_DEV_PORT ?? 5173);
 
   return {
+    // Relative asset paths so the built SPA loads from the Tauri app's
+    // `tauri://` filesystem origin (and any static host) without a server.
+    base: './',
     plugins: [react()],
     resolve: {
       alias: {

@@ -65,7 +65,7 @@ describe('accessible names', () => {
   });
 
   it('every interactive element on the trace viewer has an accessible name', async () => {
-    window.history.replaceState(null, '', '/trace/sample');
+    window.history.replaceState(null, '', '#/trace/sample');
     const { container } = render(<App />);
     await waitFor(
       () => {
@@ -85,7 +85,7 @@ describe('accessible names', () => {
   });
 
   it('rail and inspector toggles have accessible names when both are collapsed', async () => {
-    window.history.replaceState(null, '', '/trace/sample?left=0&right=0');
+    window.history.replaceState(null, '', '#/trace/sample?left=0&right=0');
     const { container } = render(<App />);
     await waitFor(
       () => {

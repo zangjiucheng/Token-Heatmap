@@ -38,7 +38,7 @@ describe('axe-core sweep', () => {
   });
 
   it('trace viewer (loading state) has no serious or critical violations', async () => {
-    window.history.replaceState(null, '', '/trace');
+    window.history.replaceState(null, '', '#/trace');
     const { container } = render(<App />);
     // Wait for any heading or loading state to appear.
     await waitFor(() => {
@@ -50,7 +50,7 @@ describe('axe-core sweep', () => {
   });
 
   it('trace viewer with sample trace has no serious or critical violations', async () => {
-    window.history.replaceState(null, '', '/trace/sample');
+    window.history.replaceState(null, '', '#/trace/sample');
     const { container } = render(<App />);
     await waitFor(
       async () => {
