@@ -1,15 +1,15 @@
-"""``token-heatmap web build`` — build the Vite frontend for production serving.
+"""``token-heatmap web build`` — build the Vite frontend for static hosting.
 
 Replaces ``scripts/build-frontend.sh``. Runs ``npm install`` + ``npm run build``
-in ``web/frontend`` and prints how to ship the resulting ``dist/`` to a server
-that has no Node.js (e.g. an HPC login node) and serve it same-origin from the
-FastAPI backend.
+in ``web/frontend`` and prints how to ship the resulting ``dist/`` to a host
+that has no Node.js (e.g. an HPC login node) and serve it with any static file
+server. The viewer is backend-free: it loads traces from a dropped file, a
+``?trace=<url>`` URL, or the bundled sample.
 """
 
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
 import subprocess
 import sys
@@ -17,7 +17,7 @@ import sys
 from llm_token_heatmap.commands._util import repo_root
 
 
-def run_web_build(args: argparse.Namespace) -> int:
+def run_web_build(args: argparse.Namespace) -> int:  # noqa: ARG001 — uniform run(args) signature
     """Execute ``token-heatmap web build``."""
     frontend_dir = repo_root() / "web" / "frontend"
     if not frontend_dir.is_dir():
@@ -28,53 +28,43 @@ def run_web_build(args: argparse.Namespace) -> int:
         print("error: 'npm' is not on PATH. Install Node.js 20+ and re-run.", file=sys.stderr)
         return 2
 
-    api_base = args.api_base_url
-    env = {**os.environ, "VITE_API_BASE_URL": api_base}
-
     print("[web build] installing node_modules (if needed)…")
     rc = subprocess.run([npm, "install", "--prefer-offline"], cwd=str(frontend_dir)).returncode
     if rc != 0:
         return rc
 
-    print(f"[web build] building frontend (VITE_API_BASE_URL='{api_base}')…")
-    rc = subprocess.run([npm, "run", "build"], cwd=str(frontend_dir), env=env).returncode
+    print("[web build] building frontend…")
+    rc = subprocess.run([npm, "run", "build"], cwd=str(frontend_dir)).returncode
     if rc != 0:
         return rc
 
     dist = frontend_dir / "dist"
     print(f"\n[web build] done — output at {dist}\n")
     print("Next steps:")
-    print("  1. Copy dist/ to the server:")
-    print(f"       rsync -av {dist}/ user@hpc:$(pwd)/web/frontend/dist/")
-    print("  2. On the server, start the backend (Python only — no Node.js needed):")
-    print("       token-heatmap trace --config configs/my_run.yaml --serve")
-    print("       # or: cd web/backend && uvicorn llm_token_heatmap_api.main:app --host :: --port 8000")
-    print("  3. Port-forward from your laptop (if on HPC):")
-    print("       ssh -L 8000:localhost:8000 user@hpc")
-    print("  4. Open http://localhost:8000")
+    print("  1. Serve dist/ with any static file server, e.g.:")
+    print(f"       python -m http.server -d {dist} 8080")
+    print("  2. Open the viewer, optionally auto-loading a trace via ?trace=<url>:")
+    print("       http://localhost:8080/")
+    print("       http://localhost:8080/?trace=http://localhost:8000/adaptive_token_trace.json")
+    print("  (Produce traces with `token-heatmap trace`; serve them with `token-heatmap serve`.)")
     return 0
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:
     web = subparsers.add_parser(
         "web",
-        help="Frontend tasks (build the production dist/).",
-        description="Frontend build tasks for the web app.",
+        help="Frontend tasks (build the static viewer dist/).",
+        description="Frontend build tasks for the web app (a static, file-based trace viewer).",
     )
     web_sub = web.add_subparsers(dest="web_command", required=True)
     build = web_sub.add_parser(
         "build",
-        help="Build the Vite frontend (dist/) for same-origin serving by the backend.",
+        help="Build the Vite frontend (dist/) for static hosting.",
         description=(
-            "Run `npm install` + `npm run build` in web/frontend. The default "
-            "empty VITE_API_BASE_URL makes the SPA use relative API paths "
-            "(same-origin), so you can serve dist/ straight from the FastAPI "
-            "backend on a host with no Node.js."
+            "Run `npm install` + `npm run build` in web/frontend. The viewer is a "
+            "static SPA with no backend — serve the resulting dist/ from any static "
+            "file server on a host with no Node.js. Traces load from a dropped file, "
+            "a ?trace=<url> URL, or the bundled sample."
         ),
-    )
-    build.add_argument(
-        "--api-base-url",
-        default=os.environ.get("VITE_API_BASE_URL", ""),
-        help="API base URL baked into the build (default: empty = relative/same-origin).",
     )
     build.set_defaults(func=run_web_build)

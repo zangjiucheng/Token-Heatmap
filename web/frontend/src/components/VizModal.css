@@ -1,0 +1,184 @@
+/* Lightbox overlay for enlarging a single visualization. */
+.viz-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 4vh, 48px);
+}
+
+.viz-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  margin: 0;
+  padding: 0;
+  cursor: zoom-out;
+  background: rgb(0 0 0 / 55%);
+  backdrop-filter: blur(2px);
+}
+
+.viz-modal__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(1200px, 94vw);
+  height: min(900px, 90vh);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+
+.viz-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex: none;
+  padding: 10px 12px 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+}
+
+.viz-modal__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.viz-modal__controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.viz-modal__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.viz-modal__btn:hover {
+  background: var(--color-bg-muted);
+  border-color: var(--color-border-strong);
+}
+
+.viz-modal__btn--text {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+}
+
+.viz-modal__btn--close {
+  margin-left: 6px;
+}
+
+.viz-modal__zoom {
+  min-width: 48px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+/* Scroll viewport — the stage pans here when zoomed past the frame. */
+.viz-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  display: flex;
+  /* `safe` keeps the top-left reachable when the stage is larger than the
+     viewport (plain center clips it). */
+  align-items: safe center;
+  justify-content: safe center;
+  background: var(--color-bg);
+  background-image:
+    linear-gradient(var(--color-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+  background-size: 24px 24px;
+  cursor: grab;
+}
+
+.viz-modal__stage {
+  flex: none;
+}
+
+/* Any SVG dropped into the stage fills it (overriding per-lens size caps such
+   as the manifold scatter's max-width). */
+.viz-modal__stage svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
+
+.viz-modal__hint {
+  flex: none;
+  margin: 0;
+  padding: 6px 16px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--text-2xs);
+  text-align: center;
+}
+
+/* ── Shared "expand to lightbox" affordance, overlaid top-right on a plot. ── */
+.viz-expand-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  opacity: 0.85;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.viz-expand-btn:hover {
+  opacity: 1;
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viz-modal__backdrop {
+    backdrop-filter: none;
+  }
+}

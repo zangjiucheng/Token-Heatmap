@@ -74,22 +74,19 @@ And update the SSH port-forward on your laptop accordingly:
 ssh -L 9000:localhost:9000 user@hpc
 ```
 
-### Frontend can't reach the backend (`ERR_CONNECTION_REFUSED` or CORS error)
+### `?trace=<url>` won't load the trace (`ERR_CONNECTION_REFUSED` or CORS error)
 
-1. **Wrong backend port** — the frontend defaults to `http://localhost:8000`. If your backend (or SSH tunnel) is on a different port, set it before starting `npm run dev`:
-   ```bash
-   # one-off
-   VITE_API_BASE_URL=http://localhost:9000 npm run dev
-   # persistent — create web/frontend/.env.local:
-   echo "VITE_API_BASE_URL=http://localhost:9000" > web/frontend/.env.local
-   ```
+The viewer fetches the trace JSON from the URL in `?trace=`. There is no
+application backend — only the dependency-free CORS file server started by
+`token-heatmap serve` / `trace --serve`.
+
+1. **File server not running / wrong port** — the URL's host:port must point at a
+   running `token-heatmap serve` (default `:8000`). Start it on the host that has
+   the trace files, e.g. `token-heatmap serve outputs/<name> --port 9000`.
 2. **SSH tunnel not running** — make sure you have `ssh -L PORT:localhost:PORT user@hpc` open in another terminal.
-3. **CORS mismatch** — if you run the frontend on a port other than 5173, pass that origin to the file server:
-   ```bash
-   token-heatmap trace --config configs/example.yaml \
-     --serve --port 8000 --frontend-url http://localhost:3000
-   ```
-   For the FastAPI backend, set `LLM_HEATMAP_ALLOWED_ORIGINS=http://localhost:3000`.
+3. **CORS** — `token-heatmap serve` / `trace --serve` already sends permissive
+   CORS headers, so any viewer origin can fetch the trace. If you front it with a
+   different static server, ensure it sets `Access-Control-Allow-Origin`.
 
 ### Frontend always shows the bundled sample after I drop a file
 

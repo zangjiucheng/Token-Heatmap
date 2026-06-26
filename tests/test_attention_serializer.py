@@ -5,7 +5,6 @@ Covers:
 * Tier 1 inline payload shape and schema validation, with and without an
   ``attention`` block present on the trace.
 * Tier 2 sidecar round-trip (write → read) preserves layer arrays.
-* ``SCHEMA_VERSION`` is consistent between library and backend.
 """
 
 from __future__ import annotations
@@ -280,20 +279,6 @@ def test_schema_version_bumped_consistently() -> None:
     sample = json.loads(SAMPLE_TRACE_PATH.read_text())
     assert sample["schema_version"] == SCHEMA_VERSION
     assert "2.0.0" in schema["properties"]["schema_version"].get("examples", [])
-
-
-def test_schema_version_matches_backend() -> None:
-    """Backend SCHEMA_VERSION must track the library's. The backend package is
-    not always on ``sys.path`` for the main suite, so this loads it directly
-    from its source file to avoid coupling pytest config to backend layout."""
-
-    backend_init = REPO_ROOT / "web" / "backend" / "llm_token_heatmap_api" / "__init__.py"
-    if not backend_init.exists():
-        pytest.skip("backend package not present in this checkout")
-
-    namespace: dict[str, object] = {}
-    exec(compile(backend_init.read_text(), str(backend_init), "exec"), namespace)
-    assert namespace["SCHEMA_VERSION"] == SCHEMA_VERSION
 
 
 # --------------------------------------------------------------------------- #

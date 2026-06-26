@@ -17,32 +17,19 @@ function openKeymapHelp() {
   window.dispatchEvent(new Event(OPEN_KEYMAP_HELP_EVENT));
 }
 
-function navLinkClass({ isActive }: { isActive: boolean }): string {
-  return isActive
-    ? 'app-header__nav-link app-header__nav-link--active'
-    : 'app-header__nav-link';
-}
-
 export function Header() {
   const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="app-header" role="banner">
-      <NavLink to="/" className="app-header__brand" aria-label="Token Heatmap — home">
+      <NavLink
+        to="/"
+        className="app-header__brand"
+        aria-label="Token Heatmap — home"
+      >
         <span className="app-header__mark" aria-hidden="true" />
         <span className="app-header__brand-text">Token Heatmap</span>
       </NavLink>
-
-      <nav className="app-header__nav" aria-label="Primary">
-        <div className="app-header__segment" role="group" aria-label="Workflow">
-          <NavLink to="/" end className={navLinkClass}>
-            Load
-          </NavLink>
-          <NavLink to="/build" className={navLinkClass}>
-            Build
-          </NavLink>
-        </div>
-      </nav>
 
       <div className="app-header__utils">
         <button

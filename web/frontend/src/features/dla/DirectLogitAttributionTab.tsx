@@ -4,7 +4,6 @@ import type {
   DirectLogitAttributionStep,
   DirectLogitAttributionHead,
 } from '@/types/trace';
-import { InterventionPanel, type PresetTarget } from './InterventionPanel';
 import './DirectLogitAttributionTab.css';
 
 export interface DirectLogitAttributionTabProps {
@@ -35,8 +34,7 @@ function pickStep(
  * Direct Logit Attribution lens — "why this token?". Decomposes the selected
  * step's realized next-token logit into per-layer attention/MLP contributions
  * (+ residual input), sorted by impact, with an explicit unexplained-error bar.
- * Attention bars expand into per-head contributions (when captured), each with
- * an "ablate" affordance that runs a causal check in the panel below.
+ * Attention bars expand into per-head contributions (when captured).
  */
 export function DirectLogitAttributionTab({
   trace,
@@ -44,7 +42,6 @@ export function DirectLogitAttributionTab({
 }: DirectLogitAttributionTabProps) {
   const dla = trace.direct_logit_attribution;
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const [preset, setPreset] = useState<PresetTarget | null>(null);
 
   const view = useMemo(() => {
     const steps = dla?.steps ?? [];
@@ -64,7 +61,11 @@ export function DirectLogitAttributionTab({
       ]),
     ];
     if ((step.bias ?? 0) !== 0) {
-      components.push({ key: 'bias', label: 'norm bias', value: step.bias ?? 0 });
+      components.push({
+        key: 'bias',
+        label: 'norm bias',
+        value: step.bias ?? 0,
+      });
     }
     const error = step.error ?? 0;
     const maxAbs = Math.max(
@@ -92,15 +93,14 @@ export function DirectLogitAttributionTab({
       >
         <p>
           No direct logit attribution in this trace. Re-run the CLI with{' '}
-          <code>--capture-full-activations</code> to decompose each token’s logit
-          by layer.
+          <code>--capture-full-activations</code> to decompose each token’s
+          logit by layer.
         </p>
       </div>
     );
   }
 
-  const { step, sorted, error, maxAbs, total, explained, errorPct, token } =
-    view;
+  const { sorted, error, maxAbs, total, explained, errorPct, token } = view;
 
   const toggleExpand = (key: string) =>
     setExpanded((prev) => {
@@ -140,8 +140,8 @@ export function DirectLogitAttributionTab({
       <p className="dla-tab__note">
         Each bar is a component’s direct contribution to the token’s logit
         (orange promotes, blue suppresses), folding the final norm. Expand an
-        attention bar to see per-head contributions; “ablate” runs a causal check
-        below. Direct/OV path only — it doesn’t explain how attention patterns form.
+        attention bar to see per-head contributions. Direct/OV path only — it
+        doesn’t explain how attention patterns form.
       </p>
 
       <ul className="dla-tab__bars" data-testid="dla-bars">
@@ -167,17 +167,9 @@ export function DirectLogitAttributionTab({
                       .map((h) => (
                         <HeadBar
                           key={h.head}
-                          layer={c.layer as number}
                           head={h.head}
                           value={h.attn}
                           maxAbs={maxAbs}
-                          onAblate={() =>
-                            setPreset({
-                              layer: c.layer as number,
-                              component: 'head',
-                              head: h.head,
-                            })
-                          }
                         />
                       ))}
                   </ul>
@@ -186,20 +178,13 @@ export function DirectLogitAttributionTab({
             </Fragment>
           );
         })}
-        <Bar
-          label="unexplained (error)"
-          value={error}
-          maxAbs={maxAbs}
-          muted
-        />
+        <Bar label="unexplained (error)" value={error} maxAbs={maxAbs} muted />
       </ul>
 
-      <InterventionPanel
-        trace={trace}
-        step={step}
-        preset={preset}
-        onPresetConsumed={() => setPreset(null)}
-      />
+      <p className="dla-tab__ablation-note">
+        Interactive ablation returns via the CLI precomputing ablations into the
+        trace.
+      </p>
     </div>
   );
 }
@@ -256,22 +241,18 @@ function Bar({
 }
 
 function HeadBar({
-  layer,
   head,
   value,
   maxAbs,
-  onAblate,
 }: {
-  layer: number;
   head: number;
   value: number;
   maxAbs: number;
-  onAblate: () => void;
 }) {
   const pct = Math.min(100, (Math.abs(value) / maxAbs) * 100);
   const positive = value >= 0;
   return (
-    <li className="dla-head-bar">
+    <li className="dla-head-bar" data-testid={`dla-head-${head}`}>
       <span className="dla-bar__label">head {head}</span>
       <span className="dla-bar__track">
         <span
@@ -284,15 +265,6 @@ function HeadBar({
         {value >= 0 ? '+' : ''}
         {value.toFixed(3)}
       </span>
-      <button
-        type="button"
-        className="dla-head-bar__ablate"
-        onClick={onAblate}
-        data-testid={`dla-ablate-${layer}-${head}`}
-        title={`Ablate L${layer} head ${head}`}
-      >
-        ablate
-      </button>
     </li>
   );
 }

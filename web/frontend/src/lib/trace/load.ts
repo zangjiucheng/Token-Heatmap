@@ -1,15 +1,16 @@
 import type { Trace } from '@/types/trace';
 import sampleTrace from '@/lib/sample/trace.json';
-import { getApiClient, type GenerateParams } from '@/api/client';
 import { TraceLoadError } from './errors';
-import { setActiveTraceSchema, validateTrace } from './validate';
+import { validateTrace } from './validate';
 
 function parseJson(text: string): unknown {
   try {
     return JSON.parse(text);
   } catch (cause) {
     const message =
-      cause instanceof Error ? `Malformed JSON: ${cause.message}` : 'Malformed JSON';
+      cause instanceof Error
+        ? `Malformed JSON: ${cause.message}`
+        : 'Malformed JSON';
     throw TraceLoadError.parse(message, cause);
   }
 }
@@ -28,7 +29,9 @@ export async function loadTraceFromUrl(url: string): Promise<Trace> {
     response = await fetch(url);
   } catch (cause) {
     const message =
-      cause instanceof Error ? `Network error: ${cause.message}` : 'Network error';
+      cause instanceof Error
+        ? `Network error: ${cause.message}`
+        : 'Network error';
     throw TraceLoadError.network(message, undefined, cause);
   }
 
@@ -61,41 +64,4 @@ export async function loadTraceFromUrl(url: string): Promise<Trace> {
  */
 export async function loadSampleTrace(): Promise<Trace> {
   return validateTrace(sampleTrace);
-}
-
-/**
- * Upload a CSV produced by `trace_to_dataframe` to the backend's
- * `/trace/convert-csv` endpoint and return the validated JSON trace.
- */
-export async function convertCsvToTrace(file: File, signal?: AbortSignal): Promise<Trace> {
-  return getApiClient().convertCsv(file, { signal });
-}
-
-/**
- * Generate a trace on the backend from model + prompt + sampling params via
- * the `/trace/generate` endpoint and return the validated JSON trace.
- */
-export async function generateTrace(
-  params: GenerateParams,
-  signal?: AbortSignal,
-): Promise<Trace> {
-  return getApiClient().generate(params, { signal });
-}
-
-/**
- * Fetch the trace schema from the backend's `/schema` endpoint and install
- * it as the active validator schema. Silently falls back to the bundled
- * copy when the backend is unreachable so the app still loads offline.
- *
- * Returns `true` when the live schema was installed, `false` when the
- * bundled copy is in effect.
- */
-export async function bootstrapTraceSchema(signal?: AbortSignal): Promise<boolean> {
-  try {
-    const schema = await getApiClient().getSchema({ signal });
-    setActiveTraceSchema(schema);
-    return true;
-  } catch {
-    return false;
-  }
 }

@@ -33,47 +33,6 @@
   color: var(--color-accent-text);
 }
 
-.app-header__nav {
-  display: flex;
-  align-items: center;
-}
-
-/* Workflow segmented control — a single grouped control with a clear active
-   state, so the toolbox always signals which stage you're in. */
-.app-header__segment {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  background: var(--color-bg-muted);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.app-header__nav-link {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 14px;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-muted);
-  font-weight: 500;
-  text-decoration: none;
-  transition:
-    color var(--transition-fast),
-    background var(--transition-fast),
-    box-shadow var(--transition-fast);
-}
-
-.app-header__nav-link:hover {
-  color: var(--color-text);
-}
-
-.app-header__nav-link--active {
-  color: var(--color-text);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-panel);
-}
-
 .app-header__utils {
   display: flex;
   align-items: center;

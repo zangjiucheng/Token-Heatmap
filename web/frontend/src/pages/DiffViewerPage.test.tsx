@@ -7,10 +7,6 @@ import { DiffViewerPage } from '@/pages/DiffViewerPage';
 import { clearTraceCache, putDiffPair } from '@/lib/trace/store';
 import { makeTwoActivationTraces } from '@/features/activations/testFixtures';
 
-vi.mock('@/hooks/useBackendHealth', () => ({
-  useBackendHealth: () => ({ status: 'unknown', probe: vi.fn() }),
-}));
-
 // The trace schema bundled in the frontend doesn't yet carry activation
 // fields, so we mock the loader to bypass validation for the routing test
 // (validation correctness is exercised elsewhere).
@@ -83,7 +79,9 @@ describe('DiffViewerPage routing', () => {
 
     renderApp();
 
-    const input = screen.getByTestId('empty-state-diff-input') as HTMLInputElement;
+    const input = screen.getByTestId(
+      'empty-state-diff-input',
+    ) as HTMLInputElement;
     await user.upload(input, [fileA, fileB]);
 
     await waitFor(() =>

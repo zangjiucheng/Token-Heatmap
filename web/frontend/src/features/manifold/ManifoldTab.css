@@ -59,6 +59,7 @@
 .manifold-tab__scatter {
   /* Hug the (capped) plot and sit flush left instead of stretching a big empty
      bordered box across the column. */
+  position: relative;
   justify-self: start;
   width: fit-content;
   max-width: 100%;
@@ -70,11 +71,11 @@
 
 .manifold-scatter {
   width: 100%;
-  /* Cap the plot so it stays a compact, readable square anchored on the left
-     rather than ballooning to fill a wide (or stacked full-width) canvas. */
-  max-width: 460px;
+  /* A comfortably-readable size anchored on the left (use the Expand button for
+     a full-screen, zoomable view). */
+  max-width: 560px;
   height: auto;
-  max-height: 42vh;
+  max-height: 48vh;
   display: block;
 }
 

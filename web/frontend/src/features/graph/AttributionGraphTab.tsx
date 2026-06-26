@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Trace, DirectLogitAttributionStep } from '@/types/trace';
-import { InterventionPanel, type PresetTarget } from '@/features/dla';
+import { VizModal } from '@/components/VizModal';
+import { GraphFigure, type NodeKind, type PlacedNode } from './GraphFigure';
 import './AttributionGraphTab.css';
 
 export interface AttributionGraphTabProps {
   trace: Trace;
   selectedStep: number | null;
 }
-
-type NodeKind = 'embed' | 'attn' | 'mlp' | 'head';
 
 interface GNode {
   id: string;
@@ -17,12 +16,6 @@ interface GNode {
   layer: number; // -1 for embed
   kind: NodeKind;
   head?: number;
-}
-
-interface PlacedNode extends GNode {
-  x: number;
-  y: number;
-  r: number;
 }
 
 const TOP_K = 16;
@@ -39,29 +32,19 @@ function pickStep(
   return steps[0];
 }
 
-function edgePath(x1: number, y1: number, x2: number, y2: number): string {
-  const mx = (x1 + x2) / 2;
-  return `M${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
-}
-
-function isAblatable(kind: NodeKind): boolean {
-  return kind === 'attn' || kind === 'mlp' || kind === 'head';
-}
-
 /**
  * Attribution graph lens — renders the Direct Logit Attribution of the selected
  * step as a pruned, layer-ordered node-link graph: the target token (right) is
  * built from its top contributors (attention heads / MLP blocks / embedding),
- * positioned by depth, sized + coloured by signed contribution. Clicking a node
- * ablates that component (causal validation) in the panel below. Frontend-only:
- * it reuses the DLA data and the intervention engine.
+ * positioned by depth, sized + coloured by signed contribution. Frontend-only:
+ * it reuses the DLA data already in the trace.
  */
 export function AttributionGraphTab({
   trace,
   selectedStep,
 }: AttributionGraphTabProps) {
   const dla = trace.direct_logit_attribution;
-  const [preset, setPreset] = useState<PresetTarget | null>(null);
+  const [zoomOpen, setZoomOpen] = useState(false);
 
   // Lay out at the frame's real pixel width (not a fixed 920 scaled down), so
   // columns spread to fill, labels don't overlap, and text stays readable.
@@ -221,19 +204,7 @@ export function AttributionGraphTab({
     );
   }
 
-  const { step, placed, output, error, maxAbs, totalN, H, contentW, total } =
-    view;
-  const outR = 24;
-
-  const ablate = (n: PlacedNode) => {
-    if (n.kind === 'head')
-      setPreset({ layer: n.layer, component: 'head', head: n.head });
-    else if (n.kind === 'attn')
-      setPreset({ layer: n.layer, component: 'attn' });
-    else if (n.kind === 'mlp') setPreset({ layer: n.layer, component: 'mlp' });
-  };
-
-  const edgeWidth = (v: number) => 1 + (Math.abs(v) / maxAbs) * 5;
+  const { placed, output, error, maxAbs, totalN, H, contentW, total } = view;
 
   return (
     <div className="graph-tab" data-testid="attribution-graph-tab-content">
@@ -260,131 +231,48 @@ export function AttributionGraphTab({
         Top {placed.length} of {totalN} contributors flow into the token
         (right). Node size and edge width track the contribution magnitude;
         orange promotes, blue suppresses. Columns are ordered by layer depth.
-        Click a node to ablate it and validate the edge below.
       </p>
 
       <div ref={svgWrapRef} className="graph-tab__svg-wrap">
-        <svg
-          className="graph-tab__svg"
-          viewBox={`0 0 ${contentW} ${H}`}
-          preserveAspectRatio="xMidYMid meet"
-          role="img"
-          aria-label="Attribution graph"
-          data-testid="attribution-graph-svg"
+        <button
+          type="button"
+          className="viz-expand-btn"
+          onClick={() => setZoomOpen(true)}
+          data-testid="graph-expand"
         >
-          {/* Edges */}
-          <g className="graph-tab__edges">
-            {placed.map((n) => (
-              <path
-                key={`e-${n.id}`}
-                className="graph-tab__edge"
-                data-sign={n.value >= 0 ? 'pos' : 'neg'}
-                d={edgePath(n.x + n.r, n.y, output.x - outR, output.y)}
-                style={{ strokeWidth: edgeWidth(n.value) }}
-              />
-            ))}
-            {Math.abs(error) > 1e-6 ? (
-              <path
-                className="graph-tab__edge graph-tab__edge--error"
-                d={edgePath(output.x, output.y + 70, output.x, output.y + outR)}
-                style={{ strokeWidth: edgeWidth(error) }}
-              />
-            ) : null}
-          </g>
-
-          {/* Contributor nodes */}
-          {placed.map((n) => {
-            const ablatable = isAblatable(n.kind);
-            const title = `${n.label}: ${n.value >= 0 ? '+' : ''}${n.value.toFixed(3)}`;
-            return (
-              <g
-                key={n.id}
-                className="graph-tab__node"
-                data-ablatable={ablatable ? 'true' : 'false'}
-                data-testid={`graph-node-${n.id}`}
-                role={ablatable ? 'button' : undefined}
-                tabIndex={ablatable ? 0 : undefined}
-                aria-label={ablatable ? `Ablate ${n.label}` : n.label}
-                onClick={ablatable ? () => ablate(n) : undefined}
-                onKeyDown={
-                  ablatable
-                    ? (e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          ablate(n);
-                        }
-                      }
-                    : undefined
-                }
-              >
-                <title>{title}</title>
-                <circle
-                  cx={n.x}
-                  cy={n.y}
-                  r={n.r}
-                  className="graph-tab__dot"
-                  data-sign={n.value >= 0 ? 'pos' : 'neg'}
-                  data-kind={n.kind}
-                />
-                <text
-                  className="graph-tab__label"
-                  x={n.x}
-                  y={n.y + n.r + 13}
-                  textAnchor="middle"
-                >
-                  {n.label}
-                </text>
-              </g>
-            );
-          })}
-
-          {/* Error node */}
-          {Math.abs(error) > 1e-6 ? (
-            <g className="graph-tab__node">
-              <title>{`unexplained (error): ${error.toFixed(3)}`}</title>
-              <circle
-                cx={output.x}
-                cy={output.y + 70}
-                r={9}
-                className="graph-tab__dot graph-tab__dot--error"
-              />
-              <text
-                className="graph-tab__label"
-                x={output.x}
-                y={output.y + 70 + 22}
-                textAnchor="middle"
-              >
-                error
-              </text>
-            </g>
-          ) : null}
-
-          {/* Output (target token) */}
-          <g className="graph-tab__output">
-            <circle
-              cx={output.x}
-              cy={output.y}
-              r={outR}
-              className="graph-tab__output-dot"
-            />
-            <text
-              className="graph-tab__output-label"
-              x={output.x}
-              y={output.y - outR - 8}
-              textAnchor="middle"
-            >
-              {JSON.stringify(output.token)}
-            </text>
-          </g>
-        </svg>
+          ⤢ Expand
+        </button>
+        <GraphFigure
+          placed={placed}
+          output={output}
+          error={error}
+          maxAbs={maxAbs}
+          contentW={contentW}
+          H={H}
+        />
       </div>
 
-      <InterventionPanel
-        trace={trace}
-        step={step}
-        preset={preset}
-        onPresetConsumed={() => setPreset(null)}
-      />
+      <p className="graph-tab__ablation-note">
+        Interactive ablation returns via the CLI precomputing ablations into the
+        trace.
+      </p>
+
+      <VizModal
+        open={zoomOpen}
+        onClose={() => setZoomOpen(false)}
+        title={`How ${JSON.stringify(output.token)} is built`}
+        aspect={contentW / H}
+      >
+        <GraphFigure
+          placed={placed}
+          output={output}
+          error={error}
+          maxAbs={maxAbs}
+          contentW={contentW}
+          H={H}
+          testId="attribution-graph-svg-modal"
+        />
+      </VizModal>
     </div>
   );
 }

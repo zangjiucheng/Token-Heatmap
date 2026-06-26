@@ -18,9 +18,7 @@ describe('EmptyState', () => {
     expect(
       screen.getByRole('heading', { name: /no trace loaded/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/drop a json or csv trace file/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/drop a json trace file/i)).toBeInTheDocument();
   });
 
   it('omits the URL field when onUrlSubmit is not provided', () => {

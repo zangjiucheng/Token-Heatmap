@@ -4,7 +4,6 @@ Each module here registers one (or a small group of) sub-command(s) on the
 top-level parser built in :mod:`llm_token_heatmap.cli`. They replace the old
 ``scripts/*.sh`` so ``token-heatmap`` is the single entry point:
 
-- :mod:`.dev`  → ``token-heatmap dev``        (FastAPI backend + Vite frontend)
 - :mod:`.web`  → ``token-heatmap web build``  (build the frontend dist/)
 - :mod:`.hpc`  → ``token-heatmap hpc {setup,run,serve}`` (Slurm round-trip)
 

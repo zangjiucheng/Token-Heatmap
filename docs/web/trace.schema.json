@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://llm-token-heatmap.venuiti.com/schemas/trace.schema.json",
   "title": "LLM Token Heatmap Trace",
-  "description": "Canonical JSON payload for a single adaptive-probe generation trace. Produced by `llm_token_heatmap.generate_with_adaptive_probe` after lightweight serialization, and consumed by the CLI exporter, FastAPI backend, and web frontend. One file == one prompt == one generation.",
+  "description": "Canonical JSON payload for a single adaptive-probe generation trace. Produced by `llm_token_heatmap.generate_with_adaptive_probe` after lightweight serialization, and consumed by the CLI exporter and the web frontend viewer. One file == one prompt == one generation.",
   "type": "object",
   "required": ["schema_version", "metadata", "tokens", "steps"],
   "additionalProperties": false,

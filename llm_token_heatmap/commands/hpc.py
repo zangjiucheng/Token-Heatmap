@@ -373,7 +373,7 @@ sbatch --parsable \\
     print()
     if args.serve:
         print(f"[hpc-run] --serve: starting a local file server on :{args.local_view_port} (Ctrl+C to stop).")
-        print("[hpc-run] open the viewer (start the frontend with 'token-heatmap dev' if needed):")
+        print("[hpc-run] open the viewer (start it with 'cd web/frontend && npm run dev' if needed):")
         print(f"            {viewer_url}")
         from llm_token_heatmap.cli import _serve_outputs  # lazy: avoids import cycle
 

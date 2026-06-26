@@ -22,17 +22,9 @@ dependencies:
     # Qwen2 tokenizer extras
     - tiktoken>=0.6
     - einops>=0.7
-    # Backend (FastAPI server + activation-diff endpoint)
-    - fastapi>=0.110
-    - "uvicorn[standard]>=0.27"
-    - pydantic>=2.5
-    - pydantic-settings>=2.1
-    - python-multipart>=0.0.6
     # Dev / test
     - pytest>=7.0
     - pytest-cov>=4.0
-    - httpx>=0.26
     - jsonschema>=4.20
-    # Install the library and backend in editable mode
+    # Install the library in editable mode
     - "-e ."
-    - "-e web/backend/"

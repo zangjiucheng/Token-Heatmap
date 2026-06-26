@@ -72,9 +72,19 @@
   line-height: 1.5;
 }
 
+.graph-tab__ablation-note {
+  margin: 0;
+  max-width: 82ch;
+  color: var(--color-text-muted);
+  font-size: var(--text-2xs);
+  font-style: italic;
+  line-height: 1.5;
+}
+
 /* Fills the available lens space; the graph scales (preserveAspectRatio) to fit
    inside, so the whole graph is always visible within the frame. */
 .graph-tab__svg-wrap {
+  position: relative;
   flex: 1 1 auto;
   width: 100%;
   min-width: 0;

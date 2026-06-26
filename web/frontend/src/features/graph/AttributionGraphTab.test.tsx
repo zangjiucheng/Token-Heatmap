@@ -1,16 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setApiClientForTests, type ApiClient } from '@/api/client';
+import { describe, expect, it } from 'vitest';
 import type { Trace } from '@/types/trace';
 import { AttributionGraphTab } from './AttributionGraphTab';
-
-// The graph reuses the InterventionPanel, which probes backend health — stub it.
-beforeEach(() => {
-  setApiClientForTests({
-    health: vi.fn().mockResolvedValue(false),
-  } as unknown as ApiClient);
-});
-afterEach(() => setApiClientForTests(null));
 
 function makeTrace(withDla = true): Trace {
   const base = {
@@ -63,13 +54,14 @@ describe('AttributionGraphTab', () => {
     expect(screen.getByText(/Top 6 of 6 contributors/i)).toBeInTheDocument();
   });
 
-  it('makes component nodes ablatable but not the embedding node', () => {
+  it('renders static nodes (no interactive ablate affordance)', () => {
     render(<AttributionGraphTab trace={makeTrace()} selectedStep={0} />);
-    expect(screen.getByTestId('graph-node-L5h7')).toHaveAttribute(
-      'role',
-      'button',
-    );
+    // Nodes are static visualization now — none are buttons.
+    expect(screen.getByTestId('graph-node-L5h7')).not.toHaveAttribute('role');
     expect(screen.getByTestId('graph-node-embed')).not.toHaveAttribute('role');
+    expect(
+      screen.getByText(/interactive ablation returns via the cli/i),
+    ).toBeInTheDocument();
   });
 
   it('shows an empty state when the trace has no attribution', () => {

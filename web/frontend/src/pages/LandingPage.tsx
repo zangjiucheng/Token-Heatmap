@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { BackendStatusBanner } from '@/components/feedback/BackendStatusBanner';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
-import { useBackendHealth } from '@/hooks/useBackendHealth';
 import { useTrace } from '@/hooks/useTrace';
 import { loadTraceFromFile } from '@/lib/trace/load';
 import { putDiffPair, putTrace } from '@/lib/trace/store';
@@ -12,7 +10,6 @@ import './LandingPage.css';
 
 export function LandingPage() {
   const { trace, load, status, error } = useTrace();
-  const health = useBackendHealth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [dismissed, setDismissed] = useState(false);
@@ -55,14 +52,8 @@ export function LandingPage() {
 
   const handleFileDropped = async (file: File) => {
     setDismissed(false);
-    const isCsv =
-      file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv';
-    setPendingNavId(isCsv ? 'uploaded-csv' : 'uploaded');
-    if (isCsv) {
-      await load({ type: 'csv', file });
-    } else {
-      await load({ type: 'file', file });
-    }
+    setPendingNavId('uploaded');
+    await load({ type: 'file', file });
   };
 
   const handleTwoFilesDropped = async (fileA: File, fileB: File) => {
@@ -87,11 +78,7 @@ export function LandingPage() {
   };
 
   if (status === 'loading') {
-    const label =
-      pendingNavId === 'generated'
-        ? 'Generating trace (this can take a while)…'
-        : 'Loading trace';
-    return <LoadingState label={label} />;
+    return <LoadingState label="Loading trace" />;
   }
 
   if (status === 'error' && error && !dismissed) {
@@ -115,18 +102,11 @@ export function LandingPage() {
 
   return (
     <div className="landing-page">
-      <div className="landing-page__status">
-        <BackendStatusBanner
-          status={health.status}
-          onRetry={() => void health.probe()}
-        />
-      </div>
       <EmptyState
         onLoadSample={handleLoadSample}
         onFileDropped={handleFileDropped}
         onTwoFilesDropped={handleTwoFilesDropped}
         onUrlSubmit={handleUrlSubmit}
-        onBuild={() => navigate('/build')}
       />
     </div>
   );

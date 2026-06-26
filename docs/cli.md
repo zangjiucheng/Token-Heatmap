@@ -83,7 +83,7 @@ Flags:
 | `--frontend` | off | Also start the Vite frontend (`npm run dev`) and open the viewer. Implies `--serve`. Needs Node.js + a repo checkout. |
 | `--no-open` | off | With `--frontend`, don't auto-open the browser |
 
-Example — backend on port 9000, frontend on port 3000:
+Example — file server on port 9000, viewer on port 3000:
 
 ```bash
 token-heatmap trace --config configs/example.yaml \
@@ -274,41 +274,33 @@ token-heatmap serve outputs/example-run                     # serves it, CORS, n
 On HPC, SSH port-forward the file-server port to your laptop (use a free local
 port — see [`web-app.md`](web-app.md)) before opening the URL.
 
-## Local dev servers (`dev`)
+## Running the viewer locally
 
-Boot the FastAPI backend (`web/backend`, with `--reload`) and the Vite dev
-server (`web/frontend`) together, with their ports and CORS wired up. Busy ports
-auto-advance to the next free one, and a single `Ctrl+C` tears down both cleanly
-(process groups are killed, so no orphan uvicorn/vite is left listening). Needs
-the venv active (uvicorn) and Node.js 20+ (npm).
+The web app is a static, file-based viewer — there is no backend to run. Start
+the Vite dev server and open a trace by dropping a file or pasting a
+`?trace=<url>`:
 
 ```bash
-token-heatmap dev                                            # backend :8000, frontend :5173
-token-heatmap dev --backend-port 8765 --frontend-port 5180   # custom ports
+cd web/frontend && npm run dev          # http://localhost:5173
 ```
 
-| Flag              | Default | Meaning                                            |
-| ----------------- | ------- | -------------------------------------------------- |
-| `--backend-port`  | `8000`  | Backend (uvicorn) port; auto-advances if busy.     |
-| `--frontend-port` | `5173`  | Frontend (Vite) port; auto-advances if busy.       |
-
-The `BACKEND_PORT` / `FRONTEND_PORT` environment variables still work as
-fallback defaults, but prefer the flags.
+The easiest path is to let the CLI start the viewer for you with `--frontend`
+(see [`--serve` / `--frontend`](#serving-the-result-instantly---serve) above),
+which boots `npm run dev`, serves the trace files, and opens the viewer pointed
+at the new trace.
 
 ## Building the frontend (`web build`)
 
-Run `npm install` + `npm run build` in `web/frontend`. The default empty
-`VITE_API_BASE_URL` makes the SPA use relative API paths (same-origin), so you
-can serve `dist/` straight from the FastAPI backend on a host with no Node.js.
+Run `npm install` + `npm run build` in `web/frontend` to produce a static
+`dist/`. The viewer is backend-free, so you can serve `dist/` from any static
+file server on a host with no Node.js.
 
 ```bash
-token-heatmap web build                                      # output: web/frontend/dist/
-token-heatmap web build --api-base-url http://example:8000   # bake an absolute API URL
+token-heatmap web build                 # output: web/frontend/dist/
+# then serve it anywhere, e.g.:
+python -m http.server -d web/frontend/dist 8080
+# open http://localhost:8080/?trace=<trace-url>
 ```
-
-| Flag             | Default              | Meaning                                                      |
-| ---------------- | -------------------- | ----------------------------------------------------------- |
-| `--api-base-url` | empty (same-origin)  | API base URL baked into the build.                          |
 
 ## HPC: build the GPU venv (`hpc setup`)
 
@@ -333,10 +325,9 @@ token-heatmap hpc setup --verify   # also run a real GPU matmul check (queues a 
 One command from your laptop. It uploads the config to the HPC, submits a Slurm
 GPU job (the *only* remote step) that runs `trace` + `manifold`, polls it to
 completion, then rsyncs the whole `outputs/<name>/` folder back — so you view it
-locally with **no GPU and no tunnel** (drag the JSON onto the frontend, or
+locally with **no GPU and no tunnel** (drag the JSON onto the viewer, or
 `token-heatmap serve outputs/<name>`). A pre-flight check refuses runs that
-won't fit the GPU's VRAM before submitting. Pairs with the Build page (`/build`)
-— *Export YAML* → `token-heatmap hpc run that.yaml`.
+won't fit the GPU's VRAM before submitting.
 
 ```bash
 token-heatmap hpc run configs/wrap-text.yaml --model Qwen/Qwen2.5-14B-Instruct \

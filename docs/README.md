@@ -8,7 +8,7 @@ has a short overview and quick start; the pages below cover each surface in dept
 | [`installation.md`](installation.md)       | Setting up the Python environment and (optionally) the web app               |
 | [`cli.md`](cli.md)                         | The `token-heatmap` command-line interface                                   |
 | [`python-api.md`](python-api.md)           | Using the library from Python: probe, generation, sampling, export, plotting |
-| [`web-app.md`](web-app.md)                 | Running and using the FastAPI backend + React frontend                       |
+| [`web-app.md`](web-app.md)                 | Running and using the static, file-based React trace viewer                   |
 | [`schema.md`](schema.md)                   | The on-disk trace JSON format and its attention/activation sidecars          |
 | [`interpreting.md`](interpreting.md)       | What the recorded metrics mean and how to read the plots                     |
 | [`troubleshooting.md`](troubleshooting.md) | Common issues and how to fix them                                            |

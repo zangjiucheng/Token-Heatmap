@@ -1,7 +1,7 @@
 # Trace schema
 
 The on-disk JSON format produced by `serialize_trace_to_json` (and therefore by
-the CLI, the example scripts, and the `POST /trace/convert-csv` endpoint).
+the CLI and the example scripts).
 
 The canonical machine-readable definition is
 [`web/trace.schema.json`](web/trace.schema.json) (JSON Schema Draft 2020-12) —

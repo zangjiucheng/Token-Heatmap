@@ -1,10 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import type { Trace } from '@/types/trace';
-import type { GenerateParams } from '@/api/client';
 import {
-  convertCsvToTrace,
-  generateTrace,
   loadSampleTrace,
   loadTraceFromFile,
   loadTraceFromUrl,
@@ -17,13 +14,10 @@ export type TraceStatus = 'idle' | 'loading' | 'ready' | 'error';
 export type TraceSource =
   | { type: 'file'; file: File }
   | { type: 'url'; url: string }
-  | { type: 'csv'; file: File }
   | { type: 'sample' }
-  /** Generate a fresh trace on the backend from model + prompt + params. */
-  | { type: 'generate'; params: GenerateParams }
   /** Adopt a trace another flow has already put in the shared store. */
   | { type: 'cached'; id: string }
-  /** Adopt a trace value directly (e.g. just returned by the API). */
+  /** Adopt a trace value directly (e.g. just loaded elsewhere). */
   | { type: 'inline'; trace: Trace };
 
 export interface UseTraceResult {
@@ -39,12 +33,8 @@ async function loadSource(source: TraceSource): Promise<Trace> {
       return loadTraceFromFile(source.file);
     case 'url':
       return loadTraceFromUrl(source.url);
-    case 'csv':
-      return convertCsvToTrace(source.file);
     case 'sample':
       return loadSampleTrace();
-    case 'generate':
-      return generateTrace(source.params);
     case 'cached': {
       const trace = takeTrace(source.id);
       if (!trace) {

@@ -20,8 +20,7 @@ source .venv/bin/activate
 
 1. Creates `.venv` if it doesn't already exist.
 2. Installs the core package in editable mode (`pip install -e ".[dev,models]"`).
-3. Installs the FastAPI backend in editable mode (`pip install -e ./web/backend`).
-4. Runs `npm install` in `web/frontend` — but only if `npm` is on `PATH`. If you don't have Node, that step is skipped with a friendly message.
+3. Runs `npm install` in `web/frontend` — but only if `npm` is on `PATH`. If you don't have Node, that step is skipped with a friendly message.
 
 After it finishes, the `token-heatmap` CLI is on your `PATH` (see [`cli.md`](cli.md)).
 
@@ -52,52 +51,28 @@ YAML config (`--config`) works out of the box — `pyyaml` is now a core depende
 
 ## Running the web app
 
+The web app is a static, file-based viewer — there is no backend to run. Traces
+load from a dropped JSON file, a `?trace=<url>` URL, or the bundled sample.
+
 ### Local machine (with Node.js)
 
 ```bash
 source .venv/bin/activate     # or: conda activate token-heatmap
-token-heatmap dev             # backend :8000, frontend :5173
+cd web/frontend && npm run dev    # http://localhost:5173
 ```
 
-Override ports with flags:
+Then drop a trace JSON onto the page, or open with `?trace=<url>`. Override the
+dev-server port with `VITE_DEV_PORT=5180 npm run dev`.
+
+The easiest path lets the CLI produce a trace and open the viewer in one go:
 
 ```bash
-token-heatmap dev --backend-port 8765 --frontend-port 5180
-```
-
-You can also run the services manually in two terminals:
-
-```bash
-# terminal 1 — backend
-cd web/backend
-uvicorn llm_token_heatmap_api.main:app --reload --port 8000
-```
-
-```bash
-# terminal 2 — frontend
-cd web/frontend
-npm run dev                    # http://localhost:5173
-```
-
-The frontend reads the backend URL from `VITE_API_BASE_URL` (default `http://localhost:8000`).
-To use a **different backend port**, create `web/frontend/.env.local`:
-
-```bash
-cp web/frontend/.env.local.example web/frontend/.env.local
-# then edit VITE_API_BASE_URL=http://localhost:YOUR_PORT
-```
-
-Or set it inline:
-
-```bash
-VITE_API_BASE_URL=http://localhost:9000 npm run dev
+token-heatmap trace --config configs/example.yaml --serve --frontend
 ```
 
 | Service             | URL                        |
 | ------------------- | -------------------------- |
-| Frontend (Vite dev) | http://localhost:5173      |
-| Backend             | http://localhost:8000      |
-| API docs (Swagger)  | http://localhost:8000/docs |
+| Viewer (Vite dev)   | http://localhost:5173      |
 
 ### HPC / server without Node.js
 
@@ -122,18 +97,18 @@ ssh -L 9000:localhost:9000 user@hpc
 # open http://localhost:3000/?trace=http://localhost:9000/adaptive_token_trace.json
 ```
 
-For a fully self-contained server (frontend + backend, no Node on any machine):
+To host the viewer itself without Node.js on the host, build the static `dist/`
+once on any machine with Node.js and serve it with any static file server:
 
-1. Build the frontend once on any machine with Node.js:
+1. Build the static viewer:
    ```bash
    token-heatmap web build          # output: web/frontend/dist/
    rsync -av web/frontend/dist/ user@hpc:…/web/frontend/dist/
    ```
-2. On HPC, the backend auto-serves the built frontend:
+2. On HPC, serve `dist/` with any static file server:
    ```bash
-   cd web/backend
-   uvicorn llm_token_heatmap_api.main:app --host :: --port 8000
-   # open http://localhost:8000 (after SSH port-forward)
+   python -m http.server -d web/frontend/dist 8080
+   # open http://localhost:8080/?trace=<trace-url> (after SSH port-forward)
    ```
 
 See [`web-app.md`](web-app.md) for a detailed breakdown.

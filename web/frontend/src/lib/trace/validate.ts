@@ -18,7 +18,6 @@ import { TraceLoadError, type ValidationIssue } from './errors';
  * Zod would have required maintaining a parallel definition.
  */
 
-let activeSchema: object = bundledSchema as object;
 let cached: ValidateFunction<Trace> | null = null;
 
 function build(schema: object): ValidateFunction<Trace> {
@@ -33,27 +32,8 @@ function build(schema: object): ValidateFunction<Trace> {
 
 function getValidator(): ValidateFunction<Trace> {
   if (cached) return cached;
-  cached = build(activeSchema);
+  cached = build(bundledSchema as object);
   return cached;
-}
-
-/**
- * Replace the runtime schema used for validation.
- *
- * The frontend bundles a copy of the schema for offline use; on startup it
- * fetches `/schema` from the backend and swaps that copy in via this
- * function so the UI validates against whatever the server is currently
- * serving. If the fetch fails, the bundled copy is left in place.
- */
-export function setActiveTraceSchema(schema: object): void {
-  activeSchema = schema;
-  cached = null;
-}
-
-/** Reset to the bundled schema. Primarily useful for tests. */
-export function resetActiveTraceSchema(): void {
-  activeSchema = bundledSchema as object;
-  cached = null;
 }
 
 function toIssue(err: ErrorObject): ValidationIssue {

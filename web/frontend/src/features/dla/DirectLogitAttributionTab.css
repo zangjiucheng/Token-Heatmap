@@ -192,7 +192,7 @@
 
 .dla-head-bar {
   display: grid;
-  grid-template-columns: 78px 1fr 64px auto;
+  grid-template-columns: 78px 1fr 64px;
   gap: var(--space-2);
   align-items: center;
 }
@@ -225,18 +225,11 @@
   font-size: var(--text-2xs);
 }
 
-.dla-head-bar__ablate {
-  padding: 2px 8px;
-  border-radius: var(--radius-xs);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-accent-text);
+.dla-tab__ablation-note {
+  margin: 0;
+  max-width: 78ch;
+  color: var(--color-text-muted);
   font-size: var(--text-2xs);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.dla-head-bar__ablate:hover {
-  border-color: var(--color-accent);
-  background: var(--color-accent-soft);
+  font-style: italic;
+  line-height: 1.5;
 }

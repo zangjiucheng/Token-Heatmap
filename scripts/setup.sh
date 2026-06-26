@@ -1,7 +1,7 @@
 #!/bin/bash
 # Set up the llm-token-heatmap development environment end-to-end:
-# Python venv + core library + web backend + (if Node is available) the
-# web frontend node_modules. Safe to re-run; each step is idempotent.
+# Python venv + core library + (if Node is available) the web frontend
+# node_modules. Safe to re-run; each step is idempotent.
 
 set -e
 
@@ -40,13 +40,6 @@ echo "[setup] Installing core Python package..."
 pip install --upgrade pip
 pip install -e ".[dev,models]"
 
-if [ -d "web/backend" ]; then
-    echo "[setup] Installing web backend (web/backend) into the same venv..."
-    pip install -e ./web/backend
-else
-    echo "[setup] web/backend not found; skipping backend install."
-fi
-
 if [ -d "web/frontend" ]; then
     if command -v npm >/dev/null 2>&1; then
         echo "[setup] Installing web frontend deps (npm install in web/frontend)..."
@@ -64,4 +57,4 @@ echo ""
 echo "[setup] Setup complete."
 echo "  Activate with:   source .venv/bin/activate"
 echo "  Run example:     python examples/qwen_attention_inspect.py"
-echo "  Start the app:   token-heatmap dev"
+echo "  Produce + view:  token-heatmap trace --config configs/example.yaml --serve --frontend"

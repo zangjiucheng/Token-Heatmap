@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Trace } from '@/types/trace';
+import { VizModal } from '@/components/VizModal';
 import { ManifoldScatter } from './ManifoldScatter';
 import { ManifoldScatter3D } from './ManifoldScatter3D';
 import { ManifoldScreePlot } from './ManifoldScreePlot';
@@ -47,6 +48,7 @@ export function ManifoldTab({
   const [colorBy, setColorBy] = useState<'step' | 'scalar'>(() =>
     trace.manifold?.scalar ? 'scalar' : 'step',
   );
+  const [zoomOpen, setZoomOpen] = useState(false);
 
   // Keep the selection valid if the trace (and thus its layers) changes.
   useEffect(() => {
@@ -103,6 +105,33 @@ export function ManifoldTab({
   const scalar = trace.manifold.scalar;
   const probe = active.probe;
   const activeView: '2d' | '3d' = can3d ? view : '2d';
+
+  // The scatter is rendered both inline and (larger) in the zoom lightbox.
+  const renderScatter = () =>
+    activeView === '3d' ? (
+      <ManifoldScatter3D
+        coords={active.projection.coords}
+        positions={active.positions}
+        colorValues={colorValues}
+        selectedStep={selectedStep}
+        hoveredStep={hoveredStep}
+        onSelectStep={onSelectStep}
+        onHoverStep={onHoverStep}
+      />
+    ) : (
+      <ManifoldScatter
+        coords={active.projection.coords}
+        positions={active.positions}
+        colorValues={colorValues}
+        xComponent={safeX}
+        yComponent={safeY}
+        selectedStep={selectedStep}
+        hoveredStep={hoveredStep}
+        onSelectStep={onSelectStep}
+        onHoverStep={onHoverStep}
+      />
+    );
+  const scatterAspect = activeView === '3d' ? 480 / 400 : 520 / 360;
 
   return (
     <div
@@ -222,35 +251,21 @@ export function ManifoldTab({
 
       <div className="manifold-tab__body">
         <div className="manifold-tab__scatter">
+          <button
+            type="button"
+            className="viz-expand-btn"
+            onClick={() => setZoomOpen(true)}
+            data-testid="manifold-expand"
+          >
+            ⤢ Expand
+          </button>
+          {renderScatter()}
           {activeView === '3d' ? (
-            <>
-              <ManifoldScatter3D
-                coords={active.projection.coords}
-                positions={active.positions}
-                colorValues={colorValues}
-                selectedStep={selectedStep}
-                hoveredStep={hoveredStep}
-                onSelectStep={onSelectStep}
-                onHoverStep={onHoverStep}
-              />
-              <p className="manifold-tab__hint">
-                Drag to rotate · colour ={' '}
-                {colorBy === 'scalar' && scalar ? scalar.name : 'generation step'}
-              </p>
-            </>
-          ) : (
-            <ManifoldScatter
-              coords={active.projection.coords}
-              positions={active.positions}
-              colorValues={colorValues}
-              xComponent={safeX}
-              yComponent={safeY}
-              selectedStep={selectedStep}
-              hoveredStep={hoveredStep}
-              onSelectStep={onSelectStep}
-              onHoverStep={onHoverStep}
-            />
-          )}
+            <p className="manifold-tab__hint">
+              Drag to rotate · colour ={' '}
+              {colorBy === 'scalar' && scalar ? scalar.name : 'generation step'}
+            </p>
+          ) : null}
         </div>
 
         <div className="manifold-tab__side">
@@ -308,6 +323,15 @@ export function ManifoldTab({
           </div>
         </div>
       </div>
+
+      <VizModal
+        open={zoomOpen}
+        onClose={() => setZoomOpen(false)}
+        title={`Manifold · ${active.layer} · ${active.submodule}`}
+        aspect={scatterAspect}
+      >
+        {renderScatter()}
+      </VizModal>
     </div>
   );
 }

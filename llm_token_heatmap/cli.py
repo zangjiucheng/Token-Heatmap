@@ -150,18 +150,18 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "Analyze LLM inference-time token probability distributions with adaptive\n"
             "top-k tracing, then explore them in the web app's lenses — Heatmap, Logit\n"
             "Lens, Attention, Direct Logit Attribution (+ per-head), Attribution Graph,\n"
-            "and Manifold — plus interventions/ablation against a live backend."
+            "and Manifold. The web app is a static, file-based viewer; this CLI is the\n"
+            "trace producer."
         ),
         epilog=(
             "command groups:\n"
             "  generate & analyze   trace, diff, manifold\n"
             "  view                 serve\n"
-            "  develop & deploy     dev, web build, hpc {setup,run,serve}\n"
+            "  develop & deploy     web build, hpc {setup,run,serve}\n"
             "\n"
             "examples:\n"
             "  token-heatmap trace --config configs/example.yaml --serve --frontend\n"
             "  token-heatmap trace --config configs/ioi.yaml      # per-head DLA / circuit demo\n"
-            "  token-heatmap dev                                  # backend + frontend for local dev\n"
             "  token-heatmap serve outputs/ioi                    # view a run you already produced\n"
             "  token-heatmap hpc run configs/wrap-text.yaml --gpu l40s\n"
             "\n"
@@ -197,7 +197,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "  # smallest run — heatmap + logit lens, then open the viewer\n"
             "  token-heatmap trace --config configs/example.yaml --serve --frontend\n"
             "\n"
-            "  # everything the Attribution / Graph / Attention lenses + ablation need\n"
+            "  # everything the Attribution / Graph / Attention lenses need\n"
             "  token-heatmap trace --model Qwen/Qwen2.5-0.5B-Instruct \\\n"
             "      --prompt 'The capital of France is' \\\n"
             "      --capture-logit-lens --capture-attention --capture-full-attention \\\n"
@@ -396,7 +396,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         "--port",
         type=int,
         default=8000,
-        help="Backend port when --serve is set (default: 8000).",
+        help="File server port when --serve is set (default: 8000).",
     )
     serve_grp.add_argument(
         "--frontend-url",
@@ -586,15 +586,13 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
     )
     serve_parser.set_defaults(func=run_serve)
 
-    # Operational sub-commands (dev / web build / hpc …) live in
+    # Operational sub-commands (web build / hpc …) live in
     # `llm_token_heatmap.commands` so they replace scripts/*.sh without bloating
     # this module. They import only stdlib, so registering them keeps `--help`
     # cheap (no torch/numpy pulled in).
-    from llm_token_heatmap.commands import dev as _dev_cmd
     from llm_token_heatmap.commands import hpc as _hpc_cmd
     from llm_token_heatmap.commands import web as _web_cmd
 
-    _dev_cmd.register(subparsers)
     _web_cmd.register(subparsers)
     _hpc_cmd.register(subparsers)
 
@@ -1057,15 +1055,15 @@ def _serve_outputs(
         def log_message(self, fmt: str, *args: object) -> None:
             pass  # suppress per-request noise; the URL is already printed below
 
-    backend_url = f"http://localhost:{port}"
-    trace_file_url = f"{backend_url}/adaptive_token_trace.json"
+    file_server_url = f"http://localhost:{port}"
+    trace_file_url = f"{file_server_url}/adaptive_token_trace.json"
     viewer_url = f"{frontend_url}/?trace={trace_file_url}"
 
     # Start the frontend before the file server so its npm/Vite startup logs
     # print first and the "open the viewer" line lands last.
     frontend_proc = None
     if start_frontend:
-        frontend_proc = _start_frontend_dev_server(frontend_url, backend_url)
+        frontend_proc = _start_frontend_dev_server(frontend_url)
         if frontend_proc is None:
             # npm or the frontend dir was unavailable; degrade to files-only.
             start_frontend = False
@@ -1087,7 +1085,7 @@ def _serve_outputs(
         ) from exc
 
     print("\n[token-heatmap] Serving output directory …")
-    print(f"[token-heatmap] Files: {backend_url}/")
+    print(f"[token-heatmap] Files: {file_server_url}/")
     if start_frontend:
         print(f"[token-heatmap] Frontend (npm run dev): {frontend_url}")
     print("[token-heatmap] Open the viewer at:")
@@ -1110,12 +1108,15 @@ def _serve_outputs(
             _terminate_process(frontend_proc)
 
 
-def _start_frontend_dev_server(frontend_url: str, backend_url: str) -> Any:
+def _start_frontend_dev_server(frontend_url: str) -> Any:
     """Launch ``npm run dev`` for the bundled ``web/frontend``.
 
     Returns the ``subprocess.Popen`` handle, or ``None`` (after printing a
     warning) when npm or the frontend directory is unavailable so the caller
     can fall back to serving files only.
+
+    The viewer is backend-free: it loads the trace purely via the ``?trace=``
+    URL pointed at this CORS file server, so no API base needs configuring.
     """
     import os
     import shutil
@@ -1142,18 +1143,12 @@ def _start_frontend_dev_server(frontend_url: str, backend_url: str) -> Any:
 
     frontend_port = urlparse(frontend_url).port or 5173
 
-    env = dict(os.environ)
-    # Point the SPA's API base at our file server so its same-origin assumptions
-    # hold; the trace itself loads via the ?trace= URL regardless. Respect a
-    # caller-provided value.
-    env.setdefault("VITE_API_BASE_URL", backend_url)
-
     print(f"[token-heatmap] Starting frontend (npm run dev) on port {frontend_port} …")
     try:
         return subprocess.Popen(
             [npm, "run", "dev", "--", "--port", str(frontend_port), "--strictPort"],
             cwd=str(frontend_dir),
-            env=env,
+            env=dict(os.environ),
         )
     except OSError as exc:
         print(f"[token-heatmap] WARNING: failed to start npm ({exc}). Serving files only.")

@@ -2,7 +2,6 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import axe from 'axe-core';
 import App from '@/App';
-import { BackendStatusBanner } from '@/components/feedback/BackendStatusBanner';
 
 const AXE_OPTIONS: axe.RunOptions = {
   // jsdom cannot compute real colors or layout; skip rules that depend on
@@ -50,22 +49,18 @@ describe('axe-core sweep', () => {
     expect(filterSerious(results)).toEqual([]);
   });
 
-  it('unhealthy BackendStatusBanner has no serious or critical violations', async () => {
-    const { container } = render(
-      <BackendStatusBanner status="unhealthy" onRetry={() => {}} />,
-    );
-    const results = await runAxe(container);
-    expect(filterSerious(results)).toEqual([]);
-  });
-
   it('trace viewer with sample trace has no serious or critical violations', async () => {
     window.history.replaceState(null, '', '/trace/sample');
     const { container } = render(<App />);
     await waitFor(
       async () => {
         // Either the heatmap renders or the page settles into another state.
-        const heatmap = container.querySelector('[data-testid="token-heatmap"]');
-        const empty = container.querySelector('[data-testid="step-detail-panel"]');
+        const heatmap = container.querySelector(
+          '[data-testid="token-heatmap"]',
+        );
+        const empty = container.querySelector(
+          '[data-testid="step-detail-panel"]',
+        );
         expect(heatmap ?? empty).not.toBeNull();
       },
       { timeout: 4000 },

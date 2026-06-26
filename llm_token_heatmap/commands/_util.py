@@ -31,11 +31,3 @@ def port_in_use(port: int) -> bool:
         except OSError:
             continue
     return False
-
-
-def next_free_port(port: int) -> int:
-    """First free port at or after ``port``."""
-    candidate = port
-    while port_in_use(candidate):
-        candidate += 1
-    return candidate

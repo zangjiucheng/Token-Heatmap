@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import App from '@/App';
-import { BackendStatusBanner } from '@/components/feedback/BackendStatusBanner';
 
 /**
  * Compute the accessible name for an element. We do not pull in a full
@@ -63,13 +62,6 @@ describe('accessible names', () => {
     await screen.findByRole('heading', { name: /no trace loaded/i });
     assertAllHaveNames('button', container);
     assertAllHaveNames('link', container);
-  });
-
-  it('BackendStatusBanner retry button has an accessible name when unhealthy', () => {
-    const { container } = render(
-      <BackendStatusBanner status="unhealthy" onRetry={() => {}} />,
-    );
-    assertAllHaveNames('button', container);
   });
 
   it('every interactive element on the trace viewer has an accessible name', async () => {

@@ -15,11 +15,6 @@ export interface EmptyStateProps {
    * server (`ssh -L 8000:localhost:8000 user@host`).
    */
   onUrlSubmit?: (url: string) => void;
-  /**
-   * Called when the user chooses to build a trace. When provided, a "Build a
-   * trace" card links to the visual config builder (which owns generation now).
-   */
-  onBuild?: () => void;
   title?: string;
   description?: ReactNode;
 }
@@ -29,13 +24,11 @@ export function EmptyState({
   onFileDropped,
   onTwoFilesDropped,
   onUrlSubmit,
-  onBuild,
   title = 'No trace loaded',
   description = (
     <>
-      Drop a JSON or CSV trace file here, choose one from disk, load a trace
-      from a URL, or load the bundled sample to explore the interactive token
-      heatmap.
+      Drop a JSON trace file here, choose one from disk, load a trace from a
+      URL, or load the bundled sample to explore the interactive token heatmap.
     </>
   ),
 }: EmptyStateProps) {
@@ -113,7 +106,7 @@ export function EmptyState({
     onTwoFilesDropped(files[0], files[1]);
   };
 
-  const hasSecondary = Boolean(onBuild) || Boolean(onTwoFilesDropped);
+  const hasSecondary = Boolean(onTwoFilesDropped);
 
   return (
     <section className="empty-state" aria-labelledby="empty-state-title">
@@ -150,7 +143,7 @@ export function EmptyState({
             <input
               ref={inputRef}
               type="file"
-              accept=".json,application/json,.csv,text/csv"
+              accept=".json,application/json"
               className="empty-state__file-input"
               onChange={handleFileChange}
               aria-label="Trace file"
@@ -195,29 +188,6 @@ export function EmptyState({
 
         {hasSecondary && (
           <div className="empty-state__secondary-row">
-            {onBuild && (
-              <div className="empty-state__card">
-                <div className="empty-state__copy">
-                  <p className="empty-state__eyebrow">Generate</p>
-                  <h2 className="empty-state__subtitle">Build a trace</h2>
-                  <p className="empty-state__card-desc">
-                    Wire a model, prompt and capture flags into a run on the
-                    backend — or export the equivalent YAML for the CLI.
-                  </p>
-                </div>
-                <div className="empty-state__actions">
-                  <button
-                    type="button"
-                    className="empty-state__secondary"
-                    onClick={onBuild}
-                    data-testid="empty-state-build"
-                  >
-                    Open the builder →
-                  </button>
-                </div>
-              </div>
-            )}
-
             {onTwoFilesDropped && (
               <div
                 className="empty-state__card empty-state__dropzone--diff"

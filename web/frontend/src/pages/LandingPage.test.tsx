@@ -3,27 +3,16 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UseTraceResult } from '@/hooks/useTrace';
-import type { UseBackendHealthResult } from '@/hooks/useBackendHealth';
 import { TraceLoadError } from '@/lib/trace/errors';
 import { LandingPage } from '@/pages/LandingPage';
 
 const useTraceMock = vi.fn<() => UseTraceResult>();
-const useHealthMock = vi.fn<() => UseBackendHealthResult>();
 
 vi.mock('@/hooks/useTrace', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks/useTrace')>();
   return {
     ...actual,
     useTrace: () => useTraceMock(),
-  };
-});
-
-vi.mock('@/hooks/useBackendHealth', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@/hooks/useBackendHealth')>();
-  return {
-    ...actual,
-    useBackendHealth: () => useHealthMock(),
   };
 });
 
@@ -44,8 +33,6 @@ function renderLanding(startPath = '/') {
 beforeEach(() => {
   window.localStorage.clear();
   useTraceMock.mockReset();
-  useHealthMock.mockReset();
-  useHealthMock.mockReturnValue({ status: 'unknown', probe: vi.fn() });
 });
 
 describe('LandingPage', () => {
@@ -85,7 +72,11 @@ describe('LandingPage', () => {
     expect(load).toHaveBeenCalledWith({ type: 'sample' });
 
     status = 'ready';
-    trace = { schema_version: '2.0.0', metadata: {}, steps: [] } as unknown as UseTraceResult['trace'];
+    trace = {
+      schema_version: '2.0.0',
+      metadata: {},
+      steps: [],
+    } as unknown as UseTraceResult['trace'];
     rerender(
       <MemoryRouter initialEntries={['/']}>
         <Routes>
@@ -117,21 +108,5 @@ describe('LandingPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /retry/i }));
     await waitFor(() => expect(load).toHaveBeenCalledWith({ type: 'sample' }));
-  });
-
-  it('shows the backend status banner when health is unhealthy', () => {
-    useTraceMock.mockReturnValue({
-      status: 'idle',
-      trace: null,
-      error: null,
-      load: vi.fn(),
-    });
-    useHealthMock.mockReturnValue({ status: 'unhealthy', probe: vi.fn() });
-    renderLanding();
-    expect(screen.getByText(/backend unreachable/i)).toBeInTheDocument();
-    // File-drop path still works (the EmptyState is still rendered).
-    expect(
-      screen.getByRole('button', { name: /try sample data/i }),
-    ).toBeInTheDocument();
   });
 });

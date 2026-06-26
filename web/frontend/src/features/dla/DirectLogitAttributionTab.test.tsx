@@ -1,18 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setApiClientForTests, type ApiClient } from '@/api/client';
+import { describe, expect, it } from 'vitest';
 import type { Trace } from '@/types/trace';
 import { DirectLogitAttributionTab } from './DirectLogitAttributionTab';
-
-// The lens renders the InterventionPanel, which probes backend health. Stub the
-// client so tests don't touch the network (offline hint is shown instead).
-beforeEach(() => {
-  setApiClientForTests({
-    health: vi.fn().mockResolvedValue(false),
-  } as unknown as ApiClient);
-});
-afterEach(() => setApiClientForTests(null));
 
 function makeTrace(withDla = true): Trace {
   const base = {
@@ -20,7 +10,12 @@ function makeTrace(withDla = true): Trace {
     metadata: { model: 'm', prompt: '', generated_text: '' },
     tokens: { prompt_token_ids: [], prompt_tokens: [] },
     steps: [
-      { step: 0, selected: { token: ' the', token_id: 5 }, raw: {}, processed: {} },
+      {
+        step: 0,
+        selected: { token: ' the', token_id: 5 },
+        raw: {},
+        processed: {},
+      },
     ],
   } as unknown as Trace;
   if (!withDla) return base;
@@ -83,7 +78,7 @@ describe('DirectLogitAttributionTab', () => {
     ).toBeInTheDocument();
   });
 
-  it('expands an attention bar into per-head sub-bars with ablate', async () => {
+  it('expands an attention bar into per-head sub-bars', async () => {
     const user = userEvent.setup();
     const t = makeTrace();
     t.direct_logit_attribution!.steps![0].layers[0].heads = [
@@ -92,9 +87,9 @@ describe('DirectLogitAttributionTab', () => {
     ];
     render(<DirectLogitAttributionTab trace={t} selectedStep={0} />);
     // No per-head bars until the attention bar is expanded.
-    expect(screen.queryByTestId('dla-ablate-0-7')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dla-head-7')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /L0 · attn/i }));
-    expect(screen.getByTestId('dla-ablate-0-7')).toBeInTheDocument();
-    expect(screen.getByTestId('dla-ablate-0-0')).toBeInTheDocument();
+    expect(screen.getByTestId('dla-head-7')).toBeInTheDocument();
+    expect(screen.getByTestId('dla-head-0')).toBeInTheDocument();
   });
 });
