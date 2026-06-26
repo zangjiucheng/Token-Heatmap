@@ -45,12 +45,17 @@
   cursor: pointer;
 }
 
+/* Inset the scrollable plot so it lines up with the lens content while the
+   toolbar above stays full-bleed (matching the activations tab). */
+.attention-grid__plot {
+  min-width: 0;
+  padding: 0 16px 16px;
+}
+
+/* Intrinsic, readable cells; the .viz-frame wrapper owns overflow/scroll and
+   keeps the grid flush top-left. */
 .attention-grid__svg {
   display: block;
-  overflow: visible;
-  /* Left-aligned (not centred) so the grid sits flush with the toolbar and the
-     rest of the lens content. */
-  margin: 0 0 16px;
 }
 
 .attention-grid__axis-label {

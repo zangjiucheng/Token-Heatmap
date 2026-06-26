@@ -14,9 +14,12 @@
 
 :root {
   /* Type — a technical grotesque for labels, a mono readout for all data. */
-  --font-display: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-sans: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display:
+    'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans:
+    'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Type scale (1.20 minor third off a 13px data base). */
   --text-2xs: 10.5px;
@@ -207,7 +210,9 @@ button {
 .tabular,
 [data-numeric] {
   font-family: var(--font-mono);
-  font-feature-settings: 'tnum' 1, 'zero' 1;
+  font-feature-settings:
+    'tnum' 1,
+    'zero' 1;
   font-variant-numeric: tabular-nums;
 }
 
@@ -218,6 +223,34 @@ button {
   letter-spacing: var(--track-label);
   text-transform: uppercase;
   color: var(--color-text-muted);
+}
+
+/*
+ * Visualization frame — one sizing contract shared by every lens plot
+ * (the attention / activation / diff grids and the attribution graph). The
+ * plot renders at its intrinsic, readable size; the frame fills the pane
+ * width, anchors top-left, and scrolls in whichever axis the plot overflows.
+ * So a large trace never spills out of the layout, gets clipped, or shrinks
+ * into an unreadable thumbnail — and resizing the window only changes how
+ * much of the plot scrolls, keeping every tab consistent.
+ */
+.viz-frame {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  /* Cap the height to the pane so a tall grid scrolls inside the frame
+     instead of shoving the surrounding controls / detail panels off-screen.
+     clamp() stays sensible from short laptops to tall external displays. */
+  max-height: clamp(280px, 60vh, 760px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* The plot itself: block-level, flush top-left — never auto-centered or
+   stretched. Intrinsic width/height (with a 1:1 viewBox) keeps the cells
+   crisp and clickable at full size. */
+.viz-frame > svg {
+  display: block;
 }
 
 :focus {

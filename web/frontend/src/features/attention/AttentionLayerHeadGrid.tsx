@@ -155,117 +155,127 @@ export function AttentionLayerHeadGrid({
           ))}
         </select>
       </div>
-      <svg
-        role="img"
-        aria-label={`Layer by head attention grid, colored by ${ATTENTION_METRIC_LABELS[metric]}`}
-        className="attention-grid__svg"
-        width={width}
-        height={height}
-        data-testid="attention-grid-svg"
-      >
-        {/* Head column labels */}
-        {Array.from({ length: numHeads }, (_, h) => (
-          <text
-            key={`h-${h}`}
-            x={LABEL_PAD_LEFT + h * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2}
-            y={LABEL_PAD_TOP - 8}
-            textAnchor="middle"
-            className="attention-grid__axis-label"
+      <div className="attention-grid__plot">
+        <div className="viz-frame">
+          <svg
+            role="img"
+            aria-label={`Layer by head attention grid, colored by ${ATTENTION_METRIC_LABELS[metric]}`}
+            className="attention-grid__svg"
+            width={width}
+            height={height}
+            viewBox={`0 0 ${width} ${height}`}
+            data-testid="attention-grid-svg"
           >
-            H{h}
-          </text>
-        ))}
-        {/* Layer row labels (use the entry's layer index, not row index) */}
-        {attention.map((entry, row) => (
-          <text
-            key={`l-${entry.layer}`}
-            x={LABEL_PAD_LEFT - 8}
-            y={LABEL_PAD_TOP + row * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2 + 4}
-            textAnchor="end"
-            className="attention-grid__axis-label"
-          >
-            L{entry.layer}
-          </text>
-        ))}
-        {cells.map((cell) => {
-          const row = attention.findIndex((e) => e.layer === cell.layer);
-          const x = LABEL_PAD_LEFT + cell.head * (CELL_SIZE + CELL_GAP);
-          const y = LABEL_PAD_TOP + row * (CELL_SIZE + CELL_GAP);
-          const isSelected =
-            selectedHead != null &&
-            selectedHead.layer === cell.layer &&
-            selectedHead.head === cell.head;
-          return (
-            <rect
-              key={`c-${cell.layer}-${cell.head}`}
-              x={x}
-              y={y}
-              width={CELL_SIZE}
-              height={CELL_SIZE}
-              fill={colorFor(cell.value, min, max)}
-              stroke={isSelected ? tk.text : 'transparent'}
-              strokeWidth={isSelected ? 2 : 0}
-              data-testid={`attention-cell-${cell.layer}-${cell.head}`}
-              data-layer={cell.layer}
-              data-head={cell.head}
-              data-value={cell.value}
-              onMouseEnter={() => setHover(cell)}
-              onMouseLeave={() => setHover((h) => (h === cell ? null : h))}
-              onClick={() => onSelectHead(cell.layer, cell.head)}
-              tabIndex={0}
-              role="button"
-              aria-label={`Layer ${cell.layer} head ${cell.head}, ${ATTENTION_METRIC_LABELS[metric]} ${formatScalar(cell.value)}`}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onSelectHead(cell.layer, cell.head);
+            {/* Head column labels */}
+            {Array.from({ length: numHeads }, (_, h) => (
+              <text
+                key={`h-${h}`}
+                x={LABEL_PAD_LEFT + h * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2}
+                y={LABEL_PAD_TOP - 8}
+                textAnchor="middle"
+                className="attention-grid__axis-label"
+              >
+                H{h}
+              </text>
+            ))}
+            {/* Layer row labels (use the entry's layer index, not row index) */}
+            {attention.map((entry, row) => (
+              <text
+                key={`l-${entry.layer}`}
+                x={LABEL_PAD_LEFT - 8}
+                y={
+                  LABEL_PAD_TOP +
+                  row * (CELL_SIZE + CELL_GAP) +
+                  CELL_SIZE / 2 +
+                  4
                 }
-              }}
-              style={{ cursor: 'pointer' }}
-            />
-          );
-        })}
-        {/* Legend: vertical gradient bar */}
-        <g
-          transform={`translate(${LABEL_PAD_LEFT + numHeads * (CELL_SIZE + CELL_GAP) + 12}, ${LABEL_PAD_TOP})`}
-        >
-          <defs>
-            <linearGradient
-              id="attn-legend-gradient"
-              x1="0"
-              x2="0"
-              y1="1"
-              y2="0"
-            >
-              {COLOR_RAMP.map((c, i) => (
-                <stop
-                  key={c}
-                  offset={`${(i / (COLOR_RAMP.length - 1)) * 100}%`}
-                  stopColor={c}
+                textAnchor="end"
+                className="attention-grid__axis-label"
+              >
+                L{entry.layer}
+              </text>
+            ))}
+            {cells.map((cell) => {
+              const row = attention.findIndex((e) => e.layer === cell.layer);
+              const x = LABEL_PAD_LEFT + cell.head * (CELL_SIZE + CELL_GAP);
+              const y = LABEL_PAD_TOP + row * (CELL_SIZE + CELL_GAP);
+              const isSelected =
+                selectedHead != null &&
+                selectedHead.layer === cell.layer &&
+                selectedHead.head === cell.head;
+              return (
+                <rect
+                  key={`c-${cell.layer}-${cell.head}`}
+                  x={x}
+                  y={y}
+                  width={CELL_SIZE}
+                  height={CELL_SIZE}
+                  fill={colorFor(cell.value, min, max)}
+                  stroke={isSelected ? tk.text : 'transparent'}
+                  strokeWidth={isSelected ? 2 : 0}
+                  data-testid={`attention-cell-${cell.layer}-${cell.head}`}
+                  data-layer={cell.layer}
+                  data-head={cell.head}
+                  data-value={cell.value}
+                  onMouseEnter={() => setHover(cell)}
+                  onMouseLeave={() => setHover((h) => (h === cell ? null : h))}
+                  onClick={() => onSelectHead(cell.layer, cell.head)}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Layer ${cell.layer} head ${cell.head}, ${ATTENTION_METRIC_LABELS[metric]} ${formatScalar(cell.value)}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectHead(cell.layer, cell.head);
+                    }
+                  }}
+                  style={{ cursor: 'pointer' }}
                 />
-              ))}
-            </linearGradient>
-          </defs>
-          <rect
-            x={0}
-            y={0}
-            width={16}
-            height={numLayers * (CELL_SIZE + CELL_GAP)}
-            fill="url(#attn-legend-gradient)"
-            data-testid="attention-grid-legend"
-          />
-          <text x={22} y={12} className="attention-grid__legend-label">
-            {formatScalar(max)}
-          </text>
-          <text
-            x={22}
-            y={numLayers * (CELL_SIZE + CELL_GAP)}
-            className="attention-grid__legend-label"
-          >
-            {formatScalar(min)}
-          </text>
-        </g>
-      </svg>
+              );
+            })}
+            {/* Legend: vertical gradient bar */}
+            <g
+              transform={`translate(${LABEL_PAD_LEFT + numHeads * (CELL_SIZE + CELL_GAP) + 12}, ${LABEL_PAD_TOP})`}
+            >
+              <defs>
+                <linearGradient
+                  id="attn-legend-gradient"
+                  x1="0"
+                  x2="0"
+                  y1="1"
+                  y2="0"
+                >
+                  {COLOR_RAMP.map((c, i) => (
+                    <stop
+                      key={c}
+                      offset={`${(i / (COLOR_RAMP.length - 1)) * 100}%`}
+                      stopColor={c}
+                    />
+                  ))}
+                </linearGradient>
+              </defs>
+              <rect
+                x={0}
+                y={0}
+                width={16}
+                height={numLayers * (CELL_SIZE + CELL_GAP)}
+                fill="url(#attn-legend-gradient)"
+                data-testid="attention-grid-legend"
+              />
+              <text x={22} y={12} className="attention-grid__legend-label">
+                {formatScalar(max)}
+              </text>
+              <text
+                x={22}
+                y={numLayers * (CELL_SIZE + CELL_GAP)}
+                className="attention-grid__legend-label"
+              >
+                {formatScalar(min)}
+              </text>
+            </g>
+          </svg>
+        </div>
+      </div>
       {hover && (
         <div
           className="attention-grid__tooltip"

@@ -254,7 +254,7 @@ export function AttributionGraphTab({
         <svg
           className="graph-tab__svg"
           viewBox={`0 0 ${width} ${H}`}
-          preserveAspectRatio="xMidYMid meet"
+          preserveAspectRatio="xMinYMin meet"
           role="img"
           aria-label="Attribution graph"
           data-testid="attribution-graph-svg"

@@ -164,127 +164,132 @@ export function DiffHeatmap({
       data-selected-step={selectedStep ?? ''}
       data-hovered-step={hoveredStep ?? ''}
     >
-      <svg
-        role="img"
-        aria-label={`Layer by step diff heatmap, colored by ${DIFF_METRIC_LABELS[metric]} for submodule ${submodule}`}
-        className="activation-heatmap__svg"
-        width={width}
-        height={height}
-        data-testid="diff-heatmap-svg"
-      >
-        {Array.from({ length: numSteps }, (_, step) => (
-          <text
-            key={`s-${step}`}
-            x={LABEL_PAD_LEFT + step * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2}
-            y={LABEL_PAD_TOP - 8}
-            textAnchor="middle"
-            className="activation-heatmap__axis-label"
-          >
-            {step}
-          </text>
-        ))}
-        {capturedLayers.map((layer, row) => (
-          <text
-            key={`l-${layer}`}
-            x={LABEL_PAD_LEFT - 8}
-            y={LABEL_PAD_TOP + row * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2 + 4}
-            textAnchor="end"
-            className="activation-heatmap__axis-label"
-          >
-            L{layer}
-          </text>
-        ))}
-        {cells.map((cell) => {
-          const row = capturedLayers.indexOf(cell.layer);
-          const x = LABEL_PAD_LEFT + cell.step * (CELL_SIZE + CELL_GAP);
-          const y = LABEL_PAD_TOP + row * (CELL_SIZE + CELL_GAP);
-          const isSelected =
-            selectedStep === cell.step && selectedLayer === cell.layer;
-          const isHoveredColumn =
-            hoveredStep != null && hoveredStep === cell.step;
-          const valid = Number.isFinite(cell.value);
-          return (
-            <rect
-              key={`c-${cell.step}-${cell.layer}`}
-              x={x}
-              y={y}
-              width={CELL_SIZE}
-              height={CELL_SIZE}
-              fill={valid ? colorFn(cell.value) : '#e5e5e5'}
-              stroke={
-                isSelected
-                  ? '#ffffff'
-                  : isHoveredColumn
-                    ? '#d55e00'
-                    : 'transparent'
-              }
-              strokeWidth={isSelected ? 2 : isHoveredColumn ? 1 : 0}
-              data-testid={`diff-cell-${cell.step}-${cell.layer}`}
-              data-step={cell.step}
-              data-layer={cell.layer}
-              data-value={cell.value}
-              onMouseEnter={() => {
-                setHover(cell);
-                onHoverStep?.(cell.step);
-              }}
-              onMouseLeave={() => {
-                setHover((h) => (h === cell ? null : h));
-                onHoverStep?.(null);
-              }}
-              onClick={() => onSelectCell(cell.step, cell.layer)}
-              tabIndex={0}
-              role="button"
-              aria-label={`Step ${cell.step} layer ${cell.layer}, ${DIFF_METRIC_LABELS[metric]} ${formatScalar(cell.value)}`}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onSelectCell(cell.step, cell.layer);
-                }
-              }}
-              style={{ cursor: 'pointer' }}
-            />
-          );
-        })}
-        <g
-          transform={`translate(${LABEL_PAD_LEFT + numSteps * (CELL_SIZE + CELL_GAP) + 12}, ${LABEL_PAD_TOP})`}
+      <div className="viz-frame">
+        <svg
+          role="img"
+          aria-label={`Layer by step diff heatmap, colored by ${DIFF_METRIC_LABELS[metric]} for submodule ${submodule}`}
+          className="activation-heatmap__svg"
+          width={width}
+          height={height}
+          viewBox={`0 0 ${width} ${height}`}
+          data-testid="diff-heatmap-svg"
         >
-          <defs>
-            <linearGradient
-              id={`diff-legend-gradient-${metric}`}
-              x1="0"
-              x2="0"
-              y1="1"
-              y2="0"
+          {Array.from({ length: numSteps }, (_, step) => (
+            <text
+              key={`s-${step}`}
+              x={LABEL_PAD_LEFT + step * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2}
+              y={LABEL_PAD_TOP - 8}
+              textAnchor="middle"
+              className="activation-heatmap__axis-label"
             >
-              {ramp.map((c, i) => (
-                <stop
-                  key={c}
-                  offset={`${(i / (ramp.length - 1)) * 100}%`}
-                  stopColor={c}
-                />
-              ))}
-            </linearGradient>
-          </defs>
-          <rect
-            x={0}
-            y={0}
-            width={16}
-            height={numLayers * (CELL_SIZE + CELL_GAP)}
-            fill={`url(#diff-legend-gradient-${metric})`}
-            data-testid="diff-heatmap-legend"
-          />
-          <text x={22} y={12} className="activation-heatmap__legend-label">
-            {formatScalar(legendMax)}
-          </text>
-          <text
-            x={22}
-            y={numLayers * (CELL_SIZE + CELL_GAP)}
-            className="activation-heatmap__legend-label"
+              {step}
+            </text>
+          ))}
+          {capturedLayers.map((layer, row) => (
+            <text
+              key={`l-${layer}`}
+              x={LABEL_PAD_LEFT - 8}
+              y={
+                LABEL_PAD_TOP + row * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2 + 4
+              }
+              textAnchor="end"
+              className="activation-heatmap__axis-label"
+            >
+              L{layer}
+            </text>
+          ))}
+          {cells.map((cell) => {
+            const row = capturedLayers.indexOf(cell.layer);
+            const x = LABEL_PAD_LEFT + cell.step * (CELL_SIZE + CELL_GAP);
+            const y = LABEL_PAD_TOP + row * (CELL_SIZE + CELL_GAP);
+            const isSelected =
+              selectedStep === cell.step && selectedLayer === cell.layer;
+            const isHoveredColumn =
+              hoveredStep != null && hoveredStep === cell.step;
+            const valid = Number.isFinite(cell.value);
+            return (
+              <rect
+                key={`c-${cell.step}-${cell.layer}`}
+                x={x}
+                y={y}
+                width={CELL_SIZE}
+                height={CELL_SIZE}
+                fill={valid ? colorFn(cell.value) : '#e5e5e5'}
+                stroke={
+                  isSelected
+                    ? '#ffffff'
+                    : isHoveredColumn
+                      ? '#d55e00'
+                      : 'transparent'
+                }
+                strokeWidth={isSelected ? 2 : isHoveredColumn ? 1 : 0}
+                data-testid={`diff-cell-${cell.step}-${cell.layer}`}
+                data-step={cell.step}
+                data-layer={cell.layer}
+                data-value={cell.value}
+                onMouseEnter={() => {
+                  setHover(cell);
+                  onHoverStep?.(cell.step);
+                }}
+                onMouseLeave={() => {
+                  setHover((h) => (h === cell ? null : h));
+                  onHoverStep?.(null);
+                }}
+                onClick={() => onSelectCell(cell.step, cell.layer)}
+                tabIndex={0}
+                role="button"
+                aria-label={`Step ${cell.step} layer ${cell.layer}, ${DIFF_METRIC_LABELS[metric]} ${formatScalar(cell.value)}`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelectCell(cell.step, cell.layer);
+                  }
+                }}
+                style={{ cursor: 'pointer' }}
+              />
+            );
+          })}
+          <g
+            transform={`translate(${LABEL_PAD_LEFT + numSteps * (CELL_SIZE + CELL_GAP) + 12}, ${LABEL_PAD_TOP})`}
           >
-            {formatScalar(legendMin)}
-          </text>
-        </g>
-      </svg>
+            <defs>
+              <linearGradient
+                id={`diff-legend-gradient-${metric}`}
+                x1="0"
+                x2="0"
+                y1="1"
+                y2="0"
+              >
+                {ramp.map((c, i) => (
+                  <stop
+                    key={c}
+                    offset={`${(i / (ramp.length - 1)) * 100}%`}
+                    stopColor={c}
+                  />
+                ))}
+              </linearGradient>
+            </defs>
+            <rect
+              x={0}
+              y={0}
+              width={16}
+              height={numLayers * (CELL_SIZE + CELL_GAP)}
+              fill={`url(#diff-legend-gradient-${metric})`}
+              data-testid="diff-heatmap-legend"
+            />
+            <text x={22} y={12} className="activation-heatmap__legend-label">
+              {formatScalar(legendMax)}
+            </text>
+            <text
+              x={22}
+              y={numLayers * (CELL_SIZE + CELL_GAP)}
+              className="activation-heatmap__legend-label"
+            >
+              {formatScalar(legendMin)}
+            </text>
+          </g>
+        </svg>
+      </div>
       {hover && (
         <div
           className="activation-heatmap__tooltip"
