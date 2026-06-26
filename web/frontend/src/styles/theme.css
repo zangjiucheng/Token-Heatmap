@@ -229,28 +229,29 @@ button {
  * Visualization frame — one sizing contract shared by every lens plot
  * (the attention / activation / diff grids and the attribution graph). The
  * plot renders at its intrinsic, readable size; the frame fills the pane
- * width, anchors top-left, and scrolls in whichever axis the plot overflows.
- * So a large trace never spills out of the layout, gets clipped, or shrinks
- * into an unreadable thumbnail — and resizing the window only changes how
- * much of the plot scrolls, keeping every tab consistent.
+ * width, anchors top-left, and scrolls *horizontally* when the plot is wider
+ * than the pane. Vertically the frame grows to its content and the lens pane
+ * (.trace-workspace__canvas-body) provides the single, outer scroll — so a
+ * large trace never spills sideways out of the layout, never gets clipped,
+ * and never creates a confusing second nested scrollbar. One vertical scroll
+ * per pane keeps every tab consistent.
  */
 .viz-frame {
-  width: 100%;
+  /* Fills the available lens space; the SVG inside scales to fit (see below),
+     so the whole grid is always visible and its cells resize with the pane
+     instead of overflowing or needing a scrollbar. */
+  flex: 1 1 auto;
   min-width: 0;
-  max-width: 100%;
-  /* Cap the height to the pane so a tall grid scrolls inside the frame
-     instead of shoving the surrounding controls / detail panels off-screen.
-     clamp() stays sensible from short laptops to tall external displays. */
-  max-height: clamp(280px, 60vh, 760px);
-  overflow: auto;
-  overscroll-behavior: contain;
+  min-height: 0;
 }
 
-/* The plot itself: block-level, flush top-left — never auto-centered or
-   stretched. Intrinsic width/height (with a 1:1 viewBox) keeps the cells
-   crisp and clickable at full size. */
+/* The plot scales to fit the frame (preserveAspectRatio on the <svg> keeps the
+   cells square and the whole grid visible). width/height: 100% lets the viewBox
+   drive the on-screen size, so cells grow/shrink with the pane. */
 .viz-frame > svg {
   display: block;
+  width: 100%;
+  height: 100%;
 }
 
 :focus {

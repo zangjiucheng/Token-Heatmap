@@ -164,6 +164,7 @@ export function AttentionLayerHeadGrid({
             width={width}
             height={height}
             viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="xMinYMid meet"
             data-testid="attention-grid-svg"
           >
             {/* Head column labels */}

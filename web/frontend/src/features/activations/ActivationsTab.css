@@ -1,10 +1,8 @@
 .activations-tab {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas:
-    'controls'
-    'heatmap'
-    'detail';
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
   gap: 0;
   padding: 0;
 }
@@ -18,7 +16,7 @@
 }
 
 .activations-tab__controls {
-  grid-area: controls;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -58,14 +56,21 @@
 }
 
 .activations-tab__heatmap {
-  grid-area: heatmap;
+  flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   padding: 16px;
 }
 
+/* Pinned below the grid; capped so a long neuron list scrolls inside itself
+   instead of squeezing the heatmap off the pane. */
 .activations-tab__detail {
-  grid-area: detail;
+  flex: none;
   min-width: 0;
+  max-height: 38%;
+  overflow: auto;
   padding: 0 16px 16px;
 }
 

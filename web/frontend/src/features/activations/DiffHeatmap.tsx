@@ -172,6 +172,7 @@ export function DiffHeatmap({
           width={width}
           height={height}
           viewBox={`0 0 ${width} ${height}`}
+          preserveAspectRatio="xMinYMid meet"
           data-testid="diff-heatmap-svg"
         >
           {Array.from({ length: numSteps }, (_, step) => (

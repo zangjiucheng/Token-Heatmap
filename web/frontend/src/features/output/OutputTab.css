@@ -3,10 +3,16 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-2) 0;
+  /* Fill the canvas height so the text area below can flex-fill and scroll
+     inside the pane, instead of a 70vh block that overflows it on long
+     reasoning / completion outputs. */
+  height: 100%;
+  min-height: 0;
 }
 
 .output-tab__controls {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
@@ -72,7 +78,10 @@
    wrapped so nothing is hidden off-screen. */
 .output-tab__text {
   margin: 0;
-  max-height: 70vh;
+  /* Take the remaining pane height and scroll internally, so the whole
+     output is reachable without the pane itself overflowing. */
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;

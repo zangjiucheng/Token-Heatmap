@@ -90,7 +90,9 @@
 /* ── Body: rail | canvas | inspector ──────────────────────────────────── */
 .trace-workspace__body {
   display: grid;
-  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--gutter-w) var(--inspector-w);
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--gutter-w) var(
+      --inspector-w
+    );
   min-height: 0;
 }
 
@@ -126,10 +128,25 @@
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
-  overflow: auto;
+  /* The pane no longer scrolls itself; the active lens fills it and owns the
+     single scroll viewport (see the rule below). */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   /* Breathing room so the active lens doesn't sit flush against the rail,
      inspector, control bar and timelines that frame it. */
   padding: var(--space-4);
+}
+
+/* The active lens fills the pane and owns the single, bounded scroll viewport:
+   both scrollbars sit at the pane edges, so a large plot (wide attention grid,
+   tall logit table, many-step activations) is always fully reachable by
+   scrolling — never pushed off-screen with an unreachable scrollbar. */
+.trace-workspace__canvas-body > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
 }
 
 /* Spine timelines — a compact, collapsible strip so they don't dominate the

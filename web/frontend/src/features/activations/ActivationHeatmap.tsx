@@ -157,6 +157,7 @@ export function ActivationHeatmap({
           width={width}
           height={height}
           viewBox={`0 0 ${width} ${height}`}
+          preserveAspectRatio="xMinYMid meet"
           data-testid="activation-heatmap-svg"
         >
           {Array.from({ length: numSteps }, (_, step) => (

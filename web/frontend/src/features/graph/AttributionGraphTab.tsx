@@ -140,11 +140,16 @@ export function AttributionGraphTab({
     const C = layersSorted.length;
     const leftM = 80;
     const rightM = 160;
-    const usableW = width - leftM - rightM;
+    const COL_GAP = 190;
+    const usableW = Math.max(0, width - leftM - rightM);
+    // Cap how far the layer columns spread: a few layers should sit a readable
+    // ~190px apart (not flung to opposite edges), while many layers still
+    // expand to use the pane. The graph is left-anchored and the pane scrolls.
+    const colSpan = C <= 1 ? 0 : Math.min(usableW, (C - 1) * COL_GAP);
     const colX = (layer: number) => {
       const idx = layersSorted.indexOf(layer);
-      if (C <= 1) return leftM + usableW / 2;
-      return leftM + (idx / (C - 1)) * usableW;
+      if (C <= 1) return leftM;
+      return leftM + (idx / (C - 1)) * colSpan;
     };
 
     const byLayer = new Map<number, GNode[]>();
@@ -176,11 +181,17 @@ export function AttributionGraphTab({
     });
 
     const output = {
-      x: width - rightM / 2,
+      // Sit a fixed gap to the right of the last column instead of pinned to
+      // the far edge, so the contributors → token flow reads tightly.
+      x: leftM + colSpan + 150,
       y: cy,
       token:
         trace.steps.find((s) => s.step === step.step)?.selected.token ?? '',
     };
+
+    // The drawing extends just past the output node (+ room for its label); the
+    // SVG is sized to this, so it stays compact and the pane handles scrolling.
+    const contentW = output.x + 160;
 
     return {
       step,
@@ -190,6 +201,7 @@ export function AttributionGraphTab({
       maxAbs,
       totalN,
       H,
+      contentW,
       total: step.total_logit,
     };
   }, [dla, selectedStep, trace.steps, width]);
@@ -209,7 +221,8 @@ export function AttributionGraphTab({
     );
   }
 
-  const { step, placed, output, error, maxAbs, totalN, H, total } = view;
+  const { step, placed, output, error, maxAbs, totalN, H, contentW, total } =
+    view;
   const outR = 24;
 
   const ablate = (n: PlacedNode) => {
@@ -253,8 +266,8 @@ export function AttributionGraphTab({
       <div ref={svgWrapRef} className="graph-tab__svg-wrap">
         <svg
           className="graph-tab__svg"
-          viewBox={`0 0 ${width} ${H}`}
-          preserveAspectRatio="xMinYMin meet"
+          viewBox={`0 0 ${contentW} ${H}`}
+          preserveAspectRatio="xMidYMid meet"
           role="img"
           aria-label="Attribution graph"
           data-testid="attribution-graph-svg"
