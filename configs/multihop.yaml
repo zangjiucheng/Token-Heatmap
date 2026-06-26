@@ -1,0 +1,45 @@
+# Two-hop factual recall — the flagship attribution-graph case study from
+# Anthropic's "On the Biology of a Large Language Model" (transformer-circuits.pub,
+# 2025). The prompt asks for the capital of the *state containing* Dallas, so the
+# model can't look the answer up directly: it must hop Dallas -> Texas -> Austin.
+# The paper shows a real intermediate "Texas" feature bridging the two hops.
+#
+# What to look for once it's served:
+#   - Logit Lens: scrub the layers on the answer position — "Texas" should peak
+#     in the MIDDLE layers before "Austin" takes over near the top (the two hops,
+#     resolved in depth).
+#   - Attribution / Graph: the Texas-carrying components feed the Austin logit;
+#     click that node to ablate it and watch P(" Austin") collapse — the causal
+#     proof that the hop is load-bearing, not decoration.
+#
+# Scale note: two-hop recall needs a capable model (0.5B usually fails the hop and
+# guesses a famous capital), so this is a 7B config — run it on a big GPU / HPC.
+# Contrast is itself instructive: try --model Qwen/Qwen2.5-0.5B-Instruct and watch
+# the hop break.
+#
+# Lenses lit: Heatmap, Logit Lens, Attention, Activations, Attribution + Graph.
+#
+# Reproduce (HPC):       token-heatmap hpc run configs/multihop.yaml --gpu l40s
+# On a big local GPU:    token-heatmap trace --config configs/multihop.yaml --serve --frontend
+#         DLA / ablate:  python examples/dla_causal_validation.py configs/multihop.yaml
+
+model: Qwen/Qwen2.5-7B-Instruct
+prompt: "Fact: the capital of the state containing Dallas is"
+
+max_new_tokens: 8
+temperature: 0.2
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/multihop
+
+capture_logit_lens: true
+lens_layers: all
+lens_top_k: 8
+
+capture_attention: true
+capture_full_attention: true
+capture_activations: true
+capture_full_activations: true

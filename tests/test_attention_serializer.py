@@ -42,7 +42,9 @@ def _load_schema(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
-def _build_synthetic_stats(*, num_heads: int = 4, head_dim: int = 4, seq_len: int = 5) -> AttentionStats:
+def _build_synthetic_stats(
+    *, num_heads: int = 4, head_dim: int = 4, seq_len: int = 5
+) -> AttentionStats:
     """Produce a small AttentionStats payload without actually running a model."""
 
     torch.manual_seed(0)
@@ -122,13 +124,23 @@ def test_attention_stats_to_payload_matches_schema() -> None:
     assert 0.0 <= entry["bos_weight"] <= 1.0
     assert entry["entropy"] >= 0.0
 
-    # per_head carries one entry per head with the 7 grid scalars, and the
+    # per_head carries one entry per head with the grid scalars, and the
     # heads must be genuinely distinct (regression: the inline serializer used
     # to emit only the layer mean, so the grid broadcast it across all heads).
     per_head = entry["per_head"]
     assert len(per_head) == stats.num_attention_heads
     assert all(
-        set(h) == {"entropy", "self_weight", "bos_weight", "top1_weight", "q_norm", "k_norm", "v_norm"}
+        set(h)
+        == {
+            "entropy",
+            "self_weight",
+            "bos_weight",
+            "induction",
+            "top1_weight",
+            "q_norm",
+            "k_norm",
+            "v_norm",
+        }
         for h in per_head
     )
     assert len({h["self_weight"] for h in per_head}) > 1
@@ -141,6 +153,46 @@ def test_attention_stats_to_payload_matches_schema() -> None:
     sample["steps"][0]["attention"] = payload["attention"]
     sample["steps"][0]["attention_sidecar_ref"] = None
     Draft202012Validator(schema).validate(sample)
+
+
+def test_induction_score_scores_post_occurrence_attention() -> None:
+    """Per-head induction score = attention on the token following the current
+    token's most recent earlier occurrence (the induction-head signature)."""
+
+    # The query token (20) last appeared at index 1, so its induction target is
+    # the token that followed it, at index 2.
+    token_ids = [10, 20, 30, 10, 20]
+    seq_len = len(token_ids)
+
+    # Head 0 is an induction head (mass on the target, position 2); head 1 is a
+    # BOS sink (all mass on position 0).
+    weights = torch.zeros(2, seq_len)
+    weights[0, 2] = 0.9
+    weights[0, 0] = 0.1
+    weights[1, 0] = 1.0
+    stats = AttentionStats(
+        layers={0: AttentionLayerStats(layer_idx=0, attention_weights=weights)},
+        num_attention_heads=2,
+        num_key_value_heads=2,
+        head_dim=4,
+        head_to_kv_group=[0, 1],
+    )
+
+    per_head = attention_stats_to_payload(
+        stats, capture_full=True, top_k_positions=4, token_ids=token_ids
+    )["attention"][0]["per_head"]
+    assert per_head[0]["induction"] == pytest.approx(0.9)
+    assert per_head[1]["induction"] == pytest.approx(0.0)
+
+    # A novel query token has no induction target -> 0 for every head.
+    novel = attention_stats_to_payload(
+        stats, capture_full=True, top_k_positions=4, token_ids=[10, 20, 30, 40, 50]
+    )
+    assert all(h["induction"] == 0.0 for h in novel["attention"][0]["per_head"])
+
+    # No token_ids at all -> score is reported as 0 (and stays schema-valid).
+    none = attention_stats_to_payload(stats, capture_full=True, top_k_positions=4)
+    assert all(h["induction"] == 0.0 for h in none["attention"][0]["per_head"])
 
 
 # --------------------------------------------------------------------------- #

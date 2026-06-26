@@ -179,6 +179,9 @@ def generate_with_adaptive_probe(
                 attention_stats,
                 capture_full=attention_probe.config.capture_full_distribution,
                 top_k_positions=attention_probe.config.top_k_positions,
+                # The current query is the last position of `generated`; its
+                # token-id sequence lets the serializer score induction heads.
+                token_ids=[int(t) for t in generated[0].tolist()],
             )
             step_entry["attention"] = payload["attention"]
             # Stash the raw stats so callers (e.g. the CLI) can write Tier 2

@@ -1,0 +1,50 @@
+# Circular feature geometry — do the days of the week live on a ring?
+#
+# A recurring finding in feature-geometry work (Anthropic's manifold / privileged-
+# bases line, and Engels et al. "Not All Language Model Features Are Linear") is
+# that *cyclic* concepts — days, months, clock positions — are encoded on a circle
+# rather than a line: advancing one day is a fixed rotation. This config feeds the
+# model a long run of the weekday cycle and lets the Manifold lens test for it.
+#
+# What to look for after the manifold pass:
+#   - Manifold scatter (colour = generation step): the trajectory should *loop*
+#     instead of drifting in a straight ramp — successive weeks retrace the same
+#     ring.
+#   - periodicity.dominant_period ~ the number of tokens per week (≈7 when each
+#     day is a single token): the FFT of PC1 picks up the cycle.
+#   - Variance spectrum: a cyclic manifold spreads its variance across PC1+PC2
+#     (the plane the ring lives in) rather than collapsing onto PC1.
+#
+# Scale note: like the line-position helix (see docs/manifold-reproduction.md), the
+# clean ring sharpens with model size — 7B shows the loop; smaller models give a
+# noisier, partial cycle. Months ("January February ...") are a nice 12-cycle
+# variant: swap the prompt and you get a longer period to resolve.
+#
+# Reproduce:
+#   1. trace (HPC):  token-heatmap hpc run configs/cyclic-days.yaml --gpu l40s
+#      or local GPU: token-heatmap trace --config configs/cyclic-days.yaml
+#   2. manifold:     token-heatmap manifold --trace outputs/cyclic-days/adaptive_token_trace.json --components 6
+#   3. serve:        token-heatmap serve outputs/cyclic-days/adaptive_token_trace.json --frontend
+#
+# (A `weekday` probe scalar — index 0..6 per token — would add the supervised
+#  circular R² readout the line-position helix gets; see the induction-score /
+#  scalar TODO. Without it, periodicity + the scatter already show the ring.)
+
+model: Qwen/Qwen2.5-7B-Instruct
+prompt: "Continue this sequence, one day per word, for as long as you can, and output nothing else:\nMonday Tuesday Wednesday Thursday Friday Saturday Sunday Monday Tuesday Wednesday"
+
+max_new_tokens: 120
+temperature: 0.2
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/cyclic-days
+
+# Manifold geometry only — no logit lens needed. Full activations feed the PCA
+# cloud the manifold pass analyses.
+capture_logit_lens: false
+capture_attention: false
+capture_activations: true
+capture_full_activations: true

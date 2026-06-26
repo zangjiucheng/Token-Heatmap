@@ -885,7 +885,8 @@
               "top1_weight": { "type": "number", "description": "This head's single largest source-position attention weight." },
               "q_norm": { "type": "number", "description": "L2 norm of this head's current-token Q vector." },
               "k_norm": { "type": "number", "description": "L2 norm of this head's current-token K vector." },
-              "v_norm": { "type": "number", "description": "L2 norm of this head's current-token V vector." }
+              "v_norm": { "type": "number", "description": "L2 norm of this head's current-token V vector." },
+              "induction": { "type": "number", "description": "Induction score: attention this head places on the token following the current token's most recent earlier occurrence (the induction-head signature). Optional; 0 when the current token is novel." }
             }
           }
         }

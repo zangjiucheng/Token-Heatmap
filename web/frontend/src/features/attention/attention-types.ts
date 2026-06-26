@@ -4,6 +4,7 @@ export type AttentionMetric =
   | 'entropy'
   | 'self_weight'
   | 'bos_weight'
+  | 'induction'
   | 'top1_weight'
   | 'q_norm'
   | 'k_norm'
@@ -13,6 +14,7 @@ export const ATTENTION_METRICS: ReadonlyArray<AttentionMetric> = [
   'entropy',
   'self_weight',
   'bos_weight',
+  'induction',
   'top1_weight',
   'q_norm',
   'k_norm',
@@ -23,6 +25,7 @@ export const ATTENTION_METRIC_LABELS: Record<AttentionMetric, string> = {
   entropy: 'Entropy',
   self_weight: 'Self-weight',
   bos_weight: 'BOS weight',
+  induction: 'Induction',
   top1_weight: 'Top-1 weight',
   q_norm: 'Q norm',
   k_norm: 'K norm',
@@ -39,6 +42,13 @@ export interface PerHeadAttentionScalars {
   entropy: number;
   self_weight: number;
   bos_weight: number;
+  /**
+   * Induction score — attention this head puts on the token after the current
+   * token's most recent earlier occurrence. High in induction heads; 0 in the
+   * broadcast fallback (older traces carry no per-head induction at the layer
+   * level).
+   */
+  induction: number;
   top1_weight: number;
   q_norm: number;
   k_norm: number;
@@ -80,6 +90,9 @@ export function derivePerHeadScalars(
     entropy: entry.entropy,
     self_weight: entry.self_weight,
     bos_weight: entry.bos_weight,
+    // Induction is a per-head-only scalar (no layer-mean to broadcast); older
+    // traces without `per_head` fall back to 0 here.
+    induction: 0,
     top1_weight: top1,
     q_norm: entry.q_norm,
     k_norm: entry.k_norm,

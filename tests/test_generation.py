@@ -319,7 +319,10 @@ def test_generate_invokes_attention_probe_per_step(
 
     from llm_token_heatmap import generation as gen_mod
 
-    def _fake_payload(stats, *, capture_full, top_k_positions):  # noqa: ANN001
+    seen_token_ids: list[list[int] | None] = []
+
+    def _fake_payload(stats, *, capture_full, top_k_positions, token_ids=None):  # noqa: ANN001
+        seen_token_ids.append(token_ids)
         return {"attention": [], "attention_metadata": {}}
 
     monkeypatch.setattr(gen_mod, "attention_stats_to_payload", _fake_payload)
@@ -345,6 +348,12 @@ def test_generate_invokes_attention_probe_per_step(
     for entry in trace:
         assert "attention" in entry
         assert "_attention_stats" in entry
+    # The running token-id sequence is threaded in for induction scoring, and it
+    # grows by one each step as tokens are appended.
+    assert len(seen_token_ids) == 4
+    assert all(ids is not None for ids in seen_token_ids)
+    lengths = [len(ids) for ids in seen_token_ids]
+    assert lengths == sorted(lengths) and len(set(lengths)) == 4
 
 
 def test_generate_invokes_logit_lens_per_step(fake_tokenizer) -> None:

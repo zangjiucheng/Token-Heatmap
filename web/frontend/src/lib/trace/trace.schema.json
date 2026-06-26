@@ -1169,6 +1169,10 @@
               "v_norm": {
                 "type": "number",
                 "description": "L2 norm of this head's current-token V vector."
+              },
+              "induction": {
+                "type": "number",
+                "description": "Induction score: attention this head places on the token following the current token's most recent earlier occurrence (the induction-head signature). Optional; 0 when the current token is novel or only repeats immediately before the query."
               }
             }
           }

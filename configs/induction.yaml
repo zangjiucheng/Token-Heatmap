@@ -5,9 +5,13 @@
 # responsible head stays crisp, so per-head DLA ranks it and ablation validates
 # it (see the scaling caveat in docs/interpreting.md for why 0.5B, not 14B).
 #
-# Lenses lit: Heatmap, Logit Lens, Attention, Attribution + Graph (per-head),
-# and interventions — full capture below means `token-heatmap trace --config
-# <this>` alone populates every tab (no extra CLI flags needed).
+# Tip: in the Attention lens, switch the metric to "Induction" — induction heads
+# light up directly (each head's attention on the token after the current token's
+# last occurrence), so you can spot them without running DLA first.
+#
+# Lenses lit: Heatmap, Logit Lens, Attention (Induction metric), Attribution +
+# Graph (per-head), and interventions — full capture below means `token-heatmap
+# trace --config <this>` alone populates every tab (no extra CLI flags needed).
 #
 # Reproduce:  token-heatmap trace --config configs/induction.yaml --serve --frontend
 #       DLA:  python examples/dla_causal_validation.py configs/induction.yaml

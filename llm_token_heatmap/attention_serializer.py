@@ -45,6 +45,7 @@ def attention_stats_to_payload(
     *,
     capture_full: bool = False,
     top_k_positions: int = 8,
+    token_ids: list[int] | None = None,
 ) -> dict[str, Any]:
     """Build the Tier 1 inline trace payload from an :class:`AttentionStats`.
 
@@ -55,6 +56,13 @@ def attention_stats_to_payload(
             ``{positions, weights}`` dict the probe emits in top-k mode.
         top_k_positions: How many aggregate top positions to keep in the inline
             summary. Independent of the probe's own ``top_k_positions``.
+        token_ids: The full token-id sequence at this step (prompt + generated
+            so far), last element being the current query token. When given,
+            each head gets a per-head **induction score** — the attention it
+            places on the token that followed the current token's most recent
+            earlier occurrence (the textbook induction-head signature). Most
+            accurate under full-distribution capture; in sparse (top-k) mode it
+            only registers when the induction target made the head's top-k.
 
     Returns:
         A dict with two keys:
@@ -64,6 +72,7 @@ def attention_stats_to_payload(
           ``AttentionLayerEntry``, sorted by ``layer`` ascending.
     """
 
+    induction_target = _induction_target_position(token_ids)
     captured_layers = sorted(stats.layers.keys())
     metadata = {
         "num_layers": len(captured_layers) if not captured_layers else max(captured_layers) + 1,
@@ -82,6 +91,7 @@ def attention_stats_to_payload(
                 derived.layers[layer_idx],
                 capture_full=capture_full,
                 top_k_positions=top_k_positions,
+                induction_target=induction_target,
             )
         )
 
@@ -97,6 +107,7 @@ def _layer_stats_to_entry(
     *,
     capture_full: bool,
     top_k_positions: int,
+    induction_target: int | None = None,
 ) -> dict[str, Any]:
     weights_dense = _to_dense_weights(layer.attention_weights, capture_full)
     top_positions = _aggregate_top_positions(weights_dense, top_k_positions)
@@ -106,7 +117,9 @@ def _layer_stats_to_entry(
     # Per-head scalars so the Layer x Head grid can color each head distinctly.
     # Without this the frontend broadcasts the layer mean across all heads, so
     # every head in a layer renders identically. top1_weight is the head's
-    # single largest source weight (from its own top-k positions).
+    # single largest source weight (from its own top-k positions); induction is
+    # the attention this head puts on the induction target (the token after the
+    # current token's last occurrence) — high in induction heads.
     per_head = [
         {
             "entropy": float(h.entropy),
@@ -116,8 +129,9 @@ def _layer_stats_to_entry(
             "q_norm": float(h.q_norm),
             "k_norm": float(h.k_norm),
             "v_norm": float(h.v_norm),
+            "induction": _head_induction(weights_dense, head_idx, induction_target),
         }
-        for h in heads
+        for head_idx, h in enumerate(heads)
     ]
     return {
         "layer": int(layer.layer_idx),
@@ -131,6 +145,38 @@ def _layer_stats_to_entry(
         "qk_alignment_angle": float(sum(h.qk_alignment_angle_deg for h in heads) / n),
         "per_head": per_head,
     }
+
+
+def _induction_target_position(token_ids: list[int] | None) -> int | None:
+    """Source position the textbook induction pattern points at for this query.
+
+    The query is the sequence's last token. An induction head, having seen this
+    token before at position ``j``, attends to ``j + 1`` — the token that
+    followed it last time — and copies it. We return that ``j + 1`` for the most
+    recent earlier occurrence, or ``None`` when the current token is novel (or
+    only repeats immediately before the query, where the target collapses onto
+    the query itself) so the induction score is undefined and reported as 0.
+    """
+
+    if not token_ids or len(token_ids) < 2:
+        return None
+    query_pos = len(token_ids) - 1
+    current = token_ids[query_pos]
+    for j in range(query_pos - 1, -1, -1):
+        if token_ids[j] == current:
+            target = j + 1
+            return target if target != query_pos else None
+    return None
+
+
+def _head_induction(weights_dense: torch.Tensor, head_idx: int, target: int | None) -> float:
+    """Attention this head places on the induction target position (0 when N/A)."""
+
+    if target is None or head_idx >= weights_dense.shape[0]:
+        return 0.0
+    if target < 0 or target >= weights_dense.shape[-1]:
+        return 0.0
+    return float(weights_dense[head_idx, target].item())
 
 
 def _to_dense_weights(
@@ -191,7 +237,11 @@ def write_sidecar(
 
     out_path = Path(path)
     if out_path.suffix != ".npz":
-        out_path = out_path.with_suffix(out_path.suffix + ".npz") if out_path.suffix else out_path.with_suffix(".npz")
+        out_path = (
+            out_path.with_suffix(out_path.suffix + ".npz")
+            if out_path.suffix
+            else out_path.with_suffix(".npz")
+        )
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     captured_layers = sorted(stats.layers.keys())
@@ -210,9 +260,7 @@ def write_sidecar(
         # Cast to float32 *before* .numpy(): numpy has no bfloat16 dtype, so a
         # bf16 tensor (the default on modern bf16-native models) would raise
         # "unsupported ScalarType BFloat16". `.float()` upcasts bf16/fp16 → f32.
-        arrays[f"layer_{layer_idx}_attention_weights"] = (
-            weights.detach().float().cpu().numpy()
-        )
+        arrays[f"layer_{layer_idx}_attention_weights"] = weights.detach().float().cpu().numpy()
         if layer.q_last is not None:
             arrays[f"layer_{layer_idx}_q_last"] = layer.q_last.detach().float().cpu().numpy()
         if layer.k_last is not None:
