@@ -1,0 +1,32 @@
+# IOI (Indirect-Object Identification) — the canonical name-mover circuit. After
+# "When Mary and John went to the store, John gave a drink to", the answer is the
+# NON-repeated name (" Mary"). Name-mover heads attend from the final position to
+# the indirect object and write it to the logits; per-head DLA should surface
+# them, and ablating the top head should drop P(" Mary").
+#
+# Small model so the per-head story stays crisp (docs/interpreting.md scaling
+# caveat). Full capture -> every lens populated from one run.
+#
+# Reproduce:  token-heatmap trace --config configs/ioi.yaml --serve --frontend
+#       DLA:  python examples/dla_causal_validation.py configs/ioi.yaml
+
+model: Qwen/Qwen2.5-0.5B-Instruct
+prompt: "When Mary and John went to the store, John gave a drink to"
+
+max_new_tokens: 8
+temperature: 0.2
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/ioi
+
+capture_logit_lens: true
+lens_layers: all
+lens_top_k: 8
+
+capture_attention: true
+capture_full_attention: true
+capture_activations: true
+capture_full_activations: true

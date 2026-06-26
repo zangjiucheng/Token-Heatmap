@@ -1,0 +1,31 @@
+# Attention-pattern demo — a few-shot in-context table the model completes by
+# pattern-matching. After three "Country -> Capital" examples and "Italy ->",
+# the model answers " Rome". The Attention lens shows the final position
+# attending to the "->" delimiters and to "Italy", with induction/copy heads
+# pulling the matching capital — interpretable attention you can actually read.
+#
+# capture_full_attention is the point here (per-head attention maps); activations
+# are captured too so the Attribution / Graph tabs also have data from one run.
+#
+# Reproduce:  token-heatmap trace --config configs/attention-demo.yaml --serve --frontend
+
+model: Qwen/Qwen2.5-0.5B-Instruct
+prompt: "Capitals:\nFrance -> Paris\nJapan -> Tokyo\nEgypt -> Cairo\nItaly ->"
+
+max_new_tokens: 6
+temperature: 0.2
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/attention-demo
+
+capture_logit_lens: true
+lens_layers: all
+lens_top_k: 8
+
+capture_attention: true
+capture_full_attention: true
+capture_activations: true
+capture_full_activations: true

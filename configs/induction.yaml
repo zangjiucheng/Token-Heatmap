@@ -1,0 +1,34 @@
+# Induction-head demo — the textbook per-head circuit. A short repeated list:
+# after "apple, banana," the model copies "cherry" from the earlier
+# "apple, banana, cherry" — exactly what induction heads do (attend to the token
+# that followed the current token last time, then copy it). On a small model the
+# responsible head stays crisp, so per-head DLA ranks it and ablation validates
+# it (see the scaling caveat in docs/interpreting.md for why 0.5B, not 14B).
+#
+# Lenses lit: Heatmap, Logit Lens, Attention, Attribution + Graph (per-head),
+# and interventions — full capture below means `token-heatmap trace --config
+# <this>` alone populates every tab (no extra CLI flags needed).
+#
+# Reproduce:  token-heatmap trace --config configs/induction.yaml --serve --frontend
+#       DLA:  python examples/dla_causal_validation.py configs/induction.yaml
+
+model: Qwen/Qwen2.5-0.5B-Instruct
+prompt: "Repeat this list exactly: apple, banana, cherry, apple, banana,"
+
+max_new_tokens: 8
+temperature: 0.2
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/induction
+
+capture_logit_lens: true
+lens_layers: all
+lens_top_k: 8
+
+capture_attention: true
+capture_full_attention: true
+capture_activations: true
+capture_full_activations: true

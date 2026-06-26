@@ -13,7 +13,8 @@ A worked argument built around a designed config (``configs/recall-probe.yaml``)
 Run (small model, a few CPU/MPS forward passes — no GPU needed):
 
     python examples/dla_causal_validation.py            # uses configs/recall-probe.yaml
-    python examples/dla_causal_validation.py configs/dla-demo.yaml
+    python examples/dla_causal_validation.py configs/ioi.yaml        # name-mover heads
+    python examples/dla_causal_validation.py configs/induction.yaml  # induction heads
 
 This is the local, causal half of the demo; produce a full viewable trace with
 ``token-heatmap trace --config configs/recall-probe.yaml --capture-activations

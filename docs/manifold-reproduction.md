@@ -47,15 +47,22 @@ scalar), the probe R², and the Helix R².
 ## The study (three traces, increasing rigor)
 
 The lesson is that **you must decorrelate the scalar from token content**, and
-use a **long** trace, or you get a confounded or aliased "helix".
+use a **long** trace, or you get a confounded or aliased "helix". Two early
+traces (since retired from `configs/`) taught it the hard way: a short *count
+1–80* (~3 lines) was **too short** → aliasing artifacts (period 3 = token
+rhythm, 29 = range); and a pure *`0123456789` repeat* was **confounded** — its
+gorgeous period‑8 "helix" (residual R² 0.85–0.99) was the **digit‑token
+manifold**, not counting (column ≡ digit). `wrap-text.yaml` fixes both:
+hard‑wrapped prose (token-at-a-column varies line to line) over many lines.
 
-| Trace (`configs/…`) | model | content vs column | linear R² | helix |
-| --- | --- | --- | --- | --- |
-| `linebreak.yaml` (count 1–80, ~3 lines) | 7B | decorrelated but **too short** | 0.83 | artifacts (period 3 = token rhythm; period 29 = range) |
-| `count-clean.yaml` (`0123456789` ×13) | 7B | **confounded** (column ≡ digit) | 0.99 | period‑8, residual R² 0.85–0.99 — but this is the **digit‑token manifold**, not counting |
-| `wrap-text.yaml` (hard‑wrapped prose, ~40 lines) | 7B | **decorrelated + long** | 0.88 | residual R² ≈ 0.25 at period≈range → **no counting helix** |
-| `wrap-text.yaml` | **14B** (fp16 GPU) | **decorrelated + long** | **0.92** | residual R² ≈ **0.48 at interior period 20 ≈ line width** → **partial / emerging helix** |
-| `wrap-text.yaml` | **32B** (4-bit GPU) | **decorrelated + long** | 0.75 | residual R² ≈ **0.37 at interior period 21 ≈ line width** → partial helix (quantization-depressed) |
+All rows below are `configs/wrap-text.yaml` (decorrelated + long), varying only
+the model:
+
+| model | linear R² | helix |
+| --- | --- | --- |
+| 7B | 0.88 | residual R² ≈ 0.25 at period≈range → **no counting helix** |
+| **14B** (fp16 GPU) | **0.92** | residual R² ≈ **0.48 at interior period 20 ≈ line width** → **partial / emerging helix** |
+| **32B** (4-bit GPU) | 0.75 | residual R² ≈ **0.37 at interior period 21 ≈ line width** → partial helix (quantization-depressed) |
 
 Three lessons: (1) once content is decorrelated (`wrap-text`), the gorgeous
 period‑8 helix from the repeating‑digit trace **vanishes** — confirming it was

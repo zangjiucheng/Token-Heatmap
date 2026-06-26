@@ -1,0 +1,32 @@
+# Multi-step reasoning — a small algebra word problem (a*b=20, a+b=9 -> a,b=4,5).
+# Interesting because the answer isn't a lookup: watch the Logit Lens resolve the
+# numbers across layers/steps, and use Direct Logit Attribution on the answer
+# tokens to see which layers (and heads) write them. The arithmetic needs a
+# capable model, so this is a GPU/HPC config (Qwen2.5-14B).
+#
+# Reproduce (HPC):  token-heatmap hpc run configs/reasoning.yaml --gpu l40s
+# On a big local GPU:  token-heatmap trace --config configs/reasoning.yaml --serve --frontend
+
+model: Qwen/Qwen2.5-14B-Instruct
+prompt: "Solve this step by step. We have a * b = 20 and a + b = 9. What are a and b?"
+
+max_new_tokens: 96
+temperature: 0.3
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/reasoning
+
+capture_logit_lens: true
+lens_layers: all
+lens_top_k: 8
+
+# Activations (+ full) drive Direct Logit Attribution on the answer tokens.
+# Attention is captured but NOT full: eager full-attention on a 14B over ~96
+# tokens is slow and memory-heavy. Flip capture_full_attention to true if you
+# want per-head attention maps and can spare the time / VRAM.
+capture_attention: true
+capture_activations: true
+capture_full_activations: true
