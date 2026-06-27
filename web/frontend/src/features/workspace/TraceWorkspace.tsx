@@ -36,6 +36,8 @@ export interface TraceWorkspaceProps {
   selectedStep: number | null;
   /** Spine — generated-token strip, always visible above the lens. */
   tokenStrip: ReactNode;
+  /** Spine — playback transport, pinned left of the token strip. */
+  transport?: ReactNode;
   /** Spine — entropy / probability timelines, docked below the lens. */
   timelines: ReactNode;
   /** The grouped lens navigation (LensRail). */
@@ -69,6 +71,7 @@ export function TraceWorkspace({
   stepCount,
   selectedStep,
   tokenStrip,
+  transport,
   timelines,
   rail,
   controlBar,
@@ -87,7 +90,9 @@ export function TraceWorkspace({
   // Inspector is resizable by dragging the gutter on its left edge; the chosen
   // width persists across reloads. `pendingDelta` tracks an in-progress drag so
   // we only write to storage on commit.
-  const [inspectorWidth, setInspectorWidth] = useState(readStoredInspectorWidth);
+  const [inspectorWidth, setInspectorWidth] = useState(
+    readStoredInspectorWidth,
+  );
   const [pendingDelta, setPendingDelta] = useState(0);
   const widthRef = useRef(inspectorWidth);
   widthRef.current = inspectorWidth;
@@ -111,7 +116,10 @@ export function TraceWorkspace({
     setPendingDelta(0);
     setInspectorWidth(INSPECTOR_DEFAULT);
     try {
-      window.localStorage.setItem(INSPECTOR_WIDTH_KEY, String(INSPECTOR_DEFAULT));
+      window.localStorage.setItem(
+        INSPECTOR_WIDTH_KEY,
+        String(INSPECTOR_DEFAULT),
+      );
     } catch {
       // ignore
     }
@@ -150,7 +158,12 @@ export function TraceWorkspace({
             </div>
           </dl>
         </div>
-        <div className="trace-workspace__spine">{tokenStrip}</div>
+        <div className="trace-workspace__spine">
+          {transport ? (
+            <div className="trace-workspace__transport">{transport}</div>
+          ) : null}
+          {tokenStrip}
+        </div>
       </header>
 
       <div className="trace-workspace__body">
@@ -183,7 +196,9 @@ export function TraceWorkspace({
               aria-controls="trace-overview-timelines"
               data-testid="overview-toggle"
             >
-              <span className="eyebrow">Overview · entropy &amp; probability</span>
+              <span className="eyebrow">
+                Overview · entropy &amp; probability
+              </span>
               <ChevronIcon direction={timelinesOpen ? 'down' : 'up'} />
             </button>
             {timelinesOpen ? (

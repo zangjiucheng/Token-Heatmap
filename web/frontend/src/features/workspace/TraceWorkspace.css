@@ -88,9 +88,22 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Spine — the generated tokens, always visible above the lens. */
+/* Spine — the generated tokens, always visible above the lens. The transport
+   is pinned left; the token strip fills the rest and scrolls horizontally. */
 .trace-workspace__spine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   padding: 0 var(--space-4) var(--space-3);
+}
+
+.trace-workspace__transport {
+  flex: none;
+}
+
+.trace-workspace__spine > .generated-token-strip {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* ── Body: rail | canvas | inspector ──────────────────────────────────── */

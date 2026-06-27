@@ -6,17 +6,26 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { useTrace } from '@/hooks/useTrace';
 import { useViewState } from '@/hooks/useViewState';
 import { useKeymap } from '@/hooks/useKeymap';
+import { usePlayback } from '@/hooks/usePlayback';
 import { announceLiveRegion } from '@/lib/a11y/announceLiveRegion';
 import type { ComparisonMode } from '@/features/comparison';
 import { takeTrace } from '@/lib/trace/store';
 import { TokenHeatmap } from '@/features/heatmap';
 import { SplitHeatmap } from '@/features/comparison';
-import { GeneratedTokenStrip, StepDetailPanel } from '@/features/detail';
+import {
+  GeneratedTokenStrip,
+  PlaybackControls,
+  StepDetailPanel,
+} from '@/features/detail';
 import {
   EntropyTimeline,
   SelectedProbabilityTimeline,
 } from '@/features/timelines';
-import { AttentionTab, AttentionHeadPattern, LogitLensTab } from '@/features/attention';
+import {
+  AttentionTab,
+  AttentionHeadPattern,
+  LogitLensTab,
+} from '@/features/attention';
 import { ActivationsTab } from '@/features/activations';
 import { ManifoldTab } from '@/features/manifold';
 import { ModelTab } from '@/features/model';
@@ -106,6 +115,17 @@ export function TraceViewerPage() {
   const totalSteps = trace?.steps.length ?? 0;
   const lastStep = Math.max(0, totalSteps - 1);
 
+  // Token playback — loop `selectedStep` through the active window so every
+  // lens animates. Plays within the step window if one is set, else the whole
+  // trace; disabled when there's nothing to step through.
+  const playbackRange: [number, number] = state.stepRange ?? [0, lastStep];
+  const playback = usePlayback({
+    selectedStep,
+    setSelectedStep,
+    range: playbackRange,
+    enabled: totalSteps > 1,
+  });
+
   useKeymap({
     'selection.prev': () => {
       if (!trace) return;
@@ -132,6 +152,10 @@ export function TraceViewerPage() {
     },
     'selection.clear': () => {
       setSelectedStep(null);
+    },
+    'selection.playPause': () => {
+      if (!trace) return;
+      playback.toggle();
     },
     'comparison.cycle': () => {
       const idx = COMPARISON_CYCLE.indexOf(state.mode);
@@ -297,9 +321,7 @@ export function TraceViewerPage() {
     const inspector = (
       <div className="trace-viewer-right" data-testid="trace-viewer-right">
         <StepDetailPanel trace={trace} selectedStep={selectedStep} />
-        {hasAttention &&
-        activeTab === 'attention' &&
-        state.selectedHead ? (
+        {hasAttention && activeTab === 'attention' && state.selectedHead ? (
           <div
             className="trace-viewer-right__attention-pattern"
             data-testid="trace-viewer-right-attention-pattern"
@@ -325,6 +347,15 @@ export function TraceViewerPage() {
         onToggleInspector={() => setRightOpen(!state.rightOpen)}
         timelinesOpen={timelinesOpen}
         onToggleTimelines={toggleTimelines}
+        transport={
+          <PlaybackControls
+            playing={playback.playing}
+            onToggle={playback.toggle}
+            speed={playback.speed}
+            onCycleSpeed={playback.cycleSpeed}
+            disabled={totalSteps <= 1}
+          />
+        }
         tokenStrip={
           <GeneratedTokenStrip
             trace={trace}

@@ -127,6 +127,33 @@ export function InspectorIcon({ size = 16, className }: IconProps) {
   );
 }
 
+export function PlayIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg
+      {...baseProps(size)}
+      fill="currentColor"
+      stroke="none"
+      className={className}
+    >
+      <path d="M8 5.5v13a1 1 0 0 0 1.5.86l11-6.5a1 1 0 0 0 0-1.72l-11-6.5A1 1 0 0 0 8 5.5Z" />
+    </svg>
+  );
+}
+
+export function PauseIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg
+      {...baseProps(size)}
+      fill="currentColor"
+      stroke="none"
+      className={className}
+    >
+      <rect x="6.5" y="5" width="3.5" height="14" rx="1" />
+      <rect x="14" y="5" width="3.5" height="14" rx="1" />
+    </svg>
+  );
+}
+
 export function HelpIcon({ size = 16, className }: IconProps) {
   return (
     <svg {...baseProps(size)} className={className}>

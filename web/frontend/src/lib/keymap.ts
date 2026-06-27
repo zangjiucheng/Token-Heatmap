@@ -76,6 +76,13 @@ export const KEYMAP: ReadonlyArray<KeymapBinding> = [
     description: 'Clear tooltip / selection',
     display: 'Esc',
   },
+  {
+    id: 'selection.playPause',
+    trigger: { key: ' ' },
+    category: 'selection',
+    description: 'Play / pause stepping through the tokens',
+    display: 'Space',
+  },
 
   // View
   {
