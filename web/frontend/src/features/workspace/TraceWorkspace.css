@@ -1,6 +1,12 @@
 .trace-workspace {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  /* Pin the single column to the container width. Without an explicit column
+     the implicit `auto` track grows to the widest row's max-content, so a very
+     wide lens (a 120-step heatmap) stretches the whole workspace past the
+     viewport. minmax(0, 1fr) keeps it exactly the available width and lets the
+     panes inside contain their own overflow. */
+  grid-template-columns: minmax(0, 1fr);
   height: 100%;
   min-height: 0;
   background: var(--color-bg);
@@ -94,6 +100,13 @@
       --inspector-w
     );
   min-height: 0;
+  /* Let this grid item shrink below its content's intrinsic width. Without it
+     min-width defaults to `auto` (= content size), so a very wide lens (e.g. a
+     120-step heatmap) forces the whole body — and the inspector with it — far
+     past the viewport, where .app-shell__main clips it off-screen with no
+     scrollbar. With min-width:0 the minmax(0,1fr) canvas track is honoured and
+     the lens scrolls horizontally inside its own pane instead. */
+  min-width: 0;
 }
 
 /* Drag handle that resizes the inspector. Zero-width column when the inspector
