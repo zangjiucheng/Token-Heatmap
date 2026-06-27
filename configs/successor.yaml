@@ -1,0 +1,44 @@
+# Successor heads — the increment circuit (Gould et al., "Successor Heads:
+# Recurring, Interpretable Attention Heads in the Wild", 2024). Some attention
+# heads implement a clean +1 in token space: given an ordered token ("7",
+# "Wednesday", "March") they write the *next* one to the logits. Feed the model a
+# bare numeric run and the successor head should carry "N -> N+1".
+#
+# What to look for once it's served:
+#   - Heatmap: every step is near-deterministic (low entropy, P ~ 1) — the
+#     sequence is fully predictable, so the model commits hard to the successor.
+#   - Attribution / per-head DLA on a number token: a small set of heads should
+#     dominate the promoted logit; that's the successor head writing N+1 through
+#     its OV circuit. Ablate it and the increment should wobble.
+#   - Logit Lens: the next number resolves early/cleanly in depth — the increment
+#     is a shallow, mechanical operation, not late-layer reasoning.
+#
+# Scale note: per-head crispness is sharper on small models (docs/interpreting.md),
+# but the behaviour is robust at 7B and the increment stays block-level legible.
+# A nice variant: swap the prompt for months ("January February March April") to
+# see the same head generalise across an ordered, non-numeric vocabulary.
+#
+# Reproduce (HPC):     token-heatmap hpc run configs/successor.yaml --gpu l40s
+# Local (small GPU):   token-heatmap trace --config configs/successor.yaml --serve --frontend
+#         DLA / ablate: python examples/dla_causal_validation.py configs/successor.yaml
+
+model: Qwen/Qwen2.5-7B-Instruct
+prompt: "Continue the sequence, numbers only, nothing else:\n1 2 3 4 5 6 7 8 9 10 11 12 13 14"
+
+max_new_tokens: 24
+temperature: 0.2
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/successor
+
+capture_logit_lens: true
+lens_layers: all
+lens_top_k: 8
+
+capture_attention: true
+capture_full_attention: true
+capture_activations: true
+capture_full_activations: true

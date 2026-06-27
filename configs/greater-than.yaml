@@ -1,0 +1,44 @@
+# Greater-than — numeric inequality as a circuit (Hanna et al., "How does GPT-2
+# compute greater-than?", 2023). Given "...from the year 17ZZ to the year 17__",
+# a valid completion must be a two-digit year strictly greater than ZZ. The model
+# can't just copy or increment; it has to put probability on the whole *range*
+# (ZZ+1 .. 99) and suppress everything <= ZZ.
+#
+# What to look for once it's served:
+#   - Heatmap on the final (two-digit year) step: the candidate mass should sit on
+#     years ABOVE the start year (here 32), with the <=32 tokens pushed down — the
+#     signature of the greater-than computation, not a single-token guess.
+#   - Attribution / per-head DLA: the components promoting the high-year tokens vs.
+#     the ones suppressing low years; ablate a promoter and watch mass leak back
+#     onto invalid (<=32) years.
+#   - Logit Lens: the "must be larger" constraint should emerge across mid/late
+#     layers rather than at the embedding.
+#
+# Scale note: the behaviour is cleaner on a capable model (a 0.5B often ignores the
+# constraint and copies/repeats), so this is a 7B config. Contrast is instructive:
+# try --model Qwen/Qwen2.5-0.5B-Instruct and watch the inequality break.
+#
+# Reproduce (HPC):     token-heatmap hpc run configs/greater-than.yaml --gpu l40s
+# Local (small GPU):   token-heatmap trace --config configs/greater-than.yaml --serve --frontend
+#         DLA / ablate: python examples/dla_causal_validation.py configs/greater-than.yaml
+
+model: Qwen/Qwen2.5-7B-Instruct
+prompt: "Complete with a year, digits only: The war lasted from the year 1732 to the year 17"
+
+max_new_tokens: 6
+temperature: 0.2
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/greater-than
+
+capture_logit_lens: true
+lens_layers: all
+lens_top_k: 8
+
+capture_attention: true
+capture_full_attention: true
+capture_activations: true
+capture_full_activations: true
