@@ -38,6 +38,18 @@
       "additionalProperties": true,
       "description": "Functional head taxonomy: each attention head labelled by role (sink / induction / worker / local / minor / other) with its mean logit contribution, fused from per-head attention stats and direct logit attribution. Derived post-hoc and contribution-first — importance is anti-correlated with attention magnitude (attention sinks fire hardest yet write nothing). Present only when both per-head attention stats and direct logit attribution exist."
     },
+    "prompt_logit_lens": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Prompt-position logit lens: the residual at every PROMPT position decoded through the unembedding at every layer (top-k tokens). Unlike the per-step logit lens (answer position only), this surfaces intermediate computations that live over earlier tokens — e.g. the 'Texas' bridge over the 'Dallas' token in a two-hop recall. Present only when captured with --capture-logit-lens.",
+      "properties": {
+        "positions": {
+          "type": "array",
+          "description": "One entry per prompt position, each with the token and a per-layer top-k decode.",
+          "items": { "type": "object", "additionalProperties": true }
+        }
+      }
+    },
     "direct_logit_attribution": {
       "$ref": "#/$defs/DirectLogitAttribution",
       "description": "Per-step Direct Logit Attribution: the realized next-token logit decomposed into additive contributions from the residual input (embed) and each layer's attention-block (o_proj) and MLP-block (mlp_out) outputs, projected through the unembedding with the final norm folded as a fixed scale (transformer-circuits.pub/2025/attribution-graphs). A per-step `error` reports the unexplained residual. Present only when the producer captured full activations (`--capture-full-activations`)."

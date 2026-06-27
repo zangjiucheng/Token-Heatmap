@@ -277,6 +277,7 @@ def serialize_trace_to_json(
     model_architecture: dict[str, Any] | None = None,
     neuron_attribution: dict[str, Any] | None = None,
     direct_logit_attribution: dict[str, Any] | None = None,
+    prompt_logit_lens: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a JSON-safe payload conforming to ``docs/web/trace.schema.json``.
 
@@ -333,6 +334,8 @@ def serialize_trace_to_json(
         payload["neuron_attribution"] = neuron_attribution
     if direct_logit_attribution is not None:
         payload["direct_logit_attribution"] = direct_logit_attribution
+    if prompt_logit_lens is not None:
+        payload["prompt_logit_lens"] = prompt_logit_lens
     # Fuse per-head attention stats + per-head DLA into a functional head
     # taxonomy (sink / induction / worker / …). Pure-dict, derived from data
     # already in the payload, so it is skipped when either input is absent.

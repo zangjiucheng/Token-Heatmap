@@ -944,6 +944,25 @@ def run_trace(args: argparse.Namespace) -> int:
         clean = {k: v for k, v in entry.items() if not k.startswith("_")}
         trace_for_json.append(clean)
 
+    # Prompt-position logit lens: decode every prompt token at every layer so an
+    # intermediate hop (e.g. "Texas" over "Dallas") is visible, not just the
+    # answer position. One extra forward; gated on --capture-logit-lens.
+    prompt_logit_lens = None
+    if args.capture_logit_lens:
+        from llm_token_heatmap.prompt_logit_lens import compute_prompt_logit_lens
+
+        try:
+            _prompt_ids = tokenizer(args.prompt)["input_ids"]
+            prompt_logit_lens = compute_prompt_logit_lens(
+                model,
+                tokenizer,
+                _prompt_ids,
+                layers=args.lens_layers,
+                top_k=args.lens_top_k,
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            print(f"[token-heatmap] prompt logit lens skipped: {exc}")
+
     json_payload = _serialize_trace_to_json(
         trace=trace_for_json,
         metadata=metadata,
@@ -956,6 +975,7 @@ def run_trace(args: argparse.Namespace) -> int:
         model_architecture=model_architecture,
         neuron_attribution=neuron_attribution,
         direct_logit_attribution=direct_logit_attribution,
+        prompt_logit_lens=prompt_logit_lens,
     )
     json_path = output_dir / "adaptive_token_trace.json"
     json_path.write_text(_dump_trace_json(json_payload), encoding="utf-8")

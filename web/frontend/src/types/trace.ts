@@ -22,6 +22,18 @@ export interface Trace {
   head_roles?: {
     [k: string]: unknown | undefined;
   };
+  /**
+   * Prompt-position logit lens: the residual at every PROMPT position decoded through the unembedding at every layer (top-k tokens). Unlike the per-step logit lens (answer position only), this surfaces intermediate computations that live over earlier tokens — e.g. the 'Texas' bridge over the 'Dallas' token in a two-hop recall. Present only when captured with --capture-logit-lens.
+   */
+  prompt_logit_lens?: {
+    /**
+     * One entry per prompt position, each with the token and a per-layer top-k decode.
+     */
+    positions?: {
+      [k: string]: unknown | undefined;
+    }[];
+    [k: string]: unknown | undefined;
+  };
   direct_logit_attribution?: DirectLogitAttribution;
   /**
    * Per-trace metadata: model identity, sampling parameters, and prompt.
