@@ -4,14 +4,21 @@
   "title": "LLM Token Heatmap Trace",
   "description": "Canonical JSON payload for a single adaptive-probe generation trace. Produced by `llm_token_heatmap.generate_with_adaptive_probe` after lightweight serialization, and consumed by the CLI exporter and the web frontend viewer. One file == one prompt == one generation.",
   "type": "object",
-  "required": ["schema_version", "metadata", "tokens", "steps"],
+  "required": [
+    "schema_version",
+    "metadata",
+    "tokens",
+    "steps"
+  ],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
       "type": "string",
       "description": "Semver of this schema. Bump major on breaking changes; consumers must hard-fail on unknown major.",
       "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "examples": ["2.0.0"]
+      "examples": [
+        "2.0.0"
+      ]
     },
     "attention_metadata": {
       "$ref": "#/$defs/AttentionMetadata",
@@ -58,14 +65,19 @@
         "model": {
           "type": "string",
           "description": "HuggingFace model id or local path used for generation.",
-          "examples": ["Qwen/Qwen2.5-0.5B-Instruct"]
+          "examples": [
+            "Qwen/Qwen2.5-0.5B-Instruct"
+          ]
         },
         "prompt": {
           "type": "string",
           "description": "The user prompt before any chat-template wrapping."
         },
         "system_prompt": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Optional system message used when use_chat_template=true."
         },
         "use_chat_template": {
@@ -83,13 +95,21 @@
         },
         "device": {
           "type": "string",
-          "enum": ["cpu", "cuda", "mps"],
+          "enum": [
+            "cpu",
+            "cuda",
+            "mps"
+          ],
           "description": "Device that ran inference."
         },
         "dtype": {
           "type": "string",
           "description": "PyTorch dtype used for the forward pass.",
-          "examples": ["float16", "float32", "bfloat16"]
+          "examples": [
+            "float16",
+            "float32",
+            "bfloat16"
+          ]
         },
         "vocab_size": {
           "type": "integer",
@@ -128,7 +148,11 @@
         },
         "probe_config": {
           "type": "object",
-          "required": ["min_k", "max_k", "mass_threshold"],
+          "required": [
+            "min_k",
+            "max_k",
+            "mass_threshold"
+          ],
           "additionalProperties": false,
           "properties": {
             "min_k": {
@@ -156,7 +180,10 @@
     "tokens": {
       "type": "object",
       "description": "Prompt tokens, surfaced separately so the UI can render the prompt with the same hover affordances as generated tokens. These are the tokens fed into the model before step 0 (after chat-template wrapping, if any).",
-      "required": ["prompt_token_ids", "prompt_tokens"],
+      "required": [
+        "prompt_token_ids",
+        "prompt_tokens"
+      ],
       "additionalProperties": false,
       "properties": {
         "prompt_token_ids": {
@@ -187,7 +214,12 @@
     "Manifold": {
       "type": "object",
       "description": "Manifold analysis results, one entry per analyzed (layer, submodule) activation cloud. See `llm_token_heatmap/manifold.py`.",
-      "required": ["schema_version", "method", "n_components", "layers"],
+      "required": [
+        "schema_version",
+        "method",
+        "n_components",
+        "layers"
+      ],
       "additionalProperties": false,
       "properties": {
         "schema_version": {
@@ -197,7 +229,9 @@
         },
         "method": {
           "type": "string",
-          "enum": ["pca"],
+          "enum": [
+            "pca"
+          ],
           "description": "Dimensionality-reduction method used for the projection."
         },
         "n_components": {
@@ -220,7 +254,11 @@
     "ManifoldScalar": {
       "type": "object",
       "description": "The per-position task scalar a supervised probe was fit against (present when `manifold --probe` was used). Lets the web app colour the manifold by the scalar instead of by generation step.",
-      "required": ["name", "positions", "values"],
+      "required": [
+        "name",
+        "positions",
+        "values"
+      ],
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -290,7 +328,10 @@
           "$ref": "#/$defs/ManifoldPca"
         },
         "participation_ratio": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "Effective dimensionality (Σλ)²/Σλ²; null when undefined."
         },
         "intrinsic_dimension": {
@@ -313,7 +354,13 @@
     "ManifoldProbe": {
       "type": "object",
       "description": "Supervised linear-probe result for this cloud: how well the manifold's task scalar is linearly decodable from the activations. See `llm_token_heatmap/probe.py`.",
-      "required": ["scalar", "r2_cv", "r2_full", "n_components", "cv_folds"],
+      "required": [
+        "scalar",
+        "r2_cv",
+        "r2_full",
+        "n_components",
+        "cv_folds"
+      ],
       "additionalProperties": false,
       "properties": {
         "scalar": {
@@ -321,11 +368,17 @@
           "description": "Name of the probed scalar (matches `manifold.scalar.name`)."
         },
         "r2_cv": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "Cross-validated R² of the scalar decode; null when too few positions to cross-validate."
         },
         "r2_full": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "In-sample R² of the full-data fit; null when the probe could not be fit."
         },
         "n_components": {
@@ -346,19 +399,32 @@
     "ManifoldProbeCircular": {
       "type": "object",
       "description": "Helix test: how decodable the *circular* coordinate cos/sin(2π·scalar/period) of the scalar is, at the best-fitting period. High circular r2_cv together with a high linear probe r2_cv is the helix signature (a plain linear ramp gives near-zero circular r2_cv).",
-      "required": ["best_period", "r2_cv", "r2_full"],
+      "required": [
+        "best_period",
+        "r2_cv",
+        "r2_full"
+      ],
       "additionalProperties": false,
       "properties": {
         "best_period": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "Period (in scalar units) whose circular coordinate is most decodable; null when the scalar range is too small to resolve one."
         },
         "r2_cv": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "Cross-validated R² of decoding the circular coordinate at `best_period` (averaged over cos and sin)."
         },
         "r2_full": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "In-sample R² of the circular decode at `best_period`."
         }
       }
@@ -395,18 +461,26 @@
     },
     "ManifoldIntrinsicDimension": {
       "type": "object",
-      "required": ["twonn"],
+      "required": [
+        "twonn"
+      ],
       "additionalProperties": false,
       "properties": {
         "twonn": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "TwoNN intrinsic-dimension estimate; null when not estimable."
         }
       }
     },
     "ManifoldProjection": {
       "type": "object",
-      "required": ["n_components", "coords"],
+      "required": [
+        "n_components",
+        "coords"
+      ],
       "additionalProperties": false,
       "properties": {
         "n_components": {
@@ -427,29 +501,45 @@
     },
     "ManifoldCurvature": {
       "type": "object",
-      "required": ["mean", "per_position"],
+      "required": [
+        "mean",
+        "per_position"
+      ],
       "additionalProperties": false,
       "properties": {
         "mean": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "Mean interior discrete curvature; null when undefined."
         },
         "per_position": {
           "type": "array",
           "description": "Per-position curvature; endpoints and degenerate points are null.",
           "items": {
-            "type": ["number", "null"]
+            "type": [
+              "number",
+              "null"
+            ]
           }
         }
       }
     },
     "ManifoldPeriodicity": {
       "type": "object",
-      "required": ["dominant_period", "power", "peak_frequency"],
+      "required": [
+        "dominant_period",
+        "power",
+        "peak_frequency"
+      ],
       "additionalProperties": false,
       "properties": {
         "dominant_period": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "Period (in positions) of the dominant non-DC FFT component of PC1; null when none."
         },
         "power": {
@@ -458,13 +548,21 @@
           "description": "Normalized spectral power of the dominant component (peak / total)."
         },
         "peak_frequency": {
-          "type": ["number", "null"]
+          "type": [
+            "number",
+            "null"
+          ]
         }
       }
     },
     "Step": {
       "type": "object",
-      "required": ["step", "selected", "raw", "processed"],
+      "required": [
+        "step",
+        "selected",
+        "raw",
+        "processed"
+      ],
       "additionalProperties": false,
       "properties": {
         "step": {
@@ -499,11 +597,17 @@
           }
         },
         "attention_sidecar_ref": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "URI pointer to a Tier 2 sidecar payload (full attention distribution and/or raw Q/K/V tensors) for this step, or null when no sidecar was written. Sidecar files follow `docs/web/attention-sidecar.schema.json`."
         },
         "activation_sidecar_ref": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "URI pointer to a Tier 2 activation sidecar payload (full per-(layer, submodule) hidden-state tensors) for this step, written when generated with `--capture-full-activations`. Null or absent when no activation sidecar was written."
         },
         "token_id": {
@@ -533,12 +637,17 @@
         "architecture": {
           "type": "string",
           "description": "Model class name from `config.architectures[0]`.",
-          "examples": ["Qwen2ForCausalLM"]
+          "examples": [
+            "Qwen2ForCausalLM"
+          ]
         },
         "model_type": {
           "type": "string",
           "description": "HuggingFace `config.model_type`.",
-          "examples": ["qwen2", "llama"]
+          "examples": [
+            "qwen2",
+            "llama"
+          ]
         },
         "num_layers": {
           "type": "integer",
@@ -596,7 +705,11 @@
         "dtype": {
           "type": "string",
           "description": "Parameter / compute dtype at trace time.",
-          "examples": ["float16", "float32", "bfloat16"]
+          "examples": [
+            "float16",
+            "float32",
+            "bfloat16"
+          ]
         }
       }
     },
@@ -608,7 +721,9 @@
         "method": {
           "type": "string",
           "description": "Identifier for the scoring method.",
-          "examples": ["twera_approx"]
+          "examples": [
+            "twera_approx"
+          ]
         },
         "n_steps": {
           "type": "integer",
@@ -631,7 +746,11 @@
     "NeuronAttributionLayer": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["layer", "submodule", "neurons"],
+      "required": [
+        "layer",
+        "submodule",
+        "neurons"
+      ],
       "properties": {
         "layer": {
           "type": "integer",
@@ -654,7 +773,10 @@
     "NeuronAttributionNeuron": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["index", "twera"],
+      "required": [
+        "index",
+        "twera"
+      ],
       "properties": {
         "index": {
           "type": "integer",
@@ -679,7 +801,9 @@
         "method": {
           "type": "string",
           "description": "Identifier for the decomposition method.",
-          "examples": ["dla_fold_norm"]
+          "examples": [
+            "dla_fold_norm"
+          ]
         },
         "n_steps": {
           "type": "integer",
@@ -707,7 +831,11 @@
     "DirectLogitAttributionStep": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["step", "total_logit", "layers"],
+      "required": [
+        "step",
+        "total_logit",
+        "layers"
+      ],
       "properties": {
         "step": {
           "type": "integer",
@@ -747,7 +875,11 @@
     "DirectLogitAttributionLayer": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["layer", "attn", "mlp"],
+      "required": [
+        "layer",
+        "attn",
+        "mlp"
+      ],
       "properties": {
         "layer": {
           "type": "integer",
@@ -774,7 +906,10 @@
     "DirectLogitAttributionHead": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["head", "attn"],
+      "required": [
+        "head",
+        "attn"
+      ],
       "properties": {
         "head": {
           "type": "integer",
@@ -873,7 +1008,10 @@
     },
     "ActivationTopNeuron": {
       "type": "object",
-      "required": ["index", "value"],
+      "required": [
+        "index",
+        "value"
+      ],
       "additionalProperties": false,
       "properties": {
         "index": {
@@ -935,11 +1073,7 @@
         "entropy",
         "self_weight",
         "bos_weight",
-        "top_positions",
-        "q_norm",
-        "k_norm",
-        "v_norm",
-        "qk_alignment_angle"
+        "top_positions"
       ],
       "additionalProperties": false,
       "properties": {
@@ -972,75 +1106,45 @@
             "$ref": "#/$defs/AttentionTopPosition"
           }
         },
-        "q_norm": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Mean L2 norm of the current-token Q vector across heads."
-        },
-        "k_norm": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Mean L2 norm of the current-token K vector across heads."
-        },
-        "v_norm": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Mean L2 norm of the current-token V vector across heads."
-        },
-        "qk_alignment_angle": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 180,
-          "description": "Mean angle in degrees between the head's Q vector and the K vector of its top-attended source position, averaged across heads."
-        },
         "per_head": {
-          "type": "array",
-          "description": "Optional per-head Tier 1 scalars, one entry per attention head (length = attention_metadata.num_attention_heads), ordered by head index. Lets the Layer x Head grid color each head distinctly; absent on older traces, where the grid broadcasts the layer mean across all heads.",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "entropy",
-              "self_weight",
-              "bos_weight",
-              "top1_weight",
-              "q_norm",
-              "k_norm",
-              "v_norm"
-            ],
-            "properties": {
-              "entropy": {
-                "type": "number",
-                "description": "This head's attention entropy in nats."
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Optional per-head Tier 1 scalars in COLUMNAR form: each property is a parallel array of length attention_metadata.num_attention_heads, ordered by head index. Columnar (vs a list of per-head objects) keeps the repeated JSON keys from dominating the file. Lets the Layer x Head grid color each head distinctly; absent on older traces, where the grid broadcasts the layer mean. Q/K/V norms are intentionally not stored — rank head importance by direct logit attribution (see head_roles), not attention magnitude.",
+          "properties": {
+            "entropy": {
+              "type": "array",
+              "items": {
+                "type": "number"
               },
-              "self_weight": {
-                "type": "number",
-                "description": "This head's attention weight on the current (self) position."
+              "description": "Per-head attention entropy (nats)."
+            },
+            "self_weight": {
+              "type": "array",
+              "items": {
+                "type": "number"
               },
-              "bos_weight": {
-                "type": "number",
-                "description": "This head's attention weight on the BOS position."
+              "description": "Per-head attention weight on the current (self) position."
+            },
+            "bos_weight": {
+              "type": "array",
+              "items": {
+                "type": "number"
               },
-              "top1_weight": {
-                "type": "number",
-                "description": "This head's single largest source-position attention weight."
+              "description": "Per-head attention weight on the BOS / sink position."
+            },
+            "top1_weight": {
+              "type": "array",
+              "items": {
+                "type": "number"
               },
-              "q_norm": {
-                "type": "number",
-                "description": "L2 norm of this head's current-token Q vector."
+              "description": "Per-head single largest source-position attention weight."
+            },
+            "induction": {
+              "type": "array",
+              "items": {
+                "type": "number"
               },
-              "k_norm": {
-                "type": "number",
-                "description": "L2 norm of this head's current-token K vector."
-              },
-              "v_norm": {
-                "type": "number",
-                "description": "L2 norm of this head's current-token V vector."
-              },
-              "induction": {
-                "type": "number",
-                "description": "Induction score: attention this head places on the token following the current token's most recent earlier occurrence (the induction-head signature). Optional; 0 when the current token is novel or only repeats immediately before the query."
-              }
+              "description": "Per-head induction score: attention placed on the token following the current token's most recent earlier occurrence. 0 when the current token is novel."
             }
           }
         }
@@ -1048,7 +1152,10 @@
     },
     "AttentionTopPosition": {
       "type": "object",
-      "required": ["position", "weight"],
+      "required": [
+        "position",
+        "weight"
+      ],
       "additionalProperties": false,
       "properties": {
         "position": {
@@ -1066,7 +1173,10 @@
     },
     "SelectedToken": {
       "type": "object",
-      "required": ["token_id", "token"],
+      "required": [
+        "token_id",
+        "token"
+      ],
       "additionalProperties": false,
       "properties": {
         "token_id": {
@@ -1134,7 +1244,13 @@
     },
     "Candidate": {
       "type": "object",
-      "required": ["rank", "token_id", "token", "prob", "logprob"],
+      "required": [
+        "rank",
+        "token_id",
+        "token",
+        "prob",
+        "logprob"
+      ],
       "additionalProperties": false,
       "properties": {
         "rank": {
@@ -1203,7 +1319,13 @@
     },
     "LogitLensCandidate": {
       "type": "object",
-      "required": ["rank", "token_id", "token", "prob", "logprob"],
+      "required": [
+        "rank",
+        "token_id",
+        "token",
+        "prob",
+        "logprob"
+      ],
       "additionalProperties": false,
       "properties": {
         "rank": {

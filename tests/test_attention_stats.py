@@ -259,14 +259,13 @@ def test_generation_with_probe_attaches_attention_block() -> None:
                 "self_weight",
                 "bos_weight",
                 "top_positions",
-                "q_norm",
-                "k_norm",
-                "v_norm",
-                "qk_alignment_angle",
+                "per_head",
             }.issubset(layer_entry.keys())
             assert 0.0 <= layer_entry["self_weight"] <= 1.0
             assert 0.0 <= layer_entry["bos_weight"] <= 1.0
-            assert 0.0 <= layer_entry["qk_alignment_angle"] <= 180.0
+            # per_head is columnar (no q/k/v norms — dropped as low-value).
+            assert isinstance(layer_entry["per_head"], dict)
+            assert "bos_weight" in layer_entry["per_head"]
 
 
 def test_compute_attention_stats_top_k_per_head() -> None:

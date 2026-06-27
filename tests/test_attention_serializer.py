@@ -113,37 +113,27 @@ def test_attention_stats_to_payload_matches_schema() -> None:
         "self_weight",
         "bos_weight",
         "top_positions",
-        "q_norm",
-        "k_norm",
-        "v_norm",
-        "qk_alignment_angle",
         "per_head",
     }
     assert 0.0 <= entry["self_weight"] <= 1.0
     assert 0.0 <= entry["bos_weight"] <= 1.0
     assert entry["entropy"] >= 0.0
 
-    # per_head carries one entry per head with the grid scalars, and the
-    # heads must be genuinely distinct (regression: the inline serializer used
-    # to emit only the layer mean, so the grid broadcast it across all heads).
+    # per_head is COLUMNAR: one parallel array per grid scalar (no q/k/v norms —
+    # they measure magnitude, not function), each of length num_attention_heads.
+    # Heads must be genuinely distinct (regression: the serializer used to emit
+    # only the layer mean, so the grid broadcast it across all heads).
     per_head = entry["per_head"]
-    assert len(per_head) == stats.num_attention_heads
-    assert all(
-        set(h)
-        == {
-            "entropy",
-            "self_weight",
-            "bos_weight",
-            "induction",
-            "top1_weight",
-            "q_norm",
-            "k_norm",
-            "v_norm",
-        }
-        for h in per_head
-    )
-    assert len({h["self_weight"] for h in per_head}) > 1
-    mean_self = sum(h["self_weight"] for h in per_head) / len(per_head)
+    assert set(per_head) == {
+        "entropy",
+        "self_weight",
+        "bos_weight",
+        "induction",
+        "top1_weight",
+    }
+    assert all(len(col) == stats.num_attention_heads for col in per_head.values())
+    assert len(set(per_head["self_weight"])) > 1
+    mean_self = sum(per_head["self_weight"]) / len(per_head["self_weight"])
     assert entry["self_weight"] == pytest.approx(mean_self)
 
     # Embed inside a step and validate against the trace schema.
@@ -180,18 +170,18 @@ def test_induction_score_scores_post_occurrence_attention() -> None:
     per_head = attention_stats_to_payload(
         stats, capture_full=True, top_k_positions=4, token_ids=token_ids
     )["attention"][0]["per_head"]
-    assert per_head[0]["induction"] == pytest.approx(0.9)
-    assert per_head[1]["induction"] == pytest.approx(0.0)
+    assert per_head["induction"][0] == pytest.approx(0.9)
+    assert per_head["induction"][1] == pytest.approx(0.0)
 
     # A novel query token has no induction target -> 0 for every head.
     novel = attention_stats_to_payload(
         stats, capture_full=True, top_k_positions=4, token_ids=[10, 20, 30, 40, 50]
     )
-    assert all(h["induction"] == 0.0 for h in novel["attention"][0]["per_head"])
+    assert all(v == 0.0 for v in novel["attention"][0]["per_head"]["induction"])
 
     # No token_ids at all -> score is reported as 0 (and stays schema-valid).
     none = attention_stats_to_payload(stats, capture_full=True, top_k_positions=4)
-    assert all(h["induction"] == 0.0 for h in none["attention"][0]["per_head"])
+    assert all(v == 0.0 for v in none["attention"][0]["per_head"]["induction"])
 
 
 # --------------------------------------------------------------------------- #

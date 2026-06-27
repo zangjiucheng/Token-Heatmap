@@ -1,35 +1,30 @@
 import type { AttentionLayerEntry } from '@/types/trace';
 
+// Ordered functional-first: BOS-weight (sink signature) and induction lead,
+// because a head's role is what it does, not how big its vectors are. Q/K/V
+// norms were removed — they measure activation magnitude, which is
+// anti-correlated with a head's actual contribution.
 export type AttentionMetric =
-  | 'entropy'
-  | 'self_weight'
   | 'bos_weight'
   | 'induction'
+  | 'self_weight'
   | 'top1_weight'
-  | 'q_norm'
-  | 'k_norm'
-  | 'v_norm';
+  | 'entropy';
 
 export const ATTENTION_METRICS: ReadonlyArray<AttentionMetric> = [
-  'entropy',
-  'self_weight',
   'bos_weight',
   'induction',
+  'self_weight',
   'top1_weight',
-  'q_norm',
-  'k_norm',
-  'v_norm',
+  'entropy',
 ];
 
 export const ATTENTION_METRIC_LABELS: Record<AttentionMetric, string> = {
-  entropy: 'Entropy',
-  self_weight: 'Self-weight',
-  bos_weight: 'BOS weight',
+  bos_weight: 'BOS weight (sink)',
   induction: 'Induction',
+  self_weight: 'Self-weight',
   top1_weight: 'Top-1 weight',
-  q_norm: 'Q norm',
-  k_norm: 'K norm',
-  v_norm: 'V norm',
+  entropy: 'Entropy',
 };
 
 /**
@@ -45,18 +40,27 @@ export interface PerHeadAttentionScalars {
   /**
    * Induction score — attention this head puts on the token after the current
    * token's most recent earlier occurrence. High in induction heads; 0 in the
-   * broadcast fallback (older traces carry no per-head induction at the layer
-   * level).
+   * broadcast fallback (older traces carry no per-head induction).
    */
   induction: number;
   top1_weight: number;
-  q_norm: number;
-  k_norm: number;
-  v_norm: number;
+}
+
+/**
+ * Per-head scalars in COLUMNAR form — one parallel array per metric, ordered by
+ * head index (matches the trace schema). Columnar keeps the repeated JSON keys
+ * from bloating the file. Q/K/V norms are intentionally absent.
+ */
+export interface PerHeadAttentionColumns {
+  entropy?: number[];
+  self_weight?: number[];
+  bos_weight?: number[];
+  induction?: number[];
+  top1_weight?: number[];
 }
 
 export interface AttentionLayerEntryWithPerHead extends AttentionLayerEntry {
-  per_head?: PerHeadAttentionScalars[];
+  per_head?: PerHeadAttentionColumns;
 }
 
 /** Compute the scalar value for a (metric, scalars) pair. */
@@ -68,35 +72,37 @@ export function getMetricValue(
 }
 
 /**
- * Derive per-head scalars for a given layer entry. When the entry has a
- * `per_head` array we return it directly; otherwise we broadcast the
- * layer-mean scalars across `numHeads` synthetic head slots. `top1_weight`
- * is approximated from the entry's `top_positions[0].weight` (the
- * highest-weight source position across heads).
+ * Derive per-head scalars for a layer entry. When the entry carries COLUMNAR
+ * `per_head` data we read each metric's array by head index; otherwise we
+ * broadcast the layer-mean scalars across `numHeads` slots (graceful fallback
+ * for older traces / file-drop mode). `top1_weight` falls back to the layer's
+ * highest-weight source position.
  */
 export function derivePerHeadScalars(
   entry: AttentionLayerEntry,
   numHeads: number,
 ): PerHeadAttentionScalars[] {
-  const ext = entry as AttentionLayerEntryWithPerHead;
-  if (ext.per_head && ext.per_head.length > 0) {
-    return ext.per_head;
-  }
+  const cols = (entry as AttentionLayerEntryWithPerHead).per_head;
   const top1 =
     entry.top_positions && entry.top_positions.length > 0
       ? entry.top_positions[0].weight
       : 0;
+  if (cols && cols.bos_weight && cols.bos_weight.length > 0) {
+    return Array.from({ length: cols.bos_weight.length }, (_, i) => ({
+      entropy: cols.entropy?.[i] ?? entry.entropy,
+      self_weight: cols.self_weight?.[i] ?? entry.self_weight,
+      bos_weight: cols.bos_weight?.[i] ?? entry.bos_weight,
+      induction: cols.induction?.[i] ?? 0,
+      top1_weight: cols.top1_weight?.[i] ?? top1,
+    }));
+  }
   const broadcast: PerHeadAttentionScalars = {
     entropy: entry.entropy,
     self_weight: entry.self_weight,
     bos_weight: entry.bos_weight,
-    // Induction is a per-head-only scalar (no layer-mean to broadcast); older
-    // traces without `per_head` fall back to 0 here.
+    // Induction has no layer-mean to broadcast; falls back to 0.
     induction: 0,
     top1_weight: top1,
-    q_norm: entry.q_norm,
-    k_norm: entry.k_norm,
-    v_norm: entry.v_norm,
   };
   return Array.from({ length: numHeads }, () => broadcast);
 }
@@ -113,7 +119,7 @@ export interface AttentionSidecar {
   /**
    * Ordered by `captured_layers` from `attention_metadata`. Each entry
    * carries the full `[num_heads, key_seq_len]` attention distribution and
-   * (optionally) per-head Q/K/V norms.
+   * (optionally) columnar per-head scalars.
    */
   layers: AttentionSidecarLayer[];
 }
@@ -122,5 +128,5 @@ export interface AttentionSidecarLayer {
   layer: number;
   /** Shape: [num_heads, key_seq_len]. */
   attention_distribution: number[][];
-  per_head?: PerHeadAttentionScalars[];
+  per_head?: PerHeadAttentionColumns;
 }

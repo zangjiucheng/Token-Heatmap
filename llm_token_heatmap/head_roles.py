@@ -78,13 +78,31 @@ def compute_head_roles(trace: dict[str, Any]) -> dict[str, Any] | None:
     for step in steps:
         for entry in step.get("attention", []) or []:
             layer = entry.get("layer")
-            per_head = entry.get("per_head") or []
-            if per_head:
-                have_per_head = True
-            for head, hd in enumerate(per_head):
-                bos.setdefault((layer, head), []).append(float(hd.get("bos_weight", 0.0)))
-                self_w.setdefault((layer, head), []).append(float(hd.get("self_weight", 0.0)))
-                induction.setdefault((layer, head), []).append(float(hd.get("induction", 0.0)))
+            per_head = entry.get("per_head")
+            if not per_head:
+                continue
+            have_per_head = True
+            if isinstance(per_head, dict):
+                # Columnar form: parallel arrays keyed by metric.
+                b = per_head.get("bos_weight") or []
+                s = per_head.get("self_weight") or []
+                ind = per_head.get("induction") or []
+                for head in range(max(len(b), len(s), len(ind))):
+                    bos.setdefault((layer, head), []).append(
+                        float(b[head]) if head < len(b) else 0.0
+                    )
+                    self_w.setdefault((layer, head), []).append(
+                        float(s[head]) if head < len(s) else 0.0
+                    )
+                    induction.setdefault((layer, head), []).append(
+                        float(ind[head]) if head < len(ind) else 0.0
+                    )
+            else:
+                # Legacy list-of-dicts form (pre-columnar traces).
+                for head, hd in enumerate(per_head):
+                    bos.setdefault((layer, head), []).append(float(hd.get("bos_weight", 0.0)))
+                    self_w.setdefault((layer, head), []).append(float(hd.get("self_weight", 0.0)))
+                    induction.setdefault((layer, head), []).append(float(hd.get("induction", 0.0)))
     if not have_per_head:
         return None
 

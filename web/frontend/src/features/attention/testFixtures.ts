@@ -16,9 +16,9 @@ function makeDistribution(): Step['raw'] {
 }
 
 function makeAttentionEntry(layer: number): AttentionLayerEntry {
-  // Intentionally inverse trends across metrics so the layer-mean
-  // broadcasting still yields per-metric color variation that tests can
-  // detect (e.g. layer 0 is the min for `entropy` but the max for `q_norm`).
+  // Inverse trends across metrics so the layer-mean broadcast still yields
+  // per-metric color variation the grid tests can detect (e.g. layer 0 is the
+  // min for `entropy` but, via top_positions, the max for `top1_weight`).
   return {
     layer,
     entropy: 1.0 + layer * 0.5,
@@ -28,10 +28,6 @@ function makeAttentionEntry(layer: number): AttentionLayerEntry {
       { position: 0, weight: 0.4 - layer * 0.05 },
       { position: 1, weight: 0.25 },
     ],
-    q_norm: 2.0 - layer * 0.5,
-    k_norm: 0.9 + layer * 0.1,
-    v_norm: 1.1,
-    qk_alignment_angle: 45,
   };
 }
 
@@ -50,7 +46,12 @@ export function makeAttentionTrace(): Trace {
       prompt: 'hi',
       generated_text: 'hi world',
       generated_at: '2026-05-13T00:00:00Z',
-      generation_params: { max_new_tokens: 2, temperature: 1, top_p: 1, sample_top_k: 0 },
+      generation_params: {
+        max_new_tokens: 2,
+        temperature: 1,
+        top_p: 1,
+        sample_top_k: 0,
+      },
       probe_config: { min_k: 1, max_k: 5, mass_threshold: 0.9 },
     },
     tokens: {
@@ -68,7 +69,13 @@ export function makeAttentionTrace(): Trace {
             layer_idx: 0,
             top_k: [
               { rank: 1, token_id: 9, token: ' the', prob: 0.2, logprob: -1.6 },
-              { rank: 2, token_id: 7, token: ' world', prob: 0.1, logprob: -2.3 },
+              {
+                rank: 2,
+                token_id: 7,
+                token: ' world',
+                prob: 0.1,
+                logprob: -2.3,
+              },
             ],
             entropy: 4.0,
             selected_token_rank: 2,
@@ -77,7 +84,13 @@ export function makeAttentionTrace(): Trace {
           {
             layer_idx: 3,
             top_k: [
-              { rank: 1, token_id: 7, token: ' world', prob: 0.6, logprob: -0.5 },
+              {
+                rank: 1,
+                token_id: 7,
+                token: ' world',
+                prob: 0.6,
+                logprob: -0.5,
+              },
               { rank: 2, token_id: 9, token: ' the', prob: 0.2, logprob: -1.6 },
             ],
             entropy: 1.2,

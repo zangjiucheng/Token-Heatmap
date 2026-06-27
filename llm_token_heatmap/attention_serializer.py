@@ -114,35 +114,31 @@ def _layer_stats_to_entry(
 
     heads = derived.heads
     n = max(1, len(heads))
-    # Per-head scalars so the Layer x Head grid can color each head distinctly.
-    # Without this the frontend broadcasts the layer mean across all heads, so
-    # every head in a layer renders identically. top1_weight is the head's
-    # single largest source weight (from its own top-k positions); induction is
-    # the attention this head puts on the induction target (the token after the
-    # current token's last occurrence) — high in induction heads.
-    per_head = [
-        {
-            "entropy": float(h.entropy),
-            "self_weight": float(h.self_weight),
-            "bos_weight": float(h.bos_weight),
-            "top1_weight": float(max((w for _, w in h.top_k_positions), default=0.0)),
-            "q_norm": float(h.q_norm),
-            "k_norm": float(h.k_norm),
-            "v_norm": float(h.v_norm),
-            "induction": _head_induction(weights_dense, head_idx, induction_target),
-        }
-        for head_idx, h in enumerate(heads)
-    ]
+    # Per-head scalars, stored COLUMNAR (parallel arrays keyed by metric, ordered
+    # by head index) instead of a list-of-dicts: the repeated JSON key names
+    # otherwise dominate the file (28 heads x 28 layers x N steps). The Layer x
+    # Head grid reads these columns. q/k/v norms are intentionally dropped — they
+    # measure activation magnitude, not function, and are anti-correlated with a
+    # head's actual contribution (see head_roles); use DLA to rank importance.
+    # top1_weight is the head's single largest source weight; induction is the
+    # attention it puts on the induction target (token after the current token's
+    # last occurrence) — high in induction heads.
+    per_head = {
+        "entropy": [float(h.entropy) for h in heads],
+        "self_weight": [float(h.self_weight) for h in heads],
+        "bos_weight": [float(h.bos_weight) for h in heads],
+        "top1_weight": [float(max((w for _, w in h.top_k_positions), default=0.0)) for h in heads],
+        "induction": [
+            _head_induction(weights_dense, head_idx, induction_target)
+            for head_idx in range(len(heads))
+        ],
+    }
     return {
         "layer": int(layer.layer_idx),
         "entropy": float(sum(h.entropy for h in heads) / n),
         "self_weight": float(sum(h.self_weight for h in heads) / n),
         "bos_weight": float(sum(h.bos_weight for h in heads) / n),
         "top_positions": top_positions,
-        "q_norm": float(sum(h.q_norm for h in heads) / n),
-        "k_norm": float(sum(h.k_norm for h in heads) / n),
-        "v_norm": float(sum(h.v_norm for h in heads) / n),
-        "qk_alignment_angle": float(sum(h.qk_alignment_angle_deg for h in heads) / n),
         "per_head": per_head,
     }
 

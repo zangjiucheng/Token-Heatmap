@@ -46,7 +46,7 @@ describe('AttentionLayerHeadGrid', () => {
     const cellEntropy = screen.getByTestId('attention-cell-0-0');
     const before = cellEntropy.getAttribute('fill');
     fireEvent.change(screen.getByTestId('attention-metric-select'), {
-      target: { value: 'q_norm' },
+      target: { value: 'bos_weight' },
     });
     const after = screen.getByTestId('attention-cell-0-0').getAttribute('fill');
     // Different metric implies different value-range mapping, so the color

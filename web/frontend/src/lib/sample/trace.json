@@ -37,7 +37,10 @@
   "steps": [
     {
       "step": 0,
-      "selected": { "token_id": 12095, "token": " Paris" },
+      "selected": {
+        "token_id": 12095,
+        "token": " Paris"
+      },
       "raw": {
         "k_used": 3,
         "entropy": 0.42,
@@ -46,9 +49,27 @@
         "selected_logprob": -0.1278,
         "selected_rank": 1,
         "candidates": [
-          { "rank": 1, "token_id": 12095, "token": " Paris", "prob": 0.88, "logprob": -0.1278 },
-          { "rank": 2, "token_id": 458, "token": " the", "prob": 0.07, "logprob": -2.659 },
-          { "rank": 3, "token_id": 1207, "token": " located", "prob": 0.02, "logprob": -3.912 }
+          {
+            "rank": 1,
+            "token_id": 12095,
+            "token": " Paris",
+            "prob": 0.88,
+            "logprob": -0.1278
+          },
+          {
+            "rank": 2,
+            "token_id": 458,
+            "token": " the",
+            "prob": 0.07,
+            "logprob": -2.659
+          },
+          {
+            "rank": 3,
+            "token_id": 1207,
+            "token": " located",
+            "prob": 0.02,
+            "logprob": -3.912
+          }
         ]
       },
       "processed": {
@@ -59,18 +80,54 @@
         "selected_logprob": -0.1054,
         "selected_rank": 1,
         "candidates": [
-          { "rank": 1, "token_id": 12095, "token": " Paris", "prob": 0.9, "logprob": -0.1054 },
-          { "rank": 2, "token_id": 458, "token": " the", "prob": 0.07, "logprob": -2.659 },
-          { "rank": 3, "token_id": 1207, "token": " located", "prob": 0.02, "logprob": -3.912 }
+          {
+            "rank": 1,
+            "token_id": 12095,
+            "token": " Paris",
+            "prob": 0.9,
+            "logprob": -0.1054
+          },
+          {
+            "rank": 2,
+            "token_id": 458,
+            "token": " the",
+            "prob": 0.07,
+            "logprob": -2.659
+          },
+          {
+            "rank": 3,
+            "token_id": 1207,
+            "token": " located",
+            "prob": 0.02,
+            "logprob": -3.912
+          }
         ]
       },
       "logit_lens": [
         {
           "layer_idx": 0,
           "top_k": [
-            { "rank": 1, "token_id": 458, "token": " the", "prob": 0.12, "logprob": -2.12 },
-            { "rank": 2, "token_id": 12095, "token": " Paris", "prob": 0.05, "logprob": -3.0 },
-            { "rank": 3, "token_id": 1207, "token": " located", "prob": 0.04, "logprob": -3.22 }
+            {
+              "rank": 1,
+              "token_id": 458,
+              "token": " the",
+              "prob": 0.12,
+              "logprob": -2.12
+            },
+            {
+              "rank": 2,
+              "token_id": 12095,
+              "token": " Paris",
+              "prob": 0.05,
+              "logprob": -3.0
+            },
+            {
+              "rank": 3,
+              "token_id": 1207,
+              "token": " located",
+              "prob": 0.04,
+              "logprob": -3.22
+            }
           ],
           "entropy": 4.18,
           "selected_token_rank": 9,
@@ -79,9 +136,27 @@
         {
           "layer_idx": 11,
           "top_k": [
-            { "rank": 1, "token_id": 12095, "token": " Paris", "prob": 0.41, "logprob": -0.89 },
-            { "rank": 2, "token_id": 458, "token": " the", "prob": 0.18, "logprob": -1.71 },
-            { "rank": 3, "token_id": 1207, "token": " located", "prob": 0.06, "logprob": -2.81 }
+            {
+              "rank": 1,
+              "token_id": 12095,
+              "token": " Paris",
+              "prob": 0.41,
+              "logprob": -0.89
+            },
+            {
+              "rank": 2,
+              "token_id": 458,
+              "token": " the",
+              "prob": 0.18,
+              "logprob": -1.71
+            },
+            {
+              "rank": 3,
+              "token_id": 1207,
+              "token": " located",
+              "prob": 0.06,
+              "logprob": -2.81
+            }
           ],
           "entropy": 1.92,
           "selected_token_rank": 1,
@@ -90,9 +165,27 @@
         {
           "layer_idx": 23,
           "top_k": [
-            { "rank": 1, "token_id": 12095, "token": " Paris", "prob": 0.88, "logprob": -0.1278 },
-            { "rank": 2, "token_id": 458, "token": " the", "prob": 0.07, "logprob": -2.659 },
-            { "rank": 3, "token_id": 1207, "token": " located", "prob": 0.02, "logprob": -3.912 }
+            {
+              "rank": 1,
+              "token_id": 12095,
+              "token": " Paris",
+              "prob": 0.88,
+              "logprob": -0.1278
+            },
+            {
+              "rank": 2,
+              "token_id": 458,
+              "token": " the",
+              "prob": 0.07,
+              "logprob": -2.659
+            },
+            {
+              "rank": 3,
+              "token_id": 1207,
+              "token": " located",
+              "prob": 0.02,
+              "logprob": -3.912
+            }
           ],
           "entropy": 0.42,
           "selected_token_rank": 1,
@@ -106,14 +199,19 @@
           "self_weight": 0.31,
           "bos_weight": 0.18,
           "top_positions": [
-            { "position": 4, "weight": 0.32 },
-            { "position": 0, "weight": 0.18 },
-            { "position": 3, "weight": 0.12 }
-          ],
-          "q_norm": 1.05,
-          "k_norm": 0.98,
-          "v_norm": 1.12,
-          "qk_alignment_angle": 42.7
+            {
+              "position": 4,
+              "weight": 0.32
+            },
+            {
+              "position": 0,
+              "weight": 0.18
+            },
+            {
+              "position": 3,
+              "weight": 0.12
+            }
+          ]
         },
         {
           "layer": 2,
@@ -121,21 +219,29 @@
           "self_weight": 0.22,
           "bos_weight": 0.27,
           "top_positions": [
-            { "position": 0, "weight": 0.27 },
-            { "position": 4, "weight": 0.23 },
-            { "position": 1, "weight": 0.15 }
-          ],
-          "q_norm": 1.21,
-          "k_norm": 1.04,
-          "v_norm": 1.08,
-          "qk_alignment_angle": 58.3
+            {
+              "position": 0,
+              "weight": 0.27
+            },
+            {
+              "position": 4,
+              "weight": 0.23
+            },
+            {
+              "position": 1,
+              "weight": 0.15
+            }
+          ]
         }
       ],
       "attention_sidecar_ref": null
     },
     {
       "step": 1,
-      "selected": { "token_id": 11, "token": "," },
+      "selected": {
+        "token_id": 11,
+        "token": ","
+      },
       "raw": {
         "k_used": 4,
         "entropy": 1.18,
@@ -144,10 +250,34 @@
         "selected_logprob": -0.5978,
         "selected_rank": 1,
         "candidates": [
-          { "rank": 1, "token_id": 11, "token": ",", "prob": 0.55, "logprob": -0.5978 },
-          { "rank": 2, "token_id": 13, "token": ".", "prob": 0.22, "logprob": -1.5141 },
-          { "rank": 3, "token_id": 220, "token": " ", "prob": 0.1, "logprob": -2.3026 },
-          { "rank": 4, "token_id": 323, "token": " and", "prob": 0.05, "logprob": -2.9957 }
+          {
+            "rank": 1,
+            "token_id": 11,
+            "token": ",",
+            "prob": 0.55,
+            "logprob": -0.5978
+          },
+          {
+            "rank": 2,
+            "token_id": 13,
+            "token": ".",
+            "prob": 0.22,
+            "logprob": -1.5141
+          },
+          {
+            "rank": 3,
+            "token_id": 220,
+            "token": " ",
+            "prob": 0.1,
+            "logprob": -2.3026
+          },
+          {
+            "rank": 4,
+            "token_id": 323,
+            "token": " and",
+            "prob": 0.05,
+            "logprob": -2.9957
+          }
         ]
       },
       "processed": {
@@ -155,18 +285,39 @@
         "entropy": 0.96,
         "top_mass_used": 0.95,
         "selected_prob": 0.62,
-        "selected_logprob": -0.4780,
+        "selected_logprob": -0.478,
         "selected_rank": 1,
         "candidates": [
-          { "rank": 1, "token_id": 11, "token": ",", "prob": 0.62, "logprob": -0.478 },
-          { "rank": 2, "token_id": 13, "token": ".", "prob": 0.22, "logprob": -1.5141 },
-          { "rank": 3, "token_id": 220, "token": " ", "prob": 0.11, "logprob": -2.2073 }
+          {
+            "rank": 1,
+            "token_id": 11,
+            "token": ",",
+            "prob": 0.62,
+            "logprob": -0.478
+          },
+          {
+            "rank": 2,
+            "token_id": 13,
+            "token": ".",
+            "prob": 0.22,
+            "logprob": -1.5141
+          },
+          {
+            "rank": 3,
+            "token_id": 220,
+            "token": " ",
+            "prob": 0.11,
+            "logprob": -2.2073
+          }
         ]
       }
     },
     {
       "step": 2,
-      "selected": { "token_id": 264, "token": " a" },
+      "selected": {
+        "token_id": 264,
+        "token": " a"
+      },
       "raw": {
         "k_used": 5,
         "entropy": 1.65,
@@ -175,11 +326,41 @@
         "selected_logprob": -0.9163,
         "selected_rank": 1,
         "candidates": [
-          { "rank": 1, "token_id": 264, "token": " a", "prob": 0.4, "logprob": -0.9163 },
-          { "rank": 2, "token_id": 279, "token": " the", "prob": 0.22, "logprob": -1.5141 },
-          { "rank": 3, "token_id": 825, "token": " one", "prob": 0.15, "logprob": -1.8971 },
-          { "rank": 4, "token_id": 374, "token": " is", "prob": 0.09, "logprob": -2.4079 },
-          { "rank": 5, "token_id": 1521, "token": " known", "prob": 0.05, "logprob": -2.9957 }
+          {
+            "rank": 1,
+            "token_id": 264,
+            "token": " a",
+            "prob": 0.4,
+            "logprob": -0.9163
+          },
+          {
+            "rank": 2,
+            "token_id": 279,
+            "token": " the",
+            "prob": 0.22,
+            "logprob": -1.5141
+          },
+          {
+            "rank": 3,
+            "token_id": 825,
+            "token": " one",
+            "prob": 0.15,
+            "logprob": -1.8971
+          },
+          {
+            "rank": 4,
+            "token_id": 374,
+            "token": " is",
+            "prob": 0.09,
+            "logprob": -2.4079
+          },
+          {
+            "rank": 5,
+            "token_id": 1521,
+            "token": " known",
+            "prob": 0.05,
+            "logprob": -2.9957
+          }
         ]
       },
       "processed": {
@@ -190,16 +371,43 @@
         "selected_logprob": -0.7765,
         "selected_rank": 1,
         "candidates": [
-          { "rank": 1, "token_id": 264, "token": " a", "prob": 0.46, "logprob": -0.7765 },
-          { "rank": 2, "token_id": 279, "token": " the", "prob": 0.24, "logprob": -1.4271 },
-          { "rank": 3, "token_id": 825, "token": " one", "prob": 0.16, "logprob": -1.8326 },
-          { "rank": 4, "token_id": 374, "token": " is", "prob": 0.07, "logprob": -2.659 }
+          {
+            "rank": 1,
+            "token_id": 264,
+            "token": " a",
+            "prob": 0.46,
+            "logprob": -0.7765
+          },
+          {
+            "rank": 2,
+            "token_id": 279,
+            "token": " the",
+            "prob": 0.24,
+            "logprob": -1.4271
+          },
+          {
+            "rank": 3,
+            "token_id": 825,
+            "token": " one",
+            "prob": 0.16,
+            "logprob": -1.8326
+          },
+          {
+            "rank": 4,
+            "token_id": 374,
+            "token": " is",
+            "prob": 0.07,
+            "logprob": -2.659
+          }
         ]
       }
     },
     {
       "step": 3,
-      "selected": { "token_id": 3283, "token": " city" },
+      "selected": {
+        "token_id": 3283,
+        "token": " city"
+      },
       "raw": {
         "k_used": 6,
         "entropy": 2.1,
@@ -208,12 +416,48 @@
         "selected_logprob": -1.204,
         "selected_rank": 1,
         "candidates": [
-          { "rank": 1, "token_id": 3283, "token": " city", "prob": 0.3, "logprob": -1.204 },
-          { "rank": 2, "token_id": 3502, "token": " town", "prob": 0.2, "logprob": -1.6094 },
-          { "rank": 3, "token_id": 1809, "token": " place", "prob": 0.15, "logprob": -1.8971 },
-          { "rank": 4, "token_id": 6722, "token": " capital", "prob": 0.12, "logprob": -2.1203 },
-          { "rank": 5, "token_id": 2978, "token": " country", "prob": 0.08, "logprob": -2.5257 },
-          { "rank": 6, "token_id": 11244, "token": " landmark", "prob": 0.05, "logprob": -2.9957 }
+          {
+            "rank": 1,
+            "token_id": 3283,
+            "token": " city",
+            "prob": 0.3,
+            "logprob": -1.204
+          },
+          {
+            "rank": 2,
+            "token_id": 3502,
+            "token": " town",
+            "prob": 0.2,
+            "logprob": -1.6094
+          },
+          {
+            "rank": 3,
+            "token_id": 1809,
+            "token": " place",
+            "prob": 0.15,
+            "logprob": -1.8971
+          },
+          {
+            "rank": 4,
+            "token_id": 6722,
+            "token": " capital",
+            "prob": 0.12,
+            "logprob": -2.1203
+          },
+          {
+            "rank": 5,
+            "token_id": 2978,
+            "token": " country",
+            "prob": 0.08,
+            "logprob": -2.5257
+          },
+          {
+            "rank": 6,
+            "token_id": 11244,
+            "token": " landmark",
+            "prob": 0.05,
+            "logprob": -2.9957
+          }
         ]
       },
       "processed": {
@@ -224,17 +468,50 @@
         "selected_logprob": -1.0498,
         "selected_rank": 1,
         "candidates": [
-          { "rank": 1, "token_id": 3283, "token": " city", "prob": 0.35, "logprob": -1.0498 },
-          { "rank": 2, "token_id": 3502, "token": " town", "prob": 0.22, "logprob": -1.5141 },
-          { "rank": 3, "token_id": 1809, "token": " place", "prob": 0.16, "logprob": -1.8326 },
-          { "rank": 4, "token_id": 6722, "token": " capital", "prob": 0.12, "logprob": -2.1203 },
-          { "rank": 5, "token_id": 2978, "token": " country", "prob": 0.07, "logprob": -2.659 }
+          {
+            "rank": 1,
+            "token_id": 3283,
+            "token": " city",
+            "prob": 0.35,
+            "logprob": -1.0498
+          },
+          {
+            "rank": 2,
+            "token_id": 3502,
+            "token": " town",
+            "prob": 0.22,
+            "logprob": -1.5141
+          },
+          {
+            "rank": 3,
+            "token_id": 1809,
+            "token": " place",
+            "prob": 0.16,
+            "logprob": -1.8326
+          },
+          {
+            "rank": 4,
+            "token_id": 6722,
+            "token": " capital",
+            "prob": 0.12,
+            "logprob": -2.1203
+          },
+          {
+            "rank": 5,
+            "token_id": 2978,
+            "token": " country",
+            "prob": 0.07,
+            "logprob": -2.659
+          }
         ]
       }
     },
     {
       "step": 4,
-      "selected": { "token_id": 448, "token": " with" },
+      "selected": {
+        "token_id": 448,
+        "token": " with"
+      },
       "raw": {
         "k_used": 7,
         "entropy": 2.42,
@@ -243,13 +520,55 @@
         "selected_logprob": -1.5141,
         "selected_rank": 1,
         "candidates": [
-          { "rank": 1, "token_id": 448, "token": " with", "prob": 0.22, "logprob": -1.5141 },
-          { "rank": 2, "token_id": 304, "token": " in", "prob": 0.18, "logprob": -1.7148 },
-          { "rank": 3, "token_id": 429, "token": " that", "prob": 0.16, "logprob": -1.8326 },
-          { "rank": 4, "token_id": 315, "token": " of", "prob": 0.13, "logprob": -2.0402 },
-          { "rank": 5, "token_id": 8482, "token": " full", "prob": 0.1, "logprob": -2.3026 },
-          { "rank": 6, "token_id": 3881, "token": " known", "prob": 0.06, "logprob": -2.8134 },
-          { "rank": 7, "token_id": 13716, "token": " rich", "prob": 0.05, "logprob": -2.9957 }
+          {
+            "rank": 1,
+            "token_id": 448,
+            "token": " with",
+            "prob": 0.22,
+            "logprob": -1.5141
+          },
+          {
+            "rank": 2,
+            "token_id": 304,
+            "token": " in",
+            "prob": 0.18,
+            "logprob": -1.7148
+          },
+          {
+            "rank": 3,
+            "token_id": 429,
+            "token": " that",
+            "prob": 0.16,
+            "logprob": -1.8326
+          },
+          {
+            "rank": 4,
+            "token_id": 315,
+            "token": " of",
+            "prob": 0.13,
+            "logprob": -2.0402
+          },
+          {
+            "rank": 5,
+            "token_id": 8482,
+            "token": " full",
+            "prob": 0.1,
+            "logprob": -2.3026
+          },
+          {
+            "rank": 6,
+            "token_id": 3881,
+            "token": " known",
+            "prob": 0.06,
+            "logprob": -2.8134
+          },
+          {
+            "rank": 7,
+            "token_id": 13716,
+            "token": " rich",
+            "prob": 0.05,
+            "logprob": -2.9957
+          }
         ]
       },
       "processed": {
@@ -260,11 +579,41 @@
         "selected_logprob": -1.347,
         "selected_rank": 1,
         "candidates": [
-          { "rank": 1, "token_id": 448, "token": " with", "prob": 0.26, "logprob": -1.347 },
-          { "rank": 2, "token_id": 304, "token": " in", "prob": 0.2, "logprob": -1.6094 },
-          { "rank": 3, "token_id": 429, "token": " that", "prob": 0.18, "logprob": -1.7148 },
-          { "rank": 4, "token_id": 315, "token": " of", "prob": 0.15, "logprob": -1.8971 },
-          { "rank": 5, "token_id": 8482, "token": " full", "prob": 0.12, "logprob": -2.1203 }
+          {
+            "rank": 1,
+            "token_id": 448,
+            "token": " with",
+            "prob": 0.26,
+            "logprob": -1.347
+          },
+          {
+            "rank": 2,
+            "token_id": 304,
+            "token": " in",
+            "prob": 0.2,
+            "logprob": -1.6094
+          },
+          {
+            "rank": 3,
+            "token_id": 429,
+            "token": " that",
+            "prob": 0.18,
+            "logprob": -1.7148
+          },
+          {
+            "rank": 4,
+            "token_id": 315,
+            "token": " of",
+            "prob": 0.15,
+            "logprob": -1.8971
+          },
+          {
+            "rank": 5,
+            "token_id": 8482,
+            "token": " full",
+            "prob": 0.12,
+            "logprob": -2.1203
+          }
         ]
       }
     }

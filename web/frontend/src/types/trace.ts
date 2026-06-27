@@ -4,7 +4,7 @@
 // Regenerate with: npm run codegen
 
 /**
- * Canonical JSON payload for a single adaptive-probe generation trace. Produced by `llm_token_heatmap.generate_with_adaptive_probe` after lightweight serialization, and consumed by the CLI exporter, FastAPI backend, and web frontend. One file == one prompt == one generation.
+ * Canonical JSON payload for a single adaptive-probe generation trace. Produced by `llm_token_heatmap.generate_with_adaptive_probe` after lightweight serialization, and consumed by the CLI exporter and the web frontend viewer. One file == one prompt == one generation.
  */
 export interface Trace {
   /**
@@ -16,6 +16,12 @@ export interface Trace {
   manifold?: Manifold;
   model_architecture?: ModelArchitecture;
   neuron_attribution?: NeuronAttribution;
+  /**
+   * Functional head taxonomy: each attention head labelled by role (sink / induction / worker / local / minor / other) with its mean logit contribution, fused from per-head attention stats and direct logit attribution. Derived post-hoc and contribution-first — importance is anti-correlated with attention magnitude (attention sinks fire hardest yet write nothing). Present only when both per-head attention stats and direct logit attribution exist.
+   */
+  head_roles?: {
+    [k: string]: unknown | undefined;
+  };
   direct_logit_attribution?: DirectLogitAttribution;
   /**
    * Per-trace metadata: model identity, sampling parameters, and prompt.
@@ -726,54 +732,30 @@ export interface AttentionLayerEntry {
    */
   top_positions: AttentionTopPosition[];
   /**
-   * Mean L2 norm of the current-token Q vector across heads.
-   */
-  q_norm: number;
-  /**
-   * Mean L2 norm of the current-token K vector across heads.
-   */
-  k_norm: number;
-  /**
-   * Mean L2 norm of the current-token V vector across heads.
-   */
-  v_norm: number;
-  /**
-   * Mean angle in degrees between the head's Q vector and the K vector of its top-attended source position, averaged across heads.
-   */
-  qk_alignment_angle: number;
-  /**
-   * Optional per-head Tier 1 scalars, one entry per attention head (length = attention_metadata.num_attention_heads), ordered by head index. Lets the Layer x Head grid color each head distinctly; absent on older traces, where the grid broadcasts the layer mean across all heads.
+   * Optional per-head Tier 1 scalars in COLUMNAR form: each property is a parallel array of length attention_metadata.num_attention_heads, ordered by head index. Columnar (vs a list of per-head objects) keeps the repeated JSON keys from dominating the file. Lets the Layer x Head grid color each head distinctly; absent on older traces, where the grid broadcasts the layer mean. Q/K/V norms are intentionally not stored — rank head importance by direct logit attribution (see head_roles), not attention magnitude.
    */
   per_head?: {
     /**
-     * This head's attention entropy in nats.
+     * Per-head attention entropy (nats).
      */
-    entropy: number;
+    entropy?: number[];
     /**
-     * This head's attention weight on the current (self) position.
+     * Per-head attention weight on the current (self) position.
      */
-    self_weight: number;
+    self_weight?: number[];
     /**
-     * This head's attention weight on the BOS position.
+     * Per-head attention weight on the BOS / sink position.
      */
-    bos_weight: number;
+    bos_weight?: number[];
     /**
-     * This head's single largest source-position attention weight.
+     * Per-head single largest source-position attention weight.
      */
-    top1_weight: number;
+    top1_weight?: number[];
     /**
-     * L2 norm of this head's current-token Q vector.
+     * Per-head induction score: attention placed on the token following the current token's most recent earlier occurrence. 0 when the current token is novel.
      */
-    q_norm: number;
-    /**
-     * L2 norm of this head's current-token K vector.
-     */
-    k_norm: number;
-    /**
-     * L2 norm of this head's current-token V vector.
-     */
-    v_norm: number;
-  }[];
+    induction?: number[];
+  };
 }
 /**
  * This interface was referenced by `Trace`'s JSON-Schema
