@@ -114,6 +114,13 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  /* When the control bar + a fixed-height lens body + the overview together
+     exceed the available height (short window, or the tall heatmap control
+     bar with the overview open), scroll the whole column rather than letting
+     the overview steal the lens's height or spill off the bottom of the
+     screen. overflow-x stays clipped so this never adds a stray horizontal
+     scrollbar — the lens body owns its own horizontal scroll. */
+  overflow: hidden auto;
 }
 
 .trace-workspace__controls {
@@ -126,7 +133,12 @@
    the note that used to live on .trace-viewer-center__heatmap). */
 .trace-workspace__canvas-body {
   flex: 1 1 auto;
-  min-height: 0;
+  /* A fixed, usable floor for the lens: it fills the spare height when the
+     window is tall, but never shrinks below this even when the control bar +
+     overview want the room — the canvas column scrolls instead (see
+     .trace-workspace__canvas). Without this floor a short window collapses the
+     lens to its header (the bars / grid disappear). */
+  min-height: 18rem;
   min-width: 0;
   /* The pane no longer scrolls itself; the active lens fills it and owns the
      single scroll viewport (see the rule below). */
