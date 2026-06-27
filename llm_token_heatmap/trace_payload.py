@@ -14,11 +14,13 @@ schema-valid JSON.
 
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
 from typing import Any
 
 from llm_token_heatmap import SCHEMA_VERSION
+from llm_token_heatmap.head_roles import compute_head_roles
 
 # Keys the trace schema allows under `metadata`. Anything else
 # (e.g. our internal capture_* flags) is dropped before serialization
@@ -331,7 +333,38 @@ def serialize_trace_to_json(
         payload["neuron_attribution"] = neuron_attribution
     if direct_logit_attribution is not None:
         payload["direct_logit_attribution"] = direct_logit_attribution
+    # Fuse per-head attention stats + per-head DLA into a functional head
+    # taxonomy (sink / induction / worker / …). Pure-dict, derived from data
+    # already in the payload, so it is skipped when either input is absent.
+    head_roles = compute_head_roles(payload)
+    if head_roles is not None:
+        payload["head_roles"] = head_roles
     return payload
+
+
+def _round_floats(obj: Any, ndigits: int) -> Any:
+    """Recursively round every float in a JSON-able structure to ``ndigits``
+    decimals. Cuts the 17-significant-digit default repr (``0.5780873894691467``)
+    down to a few characters — the dominant on-disk cost in array-heavy traces —
+    with no precision the viewer needs (attention weights, probs, logits)."""
+    if isinstance(obj, float):
+        return round(obj, ndigits)
+    if isinstance(obj, dict):
+        return {k: _round_floats(v, ndigits) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_round_floats(v, ndigits) for v in obj]
+    return obj
+
+
+def dump_trace_json(payload: dict[str, Any], *, ndigits: int = 6) -> str:
+    """Serialize a trace/diff/manifold payload to **compact, float-rounded** JSON.
+
+    Compact separators (no ``indent``) + rounding floats to ``ndigits`` decimals
+    shrink a trace ~2-3x versus pretty-printed full-precision output, which the
+    static viewer downloads in full. The schema is unchanged — only the byte
+    encoding of the same values.
+    """
+    return json.dumps(_round_floats(payload, ndigits), separators=(",", ":"))
 
 
 def project_activation_subset(

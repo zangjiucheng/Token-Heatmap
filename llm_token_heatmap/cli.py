@@ -19,6 +19,9 @@ from llm_token_heatmap.trace_payload import (
     build_model_architecture as _build_model_architecture_summary,
 )
 from llm_token_heatmap.trace_payload import (
+    dump_trace_json as _dump_trace_json,
+)
+from llm_token_heatmap.trace_payload import (
     selected_token_payload as _selected_token_payload,
 )
 from llm_token_heatmap.trace_payload import (
@@ -955,7 +958,7 @@ def run_trace(args: argparse.Namespace) -> int:
         direct_logit_attribution=direct_logit_attribution,
     )
     json_path = output_dir / "adaptive_token_trace.json"
-    json_path.write_text(json.dumps(json_payload, indent=2), encoding="utf-8")
+    json_path.write_text(_dump_trace_json(json_payload), encoding="utf-8")
 
     # Plots are a secondary convenience — the JSON/CSV above are the product.
     # A single matplotlib hiccup (a '$' or an exotic glyph in a token label)
@@ -1291,7 +1294,7 @@ def run_diff(args: argparse.Namespace) -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     diff_path = output_dir / "activation_diff.json"
-    diff_path.write_text(json.dumps(diff, indent=2), encoding="utf-8")
+    diff_path.write_text(_dump_trace_json(diff), encoding="utf-8")
 
     plot_activation_delta(
         diff,
@@ -1441,7 +1444,7 @@ def run_manifold(args: argparse.Namespace) -> int:
 
     out_path: Path = args.out if args.out is not None else trace_path
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    out_path.write_text(_dump_trace_json(payload), encoding="utf-8")
     print(
         f"Added manifold analysis ({len(layers_out)} layer/submodule "
         f"cloud{'s' if len(layers_out) != 1 else ''}) to {out_path}"
