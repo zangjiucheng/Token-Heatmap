@@ -10,6 +10,49 @@ The viewer loads a trace from exactly three sources:
 - a `?trace=<url>` query param (auto-fetched on page open),
 - the bundled sample (**Try sample data**).
 
+## Desktop app (Tauri)
+
+The same viewer is also packaged as a native desktop app via
+[Tauri](https://tauri.app/) — no Node.js or browser tab needed, just open a
+trace file. The Rust shell lives in `web/frontend/src-tauri/`.
+
+**Download a prebuilt installer.** Every published
+[GitHub Release](https://github.com/zangjiucheng/Token-Heatmap/releases) ships
+installers for macOS (Apple Silicon + Intel), Windows (`.msi`), and Linux
+(`.AppImage` / `.deb`), built by the `app-release.yml` workflow.
+
+**Build it yourself.** You need [Node.js](https://nodejs.org) and the
+[Rust toolchain](https://rustup.rs) (plus the platform's webview deps — see the
+[Tauri prerequisites](https://tauri.app/start/prerequisites/); on Linux that is
+`libwebkit2gtk-4.1-dev`, `librsvg2-dev`, `patchelf`, …).
+
+```bash
+cd web/frontend
+npm install              # first time only
+
+npm run app:dev          # hot-reloading desktop dev window (tauri dev)
+npm run app:build        # produce a release installer for the current OS
+```
+
+`app:build` runs the frontend build (`npm run build`) and then `tauri build`.
+The installers land in:
+
+```
+web/frontend/src-tauri/target/release/bundle/
+  macos/   Token Heatmap.app  +  dmg/Token Heatmap_<ver>_<arch>.dmg
+  msi/     Token Heatmap_<ver>_<arch>_en-US.msi      (Windows)
+  appimage/ token-heatmap_<ver>_<arch>.AppImage      (Linux)
+  deb/     token-heatmap_<ver>_<arch>.deb            (Linux)
+```
+
+`tauri build` only bundles for the OS it runs on; cross-compiling needs the
+matching Rust target (e.g. `rustup target add x86_64-apple-darwin`) and toolchain.
+
+**Continuous build.** The `app` job in `ci.yml` compiles the desktop app
+(frontend + Rust shell) on **every push and pull request** as a fast Linux-only
+compile check, so a change that breaks the native build is caught immediately.
+Full multi-OS installers are produced only on a published Release.
+
 ## The lens workspace
 
 The trace viewer is organized into three roles: a **generation spine** (the

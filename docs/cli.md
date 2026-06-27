@@ -274,21 +274,6 @@ token-heatmap serve outputs/example-run                     # serves it, CORS, n
 On HPC, SSH port-forward the file-server port to your laptop (use a free local
 port — see [`web-app.md`](web-app.md)) before opening the URL.
 
-## Running the viewer locally
-
-The web app is a static, file-based viewer — there is no backend to run. Start
-the Vite dev server and open a trace by dropping a file or pasting a
-`?trace=<url>`:
-
-```bash
-cd web/frontend && npm run dev          # http://localhost:5173
-```
-
-The easiest path is to let the CLI start the viewer for you with `--frontend`
-(see [`--serve` / `--frontend`](#serving-the-result-instantly---serve) above),
-which boots `npm run dev`, serves the trace files, and opens the viewer pointed
-at the new trace.
-
 ## Building the frontend (`web build`)
 
 Run `npm install` + `npm run build` in `web/frontend` to produce a static

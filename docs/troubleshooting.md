@@ -14,12 +14,6 @@ If the error persists, the installed `transformers` version may be a pre-release
 pip install "transformers==4.46.3" tiktoken einops
 ```
 
-### `TypeError: embedding(): argument 'indices' (position 2) must be Tensor, not BatchEncoding`
-
-You're on a transformers version that leaves a `BatchEncoding` wrapper after
-`.to(device)`. `generation.py` already extracts `input_ids` defensively — pull
-`main` and re-run.
-
 ### `--config` fails with `error: --config requires PyYAML`
 
 ```bash
@@ -87,8 +81,3 @@ application backend — only the dependency-free CORS file server started by
 3. **CORS** — `token-heatmap serve` / `trace --serve` already sends permissive
    CORS headers, so any viewer origin can fetch the trace. If you front it with a
    different static server, ensure it sets `Access-Control-Allow-Origin`.
-
-### Frontend always shows the bundled sample after I drop a file
-
-Fixed: the landing page now seeds the trace store with the loaded trace and
-routes to `/trace/uploaded`. Pull `main` and re-run.

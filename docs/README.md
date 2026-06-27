@@ -16,7 +16,7 @@ has a short overview and quick start; the pages below cover each surface in dept
 The canonical JSON Schemas are also under this folder and are imported by the
 runtime — do not move them:
 
-- [`web/trace.schema.json`](web/trace.schema.json) — full trace payload (loaded by the frontend validator and served by the backend's `GET /schema`)
+- [`web/trace.schema.json`](web/trace.schema.json) — full trace payload (loaded by the frontend validator)
 - [`web/attention-sidecar.schema.json`](web/attention-sidecar.schema.json) — Tier-2 per-step attention sidecar
 - [`web/activation.schema.json`](web/activation.schema.json) — projected activation trace payload
 - [`web/activation-sidecar.schema.json`](web/activation-sidecar.schema.json) — Tier-2 per-step activation sidecar

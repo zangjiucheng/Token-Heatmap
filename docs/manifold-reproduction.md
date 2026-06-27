@@ -113,9 +113,8 @@ token-heatmap hpc run configs/wrap-text.yaml --model Qwen/Qwen2.5-14B-Instruct \
 
 It scp's the config up, `sbatch`'s the GPU job, waits, then **rsyncs the whole
 output dir back** so you view it locally with no GPU and no tunnel (drag the
-JSON onto the frontend, or `token-heatmap serve outputs/<name>`). It pairs with
-the web **Build trace** page (`/build`) — *Export YAML* → `token-heatmap hpc run that.yaml`.
-The rest of this section documents the moving parts it automates.
+JSON onto the frontend, or `token-heatmap serve outputs/<name>`). The rest of
+this section documents the moving parts it automates.
 
 ### Step 0 — use the GPU env (built + verified ✅)
 

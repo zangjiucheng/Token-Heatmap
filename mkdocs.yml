@@ -4,6 +4,10 @@ repo_url: https://github.com/zangjiucheng/Token-Heatmap
 docs_dir: docs
 site_dir: site
 use_directory_urls: false
+# The interpretability epics are internal roadmap/design notes — kept in the repo
+# (docs/epics/) and readable on GitHub, but excluded from the published site.
+exclude_docs: |
+  epics/
 theme:
   name: mkdocs
 nav:
@@ -15,15 +19,6 @@ nav:
   - Trace Schema: schema.md
   - Interpreting Outputs: interpreting.md
   - Troubleshooting: troubleshooting.md
-  - Interpretability Epics:
-      - Overview: epics/README.md
-      - 01 · Direct Logit Attribution: epics/01-direct-logit-attribution.md
-      - 02 · Interventions / Ablation: epics/02-interventions-ablation.md
-      - 03 · Attribution Graph: epics/03-attribution-graph.md
-      - 04 · Faithfulness & Error: epics/04-faithfulness-error-reporting.md
-      - 05 · Cross-layer Logit Flow: epics/05-cross-layer-logit-flow.md
-      - 06 · SAE / Transcoder Features: epics/06-sae-transcoder-features.md
-      - 07 · Global TWERA: epics/07-twera-global-coactivation.md
   - JSON Schemas:
       - Trace: web/trace.schema.json
       - Attention Sidecar: web/attention-sidecar.schema.json

@@ -65,10 +65,11 @@ circuits). It is correlational — to confirm a contribution is causal, ablate i
 
 ## Interventions / ablation
 
-The Attribution lens turns each bar into a hypothesis you can test. Click
-**ablate** on a component or head (or pick one in the panel and **Run**) and the
-backend re-runs the forward pass with that block's last-position output zeroed
-(or scaled), then reports how the next-token distribution moved:
+Direct logit attribution is correlational; ablation is the causal test. Each
+attribution bar is a hypothesis you can check from the Python library / CLI
+(`llm_token_heatmap.intervention`, `examples/dla_causal_validation.py`): re-run
+the forward pass with a component or head's last-position output zeroed (or
+scaled), then read how the next-token distribution moved:
 
 | Readout | Meaning |
 | --- | --- |
@@ -79,11 +80,8 @@ backend re-runs the forward pass with that block's last-position output zeroed
 A faithful attribution predicts the intervention: ablating a high-`attn` head
 should drop the target probability more than a random head. Ablation holds the
 attention *patterns* fixed (it removes a block's write to the residual at the
-analyzed position). It runs the model, so it lives in the Python library /
-CLI (see `llm_token_heatmap.intervention` and
-`examples/dla_causal_validation.py`), not in the static viewer. Interactive
-ablation will return to the viewer once the CLI precomputes ablations into the
-trace.
+analyzed position). Interactive ablation will return to the viewer once the CLI
+precomputes ablations into the trace.
 
 ### Worked example — validating one head
 
