@@ -81,3 +81,51 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  app:
+    name: Desktop app (compile check)
+    # Verifies the Tauri desktop app still compiles on every commit (frontend +
+    # Rust shell). Host OS only (Linux) — the full mac/win/linux installers are
+    # built and attached to Releases by app-release.yml, not here.
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            build-essential \
+            libssl-dev \
+            libgtk-3-dev
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/frontend/package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: web/frontend/src-tauri -> target
+
+      - name: Install frontend dependencies
+        working-directory: web/frontend
+        run: npm ci
+
+      # No releaseId / GITHUB_TOKEN -> tauri-action only builds (no upload),
+      # which is exactly the per-commit compile check we want.
+      - name: Build the desktop app
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: web/frontend
