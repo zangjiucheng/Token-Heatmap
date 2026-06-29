@@ -3,8 +3,8 @@
 Replaces ``scripts/build-frontend.sh``. Runs ``npm install`` + ``npm run build``
 in ``web/frontend`` and prints how to ship the resulting ``dist/`` to a host
 that has no Node.js (e.g. an HPC login node) and serve it with any static file
-server. The viewer is backend-free: it loads traces from a dropped file, a
-``?trace=<url>`` URL, or the bundled sample.
+server. The viewer is backend-free: it loads traces from a dropped file or the
+bundled sample.
 """
 
 from __future__ import annotations
@@ -43,10 +43,9 @@ def run_web_build(args: argparse.Namespace) -> int:  # noqa: ARG001 — uniform 
     print("Next steps:")
     print("  1. Serve dist/ with any static file server, e.g.:")
     print(f"       python -m http.server -d {dist} 8080")
-    print("  2. Open the viewer, optionally auto-loading a trace via ?trace=<url>:")
+    print("  2. Open the viewer and drag a trace JSON onto the page:")
     print("       http://localhost:8080/")
-    print("       http://localhost:8080/?trace=http://localhost:8000/adaptive_token_trace.json")
-    print("  (Produce traces with `token-heatmap trace`; serve them with `token-heatmap serve`.)")
+    print("  (Produce traces with `token-heatmap trace`.)")
     return 0
 
 
@@ -63,8 +62,8 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         description=(
             "Run `npm install` + `npm run build` in web/frontend. The viewer is a "
             "static SPA with no backend — serve the resulting dist/ from any static "
-            "file server on a host with no Node.js. Traces load from a dropped file, "
-            "a ?trace=<url> URL, or the bundled sample."
+            "file server on a host with no Node.js. Traces load from a dropped file "
+            "or the bundled sample."
         ),
     )
     build.set_defaults(func=run_web_build)

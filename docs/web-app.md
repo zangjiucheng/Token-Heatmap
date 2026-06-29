@@ -4,11 +4,12 @@ A React + Vite SPA that is a **static, file-based trace viewer** — there is no
 backend server. Use the CLI or the Python library to *generate* traces from a
 model; the web app loads and explores traces that already exist.
 
-The viewer loads a trace from exactly three sources:
+The viewer loads a trace from exactly two sources:
 
 - a JSON file you drop or pick from disk (including two files for a diff),
-- a `?trace=<url>` query param (auto-fetched on page open),
 - the bundled sample (**Try sample data**).
+
+The desktop app additionally lets you open a trace file directly from disk.
 
 ## Desktop app (Tauri)
 
@@ -66,7 +67,6 @@ a capture flag are shown but locked until the trace carries that data.
 
 - Drop a JSON trace file → view the interactive heatmap
 - Click **Try sample data** → loads a small bundled trace
-- Pass `?trace=<url>` in the URL → auto-loads the trace on page open
 - Toggle **raw / processed / split** comparison
 - Switch the color scale between `prob` and `logprob`
 - Filter the step range, adjust the color range
@@ -87,68 +87,30 @@ a capture flag are shown but locked until the trace carries that data.
 
 ## Producing traces and opening them
 
-Generate a trace with the CLI, then open it in the viewer. The simplest path
-runs the trace and boots the viewer in one command — `--frontend` starts a
-stdlib CORS file server *and* `npm run dev`, then opens the viewer pointed at the
-trace via `?trace=`:
+Generate a trace with the CLI, then open it in the viewer — the CLI only writes
+the bundle to disk; there is nothing to serve. Run the dev server and drop the
+file in:
 
 ```bash
-token-heatmap trace --config configs/example.yaml --serve --frontend
+token-heatmap trace --config configs/example.yaml   # writes outputs/example-run/
+cd web/frontend && npm run dev                       # http://localhost:5173
+# then drag outputs/example-run/adaptive_token_trace.json onto the page
 ```
 
-To view a run you already produced (no regeneration), serve its output directory
-and open the printed viewer URL:
+Or open the same `adaptive_token_trace.json` in the desktop app. Either way the
+viewer reads the file directly — no backend, no network fetch.
 
-```bash
-token-heatmap serve outputs/ioi --frontend
-```
+## HPC / no GPU locally
 
-Or run the dev server by hand and drop a file in:
+The HPC does the GPU compute; you view the trace locally with no GPU. Use
+`token-heatmap hpc run <config>` (see [`cli.md`](cli.md#hpc-round-trip-hpc-run)),
+which rsyncs the whole output dir back to `./outputs/<name>/`. Then open the
+local JSON in the viewer:
 
 ```bash
 cd web/frontend && npm run dev          # http://localhost:5173
-# then drag a *.json trace onto the page, or paste a ?trace=<url>
+# then drag outputs/<name>/adaptive_token_trace.json onto the page
 ```
-
-## HPC / no Node.js
-
-After generation the CLI starts a stdlib `http.server` that serves the output
-directory with CORS headers. You run the viewer locally on your laptop.
-
-```bash
-# HPC: generate and serve the trace files
-token-heatmap trace --config configs/example.yaml --serve
-
-# Optional flags
-#   --port 9000              file server port (default 8000)
-#   --frontend-url http://localhost:3000   adjust the printed viewer URL if your
-#                                          local viewer is on a different port
-```
-
-Output:
-
-```
-[token-heatmap] Serving output directory …
-[token-heatmap] Files: http://localhost:8000/
-[token-heatmap] Open the viewer at:
-[token-heatmap]   http://localhost:5173/?trace=http://localhost:8000/adaptive_token_trace.json
-[token-heatmap] (Press Ctrl+C to stop)
-```
-
-Then on your laptop:
-
-```bash
-# Terminal 1 — port-forward (adjust port to match --port)
-ssh -L 8000:localhost:8000 user@hpc
-
-# Terminal 2 — viewer (any port; pass --frontend-url to match)
-cd web/frontend && npm run dev
-
-# Open the URL printed by --serve
-```
-
-The `?trace=<url>` query param makes the viewer auto-fetch and display the trace
-immediately — no manual file drag needed.
 
 ### Hosting the viewer without Node.js
 
@@ -162,7 +124,7 @@ token-heatmap web build
 
 # Serve dist/ with any static file server
 python -m http.server -d web/frontend/dist 8080
-# open http://localhost:8080/?trace=<trace-url>
+# open http://localhost:8080/ and drag a trace JSON onto the page
 ```
 
 ## Architecture
@@ -170,12 +132,12 @@ python -m http.server -d web/frontend/dist 8080
 | Layer | Tech | Serves |
 |---|---|---|
 | Python library | `llm_token_heatmap` | generation, probes, serialization |
-| CLI | `token-heatmap` | produce traces; `serve` a CORS static file server |
+| CLI | `token-heatmap` | produce traces (writes the bundle to disk) |
 | Frontend | React + Vite (`web/frontend/`) | static, file-based trace viewer |
 
-There is no application backend. `token-heatmap serve` (and `trace --serve`) is a
-dependency-free stdlib `http.server` with CORS headers — it only serves the
-trace JSON and sidecar files; it has no API.
+There is no application backend and no network loading. The viewer reads the
+trace JSON directly from a dropped file (or the desktop app's file open); it
+never fetches over HTTP.
 
 The trace JSON contract is the same for the CLI and the example scripts — they
 both go through `llm_token_heatmap.trace_payload.serialize_trace_to_json`, which

@@ -87,7 +87,8 @@ python3 examples/helix-report.py outputs/wrap-text/adaptive_token_trace.json
 #    token-heatmap manifold --trace outputs/wrap-text/adaptive_token_trace.json \
 #      --components 6 --probe line_position --scalar-max 50
 
-# 3. (optional) look at it: token-heatmap hpc serve outputs/wrap-text  → Manifold tab
+# 3. (optional) look at it: open outputs/wrap-text/adaptive_token_trace.json in the
+#    viewer (drag it onto the web app)  → Manifold tab
 ```
 
 Always sanity‑check `outputs/<run>/generated.txt`: the model must actually
@@ -108,13 +109,12 @@ token-heatmap hpc setup
 token-heatmap hpc run configs/wrap-text.yaml --model Qwen/Qwen2.5-14B-Instruct \
   --capture activations --probe line_position --extra "--max-new-tokens 320"
 # 32B on one GPU:  add  --4bit
-# auto-open it locally afterwards: add  --serve
 ```
 
 It scp's the config up, `sbatch`'s the GPU job, waits, then **rsyncs the whole
-output dir back** so you view it locally with no GPU and no tunnel (drag the
-JSON onto the frontend, or `token-heatmap serve outputs/<name>`). The rest of
-this section documents the moving parts it automates.
+output dir back** so you view it locally with no GPU and no tunnel: open
+`outputs/<name>/adaptive_token_trace.json` in the viewer (drag it onto the web
+app). The rest of this section documents the moving parts it automates.
 
 ### Step 0 — use the GPU env (built + verified ✅)
 

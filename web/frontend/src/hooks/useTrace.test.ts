@@ -1,20 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import sampleTrace from '@/lib/sample/trace.json';
 import { useTrace } from './useTrace';
 
 describe('useTrace', () => {
-  const originalFetch = globalThis.fetch;
-
-  beforeEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
-  });
-
   it('starts idle', () => {
     const { result } = renderHook(() => useTrace());
     expect(result.current.status).toBe('idle');
@@ -23,18 +12,12 @@ describe('useTrace', () => {
   });
 
   it('useTrace_transitions: idle -> loading -> ready on successful load', async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify(sampleTrace), { status: 200 }),
-      );
-
     const { result } = renderHook(() => useTrace());
     const states: string[] = [result.current.status];
 
     let pending: Promise<void>;
     act(() => {
-      pending = result.current.load({ type: 'url', url: '/sample.json' });
+      pending = result.current.load({ type: 'sample' });
     });
 
     await waitFor(() => {
@@ -53,14 +36,12 @@ describe('useTrace', () => {
   });
 
   it('useTrace_transitions: idle -> loading -> error on failure', async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValue(new Response('boom', { status: 500 }));
-
     const { result } = renderHook(() => useTrace());
     let pending: Promise<void>;
     act(() => {
-      pending = result.current.load({ type: 'url', url: '/sample.json' });
+      // A missing cached id is the simplest loader failure now that there is
+      // no network source.
+      pending = result.current.load({ type: 'cached', id: 'missing' });
     });
 
     await act(async () => {
@@ -70,7 +51,6 @@ describe('useTrace', () => {
     expect(result.current.status).toBe('error');
     expect(result.current.trace).toBeNull();
     expect(result.current.error?.kind).toBe('network');
-    expect(result.current.error?.status).toBe(500);
   });
 
   it('load with sample source transitions to ready', async () => {

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Slurm batch job: generate a token-heatmap trace for a larger model on a GPU
 # node, then add manifold analysis. This template is normally submitted *for*
-# you by `token-heatmap hpc run` (from the laptop); results are then viewed with
-# `token-heatmap hpc serve` (no GPU needed to serve).
+# you by `token-heatmap hpc run` (from the laptop), which rsyncs the output dir
+# back so you view the JSON locally (no GPU needed).
 #
 # You can also submit it by hand from the HPC repo checkout:
 #   cd /work/j7zang/Token-Heatmap
@@ -66,4 +66,4 @@ echo "[hpc-gen] [2/2] manifold analysis..."
 "$BIN" manifold --trace "$OUT/adaptive_token_trace.json" ${MANIFOLD_EXTRA:-}
 
 echo "[hpc-gen] DONE -> $OUT"
-echo "[hpc-gen] view it with:  token-heatmap hpc serve $OUT"
+echo "[hpc-gen] rsync $OUT back to your laptop, then drag adaptive_token_trace.json onto the viewer"

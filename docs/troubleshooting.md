@@ -53,31 +53,3 @@ That's the HuggingFace download. Subsequent runs hit the on-disk cache
 
 Use the step-range slider in the SPA, pass `--max-new-tokens` lower, or only
 render `source="raw"` in the matplotlib plot.
-
-### `--serve` prints port 8000 but that port is already in use
-
-Pass a different port:
-
-```bash
-token-heatmap trace --config configs/example.yaml --serve --port 9000
-```
-
-And update the SSH port-forward on your laptop accordingly:
-
-```bash
-ssh -L 9000:localhost:9000 user@hpc
-```
-
-### `?trace=<url>` won't load the trace (`ERR_CONNECTION_REFUSED` or CORS error)
-
-The viewer fetches the trace JSON from the URL in `?trace=`. There is no
-application backend — only the dependency-free CORS file server started by
-`token-heatmap serve` / `trace --serve`.
-
-1. **File server not running / wrong port** — the URL's host:port must point at a
-   running `token-heatmap serve` (default `:8000`). Start it on the host that has
-   the trace files, e.g. `token-heatmap serve outputs/<name> --port 9000`.
-2. **SSH tunnel not running** — make sure you have `ssh -L PORT:localhost:PORT user@hpc` open in another terminal.
-3. **CORS** — `token-heatmap serve` / `trace --serve` already sends permissive
-   CORS headers, so any viewer origin can fetch the trace. If you front it with a
-   different static server, ensure it sets `Access-Control-Allow-Origin`.

@@ -159,13 +159,11 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         epilog=(
             "command groups:\n"
             "  generate & analyze   trace, diff, manifold\n"
-            "  view                 serve\n"
-            "  develop & deploy     web build, hpc {setup,run,serve}\n"
+            "  develop & deploy     web build, hpc {setup,run}\n"
             "\n"
             "examples:\n"
-            "  token-heatmap trace --config configs/example.yaml --serve --frontend\n"
+            "  token-heatmap trace --config configs/example.yaml  # then open the JSON in the viewer\n"
             "  token-heatmap trace --config configs/ioi.yaml      # per-head DLA / circuit demo\n"
-            "  token-heatmap serve outputs/ioi                    # view a run you already produced\n"
             "  token-heatmap hpc run configs/wrap-text.yaml --gpu l40s\n"
             "\n"
             "Run `token-heatmap <command> --help` for a command's options.\n"
@@ -197,18 +195,20 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         ),
         epilog=(
             "examples:\n"
-            "  # smallest run — heatmap + logit lens, then open the viewer\n"
-            "  token-heatmap trace --config configs/example.yaml --serve --frontend\n"
+            "  # smallest run — heatmap + logit lens\n"
+            "  token-heatmap trace --config configs/example.yaml\n"
             "\n"
             "  # everything the Attribution / Graph / Attention lenses need\n"
             "  token-heatmap trace --model Qwen/Qwen2.5-0.5B-Instruct \\\n"
             "      --prompt 'The capital of France is' \\\n"
             "      --capture-logit-lens --capture-attention --capture-full-attention \\\n"
-            "      --capture-activations --capture-full-activations --serve --frontend\n"
+            "      --capture-activations --capture-full-activations\n"
             "\n"
-            "  # quick CLI-only trace (no web app)\n"
+            "  # quick CLI-only trace\n"
             "  token-heatmap trace --model Qwen/Qwen2.5-0.5B-Instruct --prompt 'Hello' --max-new-tokens 16\n"
             "\n"
+            "Then open adaptive_token_trace.json in the viewer — drag it onto the\n"
+            "web app, or open it in the desktop app.\n"
             "Most runs are easier to launch from a config (configs/README.md).\n"
             "Per-head DLA / the Attribution Graph need --capture-full-activations."
         ),
@@ -220,7 +220,6 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
     act_grp = trace_parser.add_argument_group(
         "capture: activations (Attribution / Graph / Manifold)"
     )
-    serve_grp = trace_parser.add_argument_group("serve & view")
     model_grp.add_argument(
         "--config",
         type=Path,
@@ -386,44 +385,6 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "manifold` analysis and per-head DLA / the Attribution Graph."
         ),
     )
-    serve_grp.add_argument(
-        "--serve",
-        action="store_true",
-        help=(
-            "After generation, serve the output directory over HTTP (Python's "
-            "stdlib http.server with CORS — no extra dependencies) so the frontend "
-            "can load the trace via a URL. Press Ctrl+C to stop."
-        ),
-    )
-    serve_grp.add_argument(
-        "--port",
-        type=int,
-        default=8000,
-        help="File server port when --serve is set (default: 8000).",
-    )
-    serve_grp.add_argument(
-        "--frontend-url",
-        default="http://localhost:5173",
-        help=(
-            "Frontend origin printed with --serve so you can copy the ready-made URL "
-            "(default: http://localhost:5173). With --frontend, the dev server binds "
-            "to this URL's port."
-        ),
-    )
-    serve_grp.add_argument(
-        "--frontend",
-        action="store_true",
-        help=(
-            "Also start the Vite frontend (npm run dev) from web/frontend and open "
-            "the viewer in your browser. Requires Node.js and a repo checkout. "
-            "Implies --serve. Press Ctrl+C to stop both."
-        ),
-    )
-    serve_grp.add_argument(
-        "--no-open",
-        action="store_true",
-        help="With --frontend, do not auto-open the viewer in a browser.",
-    )
     trace_parser.set_defaults(func=run_trace)
 
     diff_parser = subparsers.add_parser(
@@ -534,60 +495,6 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         ),
     )
     manifold_parser.set_defaults(func=run_manifold)
-
-    serve_parser = subparsers.add_parser(
-        "serve",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        help="Serve an existing output directory over HTTP with CORS (no generation).",
-        description=(
-            "Start a stdlib http.server with CORS headers serving DIR so the frontend "
-            "(possibly on another host, via an SSH port-forward) can fetch the trace "
-            "JSON. Unlike `trace --serve`, this does NOT regenerate — use it to serve a "
-            "trace you have already produced (and, optionally, augmented with "
-            "`token-heatmap manifold`). Press Ctrl+C to stop."
-        ),
-        epilog=(
-            "examples:\n"
-            "  token-heatmap serve outputs/ioi                 # files only (view via ?trace=… URL)\n"
-            "  token-heatmap serve outputs/ioi --frontend      # also start the viewer + open it"
-        ),
-    )
-    serve_parser.add_argument(
-        "dir",
-        type=Path,
-        nargs="?",
-        default=Path("outputs"),
-        help="Directory to serve (default: outputs/).",
-    )
-    serve_parser.add_argument(
-        "--port",
-        type=int,
-        default=8000,
-        help="Port for the file server (default: 8000).",
-    )
-    serve_parser.add_argument(
-        "--frontend-url",
-        default="http://localhost:5173",
-        help=(
-            "Frontend origin used to build the printed viewer URL (default: "
-            "http://localhost:5173). With --frontend, the dev server binds to this "
-            "URL's port."
-        ),
-    )
-    serve_parser.add_argument(
-        "--frontend",
-        action="store_true",
-        help=(
-            "Also start the Vite frontend (npm run dev) from web/frontend and open the "
-            "viewer in your browser. Requires Node.js and a repo checkout."
-        ),
-    )
-    serve_parser.add_argument(
-        "--no-open",
-        action="store_true",
-        help="With --frontend, do not auto-open the viewer in a browser.",
-    )
-    serve_parser.set_defaults(func=run_serve)
 
     # Operational sub-commands (web build / hpc …) live in
     # `llm_token_heatmap.commands` so they replace scripts/*.sh without bloating
@@ -1024,205 +931,9 @@ def run_trace(args: argparse.Namespace) -> int:
         )
 
     print(f"Wrote outputs to {output_dir}/")
-
-    start_frontend = getattr(args, "frontend", False)
-    if getattr(args, "serve", False) or start_frontend:
-        _serve_outputs(
-            output_dir,
-            port=args.port,
-            frontend_url=args.frontend_url,
-            start_frontend=start_frontend,
-            open_browser=not getattr(args, "no_open", False),
-        )
+    print("Open adaptive_token_trace.json in the viewer (drag it onto the web app, or open it in the desktop app).")
 
     return 0
-
-
-def _serve_outputs(
-    output_dir: Path,
-    port: int = 8000,
-    frontend_url: str = "http://localhost:5173",
-    start_frontend: bool = False,
-    open_browser: bool = True,
-) -> None:
-    """Serve the output directory over HTTP using Python's stdlib http.server.
-
-    No extra dependencies required — works with any Python 3.10+ installation.
-    CORS headers are added so the frontend (running on a different port or host)
-    can fetch the trace JSON.
-
-    When ``start_frontend`` is set, also launch the bundled Vite frontend
-    (``npm run dev`` in ``web/frontend``) and, unless ``open_browser`` is False,
-    open the ready-made viewer URL once the dev server is accepting connections.
-    The frontend subprocess is terminated on shutdown.
-
-    Blocks until Ctrl+C.
-    """
-    import http.server
-    import os
-    import socketserver
-
-    class _CORSHandler(http.server.SimpleHTTPRequestHandler):
-        """Static-file handler with permissive CORS headers."""
-
-        def end_headers(self) -> None:
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
-            super().end_headers()
-
-        def do_OPTIONS(self) -> None:  # pre-flight
-            self.send_response(200)
-            self.end_headers()
-
-        def log_message(self, fmt: str, *args: object) -> None:
-            pass  # suppress per-request noise; the URL is already printed below
-
-    file_server_url = f"http://localhost:{port}"
-    trace_file_url = f"{file_server_url}/adaptive_token_trace.json"
-    viewer_url = f"{frontend_url}/?trace={trace_file_url}"
-
-    # Start the frontend before the file server so its npm/Vite startup logs
-    # print first and the "open the viewer" line lands last.
-    frontend_proc = None
-    if start_frontend:
-        frontend_proc = _start_frontend_dev_server(frontend_url)
-        if frontend_proc is None:
-            # npm or the frontend dir was unavailable; degrade to files-only.
-            start_frontend = False
-
-    # Bind BEFORE announcing, and set allow_reuse_address before the bind (it has
-    # no effect once TCPServer.__init__ has already bound). A port conflict then
-    # gives a clear one-line message instead of a raw OSError traceback printed
-    # after a misleading "Serving …".
-    socketserver.TCPServer.allow_reuse_address = True
-    try:
-        httpd = socketserver.TCPServer(("", port), _CORSHandler)
-    except OSError as exc:
-        if frontend_proc is not None:
-            _terminate_process(frontend_proc)
-        raise SystemExit(
-            f"[token-heatmap] ERROR: could not bind port {port} "
-            f"({getattr(exc, 'strerror', None) or exc}). It's likely already in "
-            f"use — rerun with --port <N> (e.g. --port {port + 1})."
-        ) from exc
-
-    print("\n[token-heatmap] Serving output directory …")
-    print(f"[token-heatmap] Files: {file_server_url}/")
-    if start_frontend:
-        print(f"[token-heatmap] Frontend (npm run dev): {frontend_url}")
-    print("[token-heatmap] Open the viewer at:")
-    print(f"[token-heatmap]   {viewer_url}")
-    print("[token-heatmap] (Press Ctrl+C to stop)\n")
-
-    orig_dir = os.getcwd()
-    try:
-        os.chdir(output_dir)
-        with httpd:
-            if start_frontend and open_browser:
-                _open_viewer_when_ready(viewer_url, frontend_url)
-            try:
-                httpd.serve_forever()
-            except KeyboardInterrupt:
-                print("\n[token-heatmap] Shutting down …")
-    finally:
-        os.chdir(orig_dir)
-        if frontend_proc is not None:
-            _terminate_process(frontend_proc)
-
-
-def _start_frontend_dev_server(frontend_url: str) -> Any:
-    """Launch ``npm run dev`` for the bundled ``web/frontend``.
-
-    Returns the ``subprocess.Popen`` handle, or ``None`` (after printing a
-    warning) when npm or the frontend directory is unavailable so the caller
-    can fall back to serving files only.
-
-    The viewer is backend-free: it loads the trace purely via the ``?trace=``
-    URL pointed at this CORS file server, so no API base needs configuring.
-    """
-    import os
-    import shutil
-    import subprocess
-    from urllib.parse import urlparse
-
-    # llm_token_heatmap/cli.py -> repo root is one parent up.
-    repo_root = Path(__file__).resolve().parents[1]
-    frontend_dir = repo_root / "web" / "frontend"
-    if not frontend_dir.is_dir():
-        print(
-            f"[token-heatmap] WARNING: --frontend set but {frontend_dir} was not found. "
-            "Run from a repo checkout to use it. Serving files only."
-        )
-        return None
-
-    npm = shutil.which("npm")
-    if npm is None:
-        print(
-            "[token-heatmap] WARNING: --frontend set but 'npm' is not on PATH. "
-            "Install Node.js 20+ to use it. Serving files only."
-        )
-        return None
-
-    frontend_port = urlparse(frontend_url).port or 5173
-
-    print(f"[token-heatmap] Starting frontend (npm run dev) on port {frontend_port} …")
-    try:
-        return subprocess.Popen(
-            [npm, "run", "dev", "--", "--port", str(frontend_port), "--strictPort"],
-            cwd=str(frontend_dir),
-            env=dict(os.environ),
-        )
-    except OSError as exc:
-        print(f"[token-heatmap] WARNING: failed to start npm ({exc}). Serving files only.")
-        return None
-
-
-def _open_viewer_when_ready(viewer_url: str, frontend_url: str) -> None:
-    """Open ``viewer_url`` once the frontend port accepts connections.
-
-    Polls in a daemon thread so it never blocks the file server. Gives up
-    quietly after a timeout — the URL is already printed for manual use.
-    """
-    import socket
-    import threading
-    import time
-    import webbrowser
-    from urllib.parse import urlparse
-
-    parsed = urlparse(frontend_url)
-    host = parsed.hostname or "localhost"
-    fport = parsed.port or 5173
-
-    def _wait_and_open() -> None:
-        deadline = time.monotonic() + 60.0
-        while time.monotonic() < deadline:
-            try:
-                with socket.create_connection((host, fport), timeout=1.0):
-                    break
-            except OSError:
-                time.sleep(0.5)
-        else:
-            return  # never came up; nothing to open
-        try:
-            webbrowser.open(viewer_url)
-        except Exception:  # pragma: no cover - platform-dependent
-            pass
-
-    threading.Thread(target=_wait_and_open, daemon=True).start()
-
-
-def _terminate_process(proc: Any) -> None:
-    """Terminate a subprocess, escalating to kill if it ignores SIGTERM."""
-    import subprocess
-
-    if proc.poll() is not None:
-        return
-    proc.terminate()
-    try:
-        proc.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        proc.kill()
 
 
 def _load_activation_trace(path: Path) -> dict[str, Any]:
@@ -1472,28 +1183,6 @@ def run_manifold(args: argparse.Namespace) -> int:
     return 0
 
 
-def run_serve(args: argparse.Namespace) -> int:
-    """Execute the `serve` sub-command: serve an existing directory, no generation.
-
-    Thin wrapper over :func:`_serve_outputs` (the same CORS file server the
-    ``trace --serve`` flag uses) so a trace produced earlier — and augmented with
-    ``token-heatmap manifold`` — can be served without re-running generation.
-    """
-    serve_dir: Path = args.dir
-    if not serve_dir.is_dir():
-        print(f"error: directory not found: {serve_dir}", file=sys.stderr)
-        return 2
-
-    _serve_outputs(
-        serve_dir,
-        port=args.port,
-        frontend_url=args.frontend_url,
-        start_frontend=getattr(args, "frontend", False),
-        open_browser=not getattr(args, "no_open", False),
-    )
-    return 0
-
-
 def main(argv: Sequence[str] | None = None) -> int:
     """Entry point for the `token-heatmap` console script."""
     parser, trace_parser = build_parser()
@@ -1503,9 +1192,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     # that explicit CLI flags always win over config-file values.
     ns, _ = parser.parse_known_args(argv)
     # Only the `trace` sub-command takes a YAML config to preload as defaults.
-    # Other sub-commands (e.g. `hpc run <config>`, `hpc serve --config`) also
-    # have a `config` dest, but theirs is a plain path string handled by their
-    # own run function — don't try to load it here.
+    # Other sub-commands (e.g. `hpc run <config>`) also have a `config` dest,
+    # but theirs is a plain path string handled by their own run function —
+    # don't try to load it here.
     if getattr(ns, "command", None) == "trace" and getattr(ns, "config", None) is not None:
         yaml_defaults = _load_yaml_config(ns.config)
         trace_parser.set_defaults(**yaml_defaults)

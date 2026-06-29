@@ -9,12 +9,6 @@ export interface EmptyStateProps {
    * The order in which the user provides files determines (A, B).
    */
   onTwoFilesDropped?: (fileA: File, fileB: File) => void;
-  /**
-   * Called when the user submits a trace URL. Enables loading a trace served
-   * from another machine — e.g. an SSH-forwarded backend or `--serve` file
-   * server (`ssh -L 8000:localhost:8000 user@host`).
-   */
-  onUrlSubmit?: (url: string) => void;
   title?: string;
   description?: ReactNode;
 }
@@ -23,26 +17,18 @@ export function EmptyState({
   onLoadSample,
   onFileDropped,
   onTwoFilesDropped,
-  onUrlSubmit,
   title = 'No trace loaded',
   description = (
     <>
-      Drop a JSON trace file here, choose one from disk, load a trace from a
-      URL, or load the bundled sample to explore the interactive token heatmap.
+      Drop a JSON trace file here, choose one from disk, or load the bundled
+      sample to explore the interactive token heatmap.
     </>
   ),
 }: EmptyStateProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isDiffDragging, setIsDiffDragging] = useState(false);
-  const [url, setUrl] = useState('');
   const inputRef = useRef<HTMLInputElement | null>(null);
   const diffInputRef = useRef<HTMLInputElement | null>(null);
-
-  const handleUrlSubmit: React.FormEventHandler<HTMLFormElement> = (event) => {
-    event.preventDefault();
-    const trimmed = url.trim();
-    if (trimmed && onUrlSubmit) onUrlSubmit(trimmed);
-  };
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -149,41 +135,6 @@ export function EmptyState({
               aria-label="Trace file"
             />
           </div>
-
-          {onUrlSubmit && (
-            <form className="empty-state__url" onSubmit={handleUrlSubmit}>
-              <label
-                className="empty-state__url-label"
-                htmlFor="empty-state-url"
-              >
-                Load from URL
-              </label>
-              <div className="empty-state__url-row">
-                <input
-                  id="empty-state-url"
-                  type="url"
-                  inputMode="url"
-                  className="empty-state__url-input"
-                  placeholder="http://localhost:8000/adaptive_token_trace.json"
-                  value={url}
-                  onChange={(event) => setUrl(event.target.value)}
-                  aria-label="Trace URL"
-                />
-                <button
-                  type="submit"
-                  className="empty-state__secondary"
-                  disabled={!url.trim()}
-                >
-                  Load
-                </button>
-              </div>
-              <p className="empty-state__url-hint">
-                Point at a remote trace — e.g. an SSH-forwarded backend or{' '}
-                <code>--serve</code> file server after{' '}
-                <code>ssh -L 8000:localhost:8000 user@host</code>.
-              </p>
-            </form>
-          )}
         </div>
 
         {hasSecondary && (

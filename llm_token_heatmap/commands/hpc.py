@@ -1,8 +1,8 @@
-"""``token-heatmap hpc {setup,run,serve}`` — laptop-side HPC orchestration.
+"""``token-heatmap hpc {setup,run}`` — laptop-side HPC orchestration.
 
 Thin Python wrappers around ssh / scp / rsync / sbatch that replace the old
-``scripts/hpc-setup.sh``, ``scripts/hpc-run.sh`` and ``scripts/hpc-serve.sh``.
-The remote GPU job is the *only* step that touches the cluster:
+``scripts/hpc-setup.sh`` and ``scripts/hpc-run.sh``. The remote GPU job is the
+*only* step that touches the cluster:
 
     laptop                         HPC (Slurm)
     ------                         -----------
@@ -33,18 +33,14 @@ import sys
 import time
 from pathlib import Path
 
-from llm_token_heatmap.commands._util import port_in_use, repo_root
+from llm_token_heatmap.commands._util import repo_root
 
 # Defaults — every one overridable via its flag or the matching env var.
 _SSH_HOST = os.environ.get("SSH_HOST", "j7zang-gpu")
 _REMOTE_REPO = os.environ.get("REMOTE_REPO", "/work/j7zang/Token-Heatmap")
 _REMOTE_VENV = os.environ.get("REMOTE_VENV", "/work/j7zang/th-gpu")
 _REMOTE_BIN_GPU = os.environ.get("REMOTE_BIN_GPU", "/work/j7zang/th-gpu/bin/token-heatmap")
-_REMOTE_BIN = os.environ.get("REMOTE_BIN", "/work/j7zang/.local/bin/token-heatmap")
 _ANACONDA_PYTHON = os.environ.get("ANACONDA_PYTHON", "/opt/uw/anaconda3/2025.06.1/bin/python3.13")
-_FRONTEND_PORT = int(os.environ.get("FRONTEND_PORT", "5173"))
-_LOCAL_VIEW_PORT = int(os.environ.get("LOCAL_VIEW_PORT", os.environ.get("LOCAL_PORT", "8001")))
-_REMOTE_PORT = int(os.environ.get("REMOTE_PORT", "8000"))
 _POLL_SECONDS = int(os.environ.get("POLL_SECONDS", "15"))
 
 
@@ -322,7 +318,7 @@ sbatch --parsable \\
     except KeyboardInterrupt:
         print(
             f"\n[hpc-run] interrupted — the Slurm job {job_id} keeps running. "
-            f"Re-attach later with: token-heatmap hpc serve {out_rel}"
+            f"Re-run `token-heatmap hpc run` once it finishes to pull the results."
         )
         return 130
 
@@ -341,7 +337,10 @@ sbatch --parsable \\
     # --- 4. pull EVERYTHING back ------------------------------------------- #
     if not args.pull:
         print(f"[hpc-run] --no-pull: leaving results on the HPC at {remote_repo}/{out_rel}")
-        print(f"[hpc-run] view remotely with: token-heatmap hpc serve {out_rel}")
+        print(
+            f"[hpc-run] rsync them back when ready: "
+            f"rsync -az {host}:{remote_repo}/{out_rel}/ ./{out_rel}/"
+        )
         return 0
 
     print(f"[hpc-run] [4/4] pulling results -> {local_out}/ ...")
@@ -364,99 +363,13 @@ sbatch --parsable \\
     for entry in sorted(p.name for p in local_out.iterdir()):
         print(f"[hpc-run]     {entry}")
 
-    # --- view locally (no GPU, no tunnel) ---------------------------------- #
+    # --- view locally (no GPU) --------------------------------------------- #
     trace_json = f"{out_rel}/adaptive_token_trace.json"
-    viewer_url = (
-        f"http://localhost:{args.frontend_port}/?trace="
-        f"http://localhost:{args.local_view_port}/adaptive_token_trace.json"
-    )
     print()
-    if args.serve:
-        print(f"[hpc-run] --serve: starting a local file server on :{args.local_view_port} (Ctrl+C to stop).")
-        print("[hpc-run] open the viewer (start it with 'cd web/frontend && npm run dev' if needed):")
-        print(f"            {viewer_url}")
-        from llm_token_heatmap.cli import _serve_outputs  # lazy: avoids import cycle
-
-        _serve_outputs(
-            Path(out_rel),
-            port=args.local_view_port,
-            frontend_url=f"http://localhost:{args.frontend_port}",
-        )
-        return 0
-
-    print("[hpc-run] view it locally (no GPU needed) — either:")
-    print(f"  A) drag {trace_json} onto http://localhost:{args.frontend_port}")
-    print("  B) serve + open:")
-    print(f"       token-heatmap serve {out_rel} --port {args.local_view_port}")
-    print(f"       {viewer_url}")
-    print("  (or re-run with --serve to do B automatically)")
+    print(f"[hpc-run] view it locally (no GPU needed): open {trace_json} in the viewer —")
+    print("[hpc-run] drag it onto the web app (cd web/frontend && npm run dev), or open")
+    print("[hpc-run] it in the desktop app.")
     return 0
-
-
-# --------------------------------------------------------------------------- #
-# serve  (SSH tunnel + remote file server)
-# --------------------------------------------------------------------------- #
-def run_hpc_serve(args: argparse.Namespace) -> int:
-    host = args.ssh_host
-    remote_repo = args.remote_repo
-    remote_bin = args.remote_bin
-    remote_dir = args.dir
-
-    if port_in_use(args.local_port):
-        print(
-            f"error: local port {args.local_port} is already in use — pick another with --local-port.",
-            file=sys.stderr,
-        )
-        print("       (port 8000 is your WC2026 service; that's why the default is 8001)", file=sys.stderr)
-        return 1
-
-    viewer_url = (
-        f"http://localhost:{args.frontend_port}/?trace="
-        f"http://localhost:{args.local_port}/adaptive_token_trace.json"
-    )
-
-    # Build the remote command. `exec` on the final serve so SIGHUP reaches
-    # token-heatmap directly when the SSH connection drops.
-    parts = [f"cd {shlex.quote(remote_repo)}"]
-    if args.gen:
-        parts.append(
-            f"{shlex.quote(remote_bin)} trace --config {shlex.quote(args.config)} "
-            "--capture-attention --attention-layers all --capture-full-attention "
-            "--capture-activations --capture-full-activations"
-        )
-        parts.append(
-            f"{shlex.quote(remote_bin)} manifold --trace "
-            f"{shlex.quote(remote_dir + '/adaptive_token_trace.json')}"
-        )
-    parts.append(f"exec {shlex.quote(remote_bin)} serve {shlex.quote(remote_dir)} --port {args.remote_port}")
-    remote_cmd = " && ".join(parts)
-
-    print(f"[hpc-serve] host={host}")
-    print(
-        f"[hpc-serve] serving {remote_dir} on remote :{args.remote_port}  ->  "
-        f"forwarded to local :{args.local_port}"
-    )
-    if args.gen:
-        print(
-            "[hpc-serve] --gen: regenerating full trace (attention + logit-lens + activations) "
-            "+ manifold first (runs the model, eager attention; takes a while)"
-        )
-    print("[hpc-serve] once it says 'Serving', open the viewer:")
-    print(f"              {viewer_url}")
-    print("[hpc-serve] Ctrl+C here stops the tunnel AND the remote server.\n")
-
-    # -t: pty so Ctrl+C/SIGHUP reaches the remote process and cleans it up.
-    return subprocess.run(
-        [
-            "ssh", "-t",
-            "-o", "ServerAliveInterval=30",
-            "-o", "ServerAliveCountMax=3",
-            "-o", "ExitOnForwardFailure=yes",
-            "-L", f"{args.local_port}:localhost:{args.remote_port}",
-            host,
-            remote_cmd,
-        ]
-    ).returncode
 
 
 # --------------------------------------------------------------------------- #
@@ -482,7 +395,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     hpc = subparsers.add_parser(
         "hpc",
         help="Run GPU compute on an HPC (Slurm) and pull results back.",
-        description="Laptop-side HPC orchestration: setup the GPU venv, run a round-trip, or serve a run.",
+        description="Laptop-side HPC orchestration: setup the GPU venv or run a round-trip.",
     )
     hpc_sub = hpc.add_subparsers(dest="hpc_command", required=True)
 
@@ -529,7 +442,6 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     run.add_argument("--probe", help="Add a supervised manifold probe scalar (e.g. line_position).")
     run.add_argument("--extra", help="Extra `trace` flags (e.g. '--max-new-tokens 320').")
     run.add_argument("--4bit", dest="four_bit", action="store_true", help="Load in 4-bit NF4 (for 32B+).")
-    run.add_argument("--serve", action="store_true", help="After pulling, start a local file server + print the viewer URL.")
     run.add_argument("--no-manifold", dest="manifold", action="store_false", help="Skip the manifold pass.")
     run.add_argument("--no-sync", dest="sync", action="store_false", help="Don't `git pull` the HPC repo first.")
     run.add_argument("--no-pull", dest="pull", action="store_false", help="Leave outputs on the HPC (no rsync back).")
@@ -538,27 +450,5 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     _add_host_repo(run)
     _add_venv_args(run)
     run.add_argument("--remote-bin-gpu", default=_REMOTE_BIN_GPU, help="token-heatmap in the GPU venv on the HPC.")
-    run.add_argument("--local-view-port", type=int, default=_LOCAL_VIEW_PORT, help="Local file-server port for --serve (default: 8001).")
-    run.add_argument("--frontend-port", type=int, default=_FRONTEND_PORT, help="Frontend port for the printed viewer URL (default: 5173).")
     run.add_argument("--poll-seconds", type=int, default=_POLL_SECONDS, help="squeue poll interval (default: 15).")
     run.set_defaults(func=run_hpc_run)
-
-    # --- hpc serve --------------------------------------------------------- #
-    serve = hpc_sub.add_parser(
-        "serve",
-        help="SSH tunnel + remote file server to view an HPC run locally.",
-        description=(
-            "Start the token-heatmap file server on the HPC and forward it to a "
-            "local port so the local frontend can fetch the trace. One SSH session "
-            "does both, so a single Ctrl+C tears down both."
-        ),
-    )
-    serve.add_argument("dir", nargs="?", default="outputs/example-run", help="Remote run dir to serve.")
-    serve.add_argument("--gen", action="store_true", help="Regenerate trace+manifold first, then serve.")
-    serve.add_argument("--config", default="configs/example.yaml", help="Config used with --gen.")
-    _add_host_repo(serve)
-    serve.add_argument("--remote-bin", default=_REMOTE_BIN, help="token-heatmap path on the HPC (default: ~/.local/bin).")
-    serve.add_argument("--remote-port", type=int, default=_REMOTE_PORT, help="File-server port on the HPC (default: 8000).")
-    serve.add_argument("--local-port", type=int, default=_LOCAL_VIEW_PORT, help="Local forwarded port (default: 8001).")
-    serve.add_argument("--frontend-port", type=int, default=_FRONTEND_PORT, help="Frontend port for the printed viewer URL (default: 5173).")
-    serve.set_defaults(func=run_hpc_serve)

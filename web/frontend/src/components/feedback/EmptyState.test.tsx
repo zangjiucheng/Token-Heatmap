@@ -21,40 +21,11 @@ describe('EmptyState', () => {
     expect(screen.getByText(/drop a json trace file/i)).toBeInTheDocument();
   });
 
-  it('omits the URL field when onUrlSubmit is not provided', () => {
+  it('offers only local loading — no remote URL field', () => {
     render(<EmptyState onLoadSample={() => undefined} />);
     expect(screen.queryByLabelText(/trace url/i)).not.toBeInTheDocument();
-  });
-
-  it('submits the trimmed URL via onUrlSubmit', async () => {
-    const onUrlSubmit = vi.fn();
-    render(
-      <EmptyState onLoadSample={() => undefined} onUrlSubmit={onUrlSubmit} />,
-    );
-
-    const input = screen.getByLabelText(/trace url/i);
-    await userEvent.type(input, '  http://localhost:8000/trace.json  ');
-    await userEvent.click(screen.getByRole('button', { name: /^load$/i }));
-
-    expect(onUrlSubmit).toHaveBeenCalledTimes(1);
-    expect(onUrlSubmit).toHaveBeenCalledWith(
-      'http://localhost:8000/trace.json',
-    );
-  });
-
-  it('disables Load until a URL is entered', async () => {
-    const onUrlSubmit = vi.fn();
-    render(
-      <EmptyState onLoadSample={() => undefined} onUrlSubmit={onUrlSubmit} />,
-    );
-
-    const loadButton = screen.getByRole('button', { name: /^load$/i });
-    expect(loadButton).toBeDisabled();
-
-    await userEvent.type(
-      screen.getByLabelText(/trace url/i),
-      'http://x/y.json',
-    );
-    expect(loadButton).toBeEnabled();
+    expect(
+      screen.queryByRole('button', { name: /^load$/i }),
+    ).not.toBeInTheDocument();
   });
 });

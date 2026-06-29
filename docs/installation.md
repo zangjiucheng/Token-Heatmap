@@ -51,13 +51,14 @@ YAML config (`--config`) works out of the box — `pyyaml` is now a core depende
 
 ## Running the web app
 
-The web app is a static, file-based viewer — there is no backend to run. The
-quickest path lets the CLI generate a trace and open the viewer in one command:
+The web app is a static, file-based viewer — there is no backend to run. The CLI
+just generates the trace to disk; you then open the JSON in the viewer:
 
 ```bash
-token-heatmap trace --config configs/example.yaml --serve --frontend
+token-heatmap trace --config configs/example.yaml   # writes outputs/example-run/
+cd web/frontend && npm run dev                       # http://localhost:5173
+# then drag outputs/example-run/adaptive_token_trace.json onto the page
 ```
 
-Everything else — manual file drop, `?trace=<url>`, the HPC / no-Node.js
-round-trip, hosting a prebuilt `dist/`, and the native desktop app — is in
-[`web-app.md`](web-app.md).
+Everything else — manual file drop, the bundled sample, hosting a prebuilt
+`dist/`, and the native desktop app — is in [`web-app.md`](web-app.md).

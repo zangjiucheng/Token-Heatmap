@@ -55,73 +55,11 @@ outputs/
 
 Run `token-heatmap trace --help` for the full flag list.
 
-## Serving the result instantly (`--serve`)
+## Viewing the result
 
-Add `--serve` to start a file server immediately after generation and print a
-ready-made URL to open in the browser. Uses Python's built-in `http.server` —
-no uvicorn, no npm, no extra installs required.
-
-```bash
-token-heatmap trace --config configs/example.yaml --serve
-```
-
-```
-[token-heatmap] Serving output directory …
-[token-heatmap] Files: http://localhost:8000/
-[token-heatmap] Open the viewer at:
-[token-heatmap]   http://localhost:5173/?trace=http://localhost:8000/adaptive_token_trace.json
-[token-heatmap] (Press Ctrl+C to stop)
-```
-
-Flags:
-
-| Flag | Default | Meaning |
-|---|---|---|
-| `--serve` | off | Start file server after generation |
-| `--port` | `8000` | Port for the file server |
-| `--frontend-url` | `http://localhost:5173` | Frontend origin used to build the printed URL |
-| `--frontend` | off | Also start the Vite frontend (`npm run dev`) and open the viewer. Implies `--serve`. Needs Node.js + a repo checkout. |
-| `--no-open` | off | With `--frontend`, don't auto-open the browser |
-
-Example — file server on port 9000, viewer on port 3000:
-
-```bash
-token-heatmap trace --config configs/example.yaml \
-  --serve --port 9000 --frontend-url http://localhost:3000
-# prints: http://localhost:3000/?trace=http://localhost:9000/adaptive_token_trace.json
-```
-
-On HPC, SSH port-forward the file-server port to your laptop before opening the URL:
-
-```bash
-ssh -L 9000:localhost:9000 user@hpc
-```
-
-### One command, frontend included (`--frontend`)
-
-On a **local machine with Node.js and a repo checkout**, `--frontend` starts the
-file server *and* the Vite dev server, then opens the ready-made viewer URL once
-the frontend is up. The dev server binds to the port in `--frontend-url`
-(default `5173`). One `Ctrl+C` stops both.
-
-```bash
-token-heatmap trace --config configs/example.yaml --serve --frontend
-```
-
-```
-[token-heatmap] Starting frontend (npm run dev) on port 5173 …
-[token-heatmap] Serving output directory …
-[token-heatmap] Files: http://localhost:8000/
-[token-heatmap] Frontend (npm run dev): http://localhost:5173
-[token-heatmap] Open the viewer at:
-[token-heatmap]   http://localhost:5173/?trace=http://localhost:8000/adaptive_token_trace.json
-[token-heatmap] (Press Ctrl+C to stop)
-```
-
-If `npm` isn't on `PATH` or `web/frontend` is missing (e.g. a pip-only install),
-it prints a warning and degrades to serving files only. This flag is for local
-use — the HPC node typically has no Node.js, which is exactly why the
-SSH-forward-the-port workflow above exists.
+`trace` only writes the bundle to disk. To explore it, drag
+`adaptive_token_trace.json` onto the web viewer (`cd web/frontend && npm run dev`),
+or open it in the desktop app. See [`web-app.md`](web-app.md).
 
 ## Inspecting attention and the logit lens
 
@@ -249,30 +187,9 @@ or when no `(layer, submodule)` cloud has at least two positions to analyze.
 
 See [`interpreting.md`](interpreting.md#manifold-metrics) for what the metrics mean.
 
-## Serving an existing trace (`serve`)
-
-`trace --serve` regenerates before serving, so it can't serve a trace you've
-just augmented with `manifold`. The `serve` subcommand serves an existing
-directory over HTTP with CORS — **no regeneration** — so the full flow fits in
-one terminal:
-
-```bash
-token-heatmap trace --config configs/example.yaml \
-  --capture-activations --capture-full-activations          # writes outputs/example-run/
-token-heatmap manifold --trace outputs/example-run/adaptive_token_trace.json
-token-heatmap serve outputs/example-run                     # serves it, CORS, no regen
-```
-
-| Flag             | Default                   | Meaning                                                      |
-| ---------------- | ------------------------- | ----------------------------------------------------------- |
-| `dir`            | `outputs/`                | Directory to serve.                                         |
-| `--port`         | `8000`                    | File-server port.                                          |
-| `--frontend-url` | `http://localhost:5173`   | Frontend origin used to build the printed viewer URL.      |
-| `--frontend`     | off                       | Also start the Vite frontend (`npm run dev`) and open it.  |
-| `--no-open`      | off                       | With `--frontend`, don't auto-open the browser.            |
-
-On HPC, SSH port-forward the file-server port to your laptop (use a free local
-port — see [`web-app.md`](web-app.md)) before opening the URL.
+After augmenting a trace with `manifold`, drag its
+`adaptive_token_trace.json` onto the web viewer (`cd web/frontend && npm run dev`),
+or open it in the desktop app — see [`web-app.md`](web-app.md).
 
 ## Building the frontend (`web build`)
 
@@ -284,7 +201,7 @@ file server on a host with no Node.js.
 token-heatmap web build                 # output: web/frontend/dist/
 # then serve it anywhere, e.g.:
 python -m http.server -d web/frontend/dist 8080
-# open http://localhost:8080/?trace=<trace-url>
+# open http://localhost:8080/ and drag a trace JSON onto the page
 ```
 
 ## HPC: build the GPU venv (`hpc setup`)
@@ -310,15 +227,14 @@ token-heatmap hpc setup --verify   # also run a real GPU matmul check (queues a 
 One command from your laptop. It uploads the config to the HPC, submits a Slurm
 GPU job (the *only* remote step) that runs `trace` + `manifold`, polls it to
 completion, then rsyncs the whole `outputs/<name>/` folder back — so you view it
-locally with **no GPU and no tunnel** (drag the JSON onto the viewer, or
-`token-heatmap serve outputs/<name>`). A pre-flight check refuses runs that
-won't fit the GPU's VRAM before submitting.
+locally with **no GPU and no tunnel** (drag `outputs/<name>/adaptive_token_trace.json`
+onto the web viewer, or open it in the desktop app). A pre-flight check refuses
+runs that won't fit the GPU's VRAM before submitting.
 
 ```bash
 token-heatmap hpc run configs/wrap-text.yaml --model Qwen/Qwen2.5-14B-Instruct \
   --capture activations --probe line_position --extra "--max-new-tokens 320"
 # 32B on one GPU: add  --4bit
-# auto-open it locally afterwards: add  --serve
 ```
 
 | Flag             | Default                          | Meaning                                                                |
@@ -334,7 +250,6 @@ token-heatmap hpc run configs/wrap-text.yaml --model Qwen/Qwen2.5-14B-Instruct \
 | `--probe`        | _none_                           | Add a supervised manifold probe scalar (e.g. `line_position`).        |
 | `--extra`        | _none_                           | Extra `trace` flags (e.g. `--max-new-tokens 320`).                    |
 | `--4bit`         | off                              | Load in 4-bit NF4 (for 32B+).                                          |
-| `--serve`        | off                              | After pulling, start a local file server + print the viewer URL.      |
 | `--no-manifold`  | off                              | Skip the manifold pass.                                                |
 | `--no-sync`      | off                              | Don't `git pull` the HPC repo first.                                   |
 | `--no-pull`      | off                              | Leave outputs on the HPC (no rsync back).                              |
@@ -342,29 +257,5 @@ token-heatmap hpc run configs/wrap-text.yaml --model Qwen/Qwen2.5-14B-Instruct \
 | `--force`        | off                              | Skip the pre-flight "won't fit in VRAM" size check.                   |
 
 Connection / path overrides also exist (`--ssh-host`, `--remote-repo`,
-`--remote-venv`, `--anaconda-python`, `--remote-bin-gpu`, `--local-view-port`,
-`--frontend-port`, `--poll-seconds`); run `token-heatmap hpc run --help` for the
-full list.
-
-## HPC: serve a remote run (`hpc serve`)
-
-Start the `token-heatmap` file server on the HPC and forward it to a local port
-so the local frontend can fetch the trace. One SSH session does both, so a
-single `Ctrl+C` tears down both.
-
-```bash
-token-heatmap hpc serve outputs/wrap-text                    # serve an existing remote run
-token-heatmap hpc serve --gen --config configs/wrap-text.yaml   # regenerate first, then serve
-```
-
-| Flag              | Default                      | Meaning                                            |
-| ----------------- | ---------------------------- | -------------------------------------------------- |
-| `dir`             | _remote run dir_             | Remote run dir to serve.                           |
-| `--gen`           | off                          | Regenerate trace + manifold first, then serve.     |
-| `--config`        | _none_                       | Config used with `--gen`.                          |
-| `--ssh-host`      | `j7zang-gpu`                 | SSH host alias.                                     |
-| `--remote-repo`   | `/work/j7zang/Token-Heatmap` | Repo checkout on the HPC.                           |
-| `--remote-bin`    | `~/.local/bin`               | `token-heatmap` path on the HPC.                   |
-| `--remote-port`   | `8000`                       | File-server port on the HPC.                       |
-| `--local-port`    | `8001`                       | Local forwarded port.                              |
-| `--frontend-port` | `5173`                       | Frontend port for the printed viewer URL.          |
+`--remote-venv`, `--anaconda-python`, `--remote-bin-gpu`, `--poll-seconds`); run
+`token-heatmap hpc run --help` for the full list.

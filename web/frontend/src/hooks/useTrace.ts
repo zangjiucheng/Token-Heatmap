@@ -1,11 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import type { Trace } from '@/types/trace';
-import {
-  loadSampleTrace,
-  loadTraceFromFile,
-  loadTraceFromUrl,
-} from '@/lib/trace/load';
+import { loadSampleTrace, loadTraceFromFile } from '@/lib/trace/load';
 import { TraceLoadError, isTraceLoadError } from '@/lib/trace/errors';
 import { takeTrace } from '@/lib/trace/store';
 
@@ -13,7 +9,6 @@ export type TraceStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export type TraceSource =
   | { type: 'file'; file: File }
-  | { type: 'url'; url: string }
   | { type: 'sample' }
   /** Adopt a trace another flow has already put in the shared store. */
   | { type: 'cached'; id: string }
@@ -31,8 +26,6 @@ async function loadSource(source: TraceSource): Promise<Trace> {
   switch (source.type) {
     case 'file':
       return loadTraceFromFile(source.file);
-    case 'url':
-      return loadTraceFromUrl(source.url);
     case 'sample':
       return loadSampleTrace();
     case 'cached': {
@@ -51,7 +44,7 @@ async function loadSource(source: TraceSource): Promise<Trace> {
  * React hook wrapping the current trace, loader state, and a `load` action.
  *
  * Concurrent calls to `load` are resolved by last-write-wins: only the most
- * recent invocation updates state, so a stale slow URL fetch can never
+ * recent invocation updates state, so a stale slow file read can never
  * clobber a fresh sample load.
  */
 export function useTrace(): UseTraceResult {
