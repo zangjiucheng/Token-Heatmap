@@ -1,4 +1,4 @@
-# LLM Token Heatmap — Frontend
+# LLM Token Heatmap — Desktop App (Tauri + React)
 
 React 18 + TypeScript + Vite SPA for loading and exploring LLM token
 probability traces. It is a static, file-based **viewer** with no backend:
@@ -15,7 +15,7 @@ export.
 ## Install
 
 ```bash
-cd web/frontend
+cd app
 npm install
 ```
 
@@ -36,7 +36,7 @@ npm install
 ## Project layout
 
 ```
-web/frontend/
+app/
 ├── src/
 │   ├── components/  # Reusable presentational components
 │   ├── features/    # Feature-scoped modules (heatmap, attention, activations, ...)

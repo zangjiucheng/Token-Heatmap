@@ -40,17 +40,17 @@ echo "[setup] Installing core Python package..."
 pip install --upgrade pip
 pip install -e ".[dev,models]"
 
-if [ -d "web/frontend" ]; then
+if [ -d "app" ]; then
     if command -v npm >/dev/null 2>&1; then
-        echo "[setup] Installing web frontend deps (npm install in web/frontend)..."
-        (cd web/frontend && npm install)
+        echo "[setup] Installing web frontend deps (npm install in app)..."
+        (cd app && npm install)
     else
-        echo "[setup] npm not found on PATH; skipping web/frontend install."
-        echo "        Install Node.js 20+ and run 'cd web/frontend && npm install'"
+        echo "[setup] npm not found on PATH; skipping app install."
+        echo "        Install Node.js 20+ and run 'cd app && npm install'"
         echo "        if you want to run the web app."
     fi
 else
-    echo "[setup] web/frontend not found; skipping frontend install."
+    echo "[setup] app not found; skipping frontend install."
 fi
 
 echo ""
@@ -58,4 +58,4 @@ echo "[setup] Setup complete."
 echo "  Activate with:   source .venv/bin/activate"
 echo "  Run example:     python examples/qwen_attention_inspect.py"
 echo "  Produce:         token-heatmap trace --config configs/example.yaml"
-echo "  View:            drag the JSON onto the viewer (cd web/frontend && npm run dev)"
+echo "  View:            drag the JSON onto the viewer (cd app && npm run dev)"

@@ -1,7 +1,7 @@
 """``token-heatmap web build`` — build the Vite frontend for static hosting.
 
 Replaces ``scripts/build-frontend.sh``. Runs ``npm install`` + ``npm run build``
-in ``web/frontend`` and prints how to ship the resulting ``dist/`` to a host
+in ``app`` and prints how to ship the resulting ``dist/`` to a host
 that has no Node.js (e.g. an HPC login node) and serve it with any static file
 server. The viewer is backend-free: it loads traces from a dropped file or the
 bundled sample.
@@ -19,7 +19,7 @@ from llm_token_heatmap.commands._util import repo_root
 
 def run_web_build(args: argparse.Namespace) -> int:  # noqa: ARG001 — uniform run(args) signature
     """Execute ``token-heatmap web build``."""
-    frontend_dir = repo_root() / "web" / "frontend"
+    frontend_dir = repo_root() / "app"
     if not frontend_dir.is_dir():
         print(f"error: frontend directory not found at {frontend_dir}", file=sys.stderr)
         return 2
@@ -60,7 +60,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         "build",
         help="Build the Vite frontend (dist/) for static hosting.",
         description=(
-            "Run `npm install` + `npm run build` in web/frontend. The viewer is a "
+            "Run `npm install` + `npm run build` in app. The viewer is a "
             "static SPA with no backend — serve the resulting dist/ from any static "
             "file server on a host with no Node.js. Traces load from a dropped file "
             "or the bundled sample."

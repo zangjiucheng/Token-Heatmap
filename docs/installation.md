@@ -20,7 +20,7 @@ source .venv/bin/activate
 
 1. Creates `.venv` if it doesn't already exist.
 2. Installs the core package in editable mode (`pip install -e ".[dev,models]"`).
-3. Runs `npm install` in `web/frontend` — but only if `npm` is on `PATH`. If you don't have Node, that step is skipped with a friendly message.
+3. Runs `npm install` in `app` — but only if `npm` is on `PATH`. If you don't have Node, that step is skipped with a friendly message.
 
 After it finishes, the `token-heatmap` CLI is on your `PATH` (see [`cli.md`](cli.md)).
 
@@ -56,7 +56,7 @@ just generates the trace to disk; you then open the JSON in the viewer:
 
 ```bash
 token-heatmap trace --config configs/example.yaml   # writes outputs/example-run/
-cd web/frontend && npm run dev                       # http://localhost:5173
+cd app && npm run dev                       # http://localhost:5173
 # then drag outputs/example-run/adaptive_token_trace.json onto the page
 ```
 

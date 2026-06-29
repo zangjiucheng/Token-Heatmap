@@ -367,7 +367,7 @@ sbatch --parsable \\
     trace_json = f"{out_rel}/adaptive_token_trace.json"
     print()
     print(f"[hpc-run] view it locally (no GPU needed): open {trace_json} in the viewer —")
-    print("[hpc-run] drag it onto the web app (cd web/frontend && npm run dev), or open")
+    print("[hpc-run] drag it onto the web app (cd app && npm run dev), or open")
     print("[hpc-run] it in the desktop app.")
     return 0
 

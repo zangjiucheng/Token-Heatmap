@@ -58,7 +58,7 @@ Run `token-heatmap trace --help` for the full flag list.
 ## Viewing the result
 
 `trace` only writes the bundle to disk. To explore it, drag
-`adaptive_token_trace.json` onto the web viewer (`cd web/frontend && npm run dev`),
+`adaptive_token_trace.json` onto the web viewer (`cd app && npm run dev`),
 or open it in the desktop app. See [`web-app.md`](web-app.md).
 
 ## Inspecting attention and the logit lens
@@ -188,19 +188,19 @@ or when no `(layer, submodule)` cloud has at least two positions to analyze.
 See [`interpreting.md`](interpreting.md#manifold-metrics) for what the metrics mean.
 
 After augmenting a trace with `manifold`, drag its
-`adaptive_token_trace.json` onto the web viewer (`cd web/frontend && npm run dev`),
+`adaptive_token_trace.json` onto the web viewer (`cd app && npm run dev`),
 or open it in the desktop app — see [`web-app.md`](web-app.md).
 
 ## Building the frontend (`web build`)
 
-Run `npm install` + `npm run build` in `web/frontend` to produce a static
+Run `npm install` + `npm run build` in `app` to produce a static
 `dist/`. The viewer is backend-free, so you can serve `dist/` from any static
 file server on a host with no Node.js.
 
 ```bash
-token-heatmap web build                 # output: web/frontend/dist/
+token-heatmap web build                 # output: app/dist/
 # then serve it anywhere, e.g.:
-python -m http.server -d web/frontend/dist 8080
+python -m http.server -d app/dist 8080
 # open http://localhost:8080/ and drag a trace JSON onto the page
 ```
 

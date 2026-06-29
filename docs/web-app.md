@@ -15,7 +15,7 @@ The desktop app additionally lets you open a trace file directly from disk.
 
 The same viewer is also packaged as a native desktop app via
 [Tauri](https://tauri.app/) — no Node.js or browser tab needed, just open a
-trace file. The Rust shell lives in `web/frontend/src-tauri/`.
+trace file. The Rust shell lives in `app/src-tauri/`.
 
 **Download a prebuilt installer.** Every published
 [GitHub Release](https://github.com/zangjiucheng/Token-Heatmap/releases) ships
@@ -28,7 +28,7 @@ installers for macOS (Apple Silicon + Intel), Windows (`.msi`), and Linux
 `libwebkit2gtk-4.1-dev`, `librsvg2-dev`, `patchelf`, …).
 
 ```bash
-cd web/frontend
+cd app
 npm install              # first time only
 
 npm run app:dev          # hot-reloading desktop dev window (tauri dev)
@@ -39,7 +39,7 @@ npm run app:build        # produce a release installer for the current OS
 The installers land in:
 
 ```
-web/frontend/src-tauri/target/release/bundle/
+app/src-tauri/target/release/bundle/
   macos/   Token Heatmap.app  +  dmg/Token Heatmap_<ver>_<arch>.dmg
   msi/     Token Heatmap_<ver>_<arch>_en-US.msi      (Windows)
   appimage/ token-heatmap_<ver>_<arch>.AppImage      (Linux)
@@ -93,7 +93,7 @@ file in:
 
 ```bash
 token-heatmap trace --config configs/example.yaml   # writes outputs/example-run/
-cd web/frontend && npm run dev                       # http://localhost:5173
+cd app && npm run dev                       # http://localhost:5173
 # then drag outputs/example-run/adaptive_token_trace.json onto the page
 ```
 
@@ -108,7 +108,7 @@ which rsyncs the whole output dir back to `./outputs/<name>/`. Then open the
 local JSON in the viewer:
 
 ```bash
-cd web/frontend && npm run dev          # http://localhost:5173
+cd app && npm run dev          # http://localhost:5173
 # then drag outputs/<name>/adaptive_token_trace.json onto the page
 ```
 
@@ -123,7 +123,7 @@ ever needed on the host:
 token-heatmap web build
 
 # Serve dist/ with any static file server
-python -m http.server -d web/frontend/dist 8080
+python -m http.server -d app/dist 8080
 # open http://localhost:8080/ and drag a trace JSON onto the page
 ```
 
@@ -133,7 +133,7 @@ python -m http.server -d web/frontend/dist 8080
 |---|---|---|
 | Python library | `llm_token_heatmap` | generation, probes, serialization |
 | CLI | `token-heatmap` | produce traces (writes the bundle to disk) |
-| Frontend | React + Vite (`web/frontend/`) | static, file-based trace viewer |
+| Frontend | React + Vite (`app/`) | static, file-based trace viewer |
 
 There is no application backend and no network loading. The viewer reads the
 trace JSON directly from a dropped file (or the desktop app's file open); it

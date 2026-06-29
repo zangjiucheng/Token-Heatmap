@@ -22,9 +22,9 @@ prompt + previous tokens → logits → probabilities → next token
 
 - **`llm_token_heatmap`** — Python library: `AdaptiveTokenProbe`, a manual generation loop, sampling helpers, CSV/JSON/DataFrame export, attention + logit-lens + activation probes, a self-contained model-architecture summary, TWERA-style neuron attribution, **direct logit attribution (per-layer + per-head)**, component / head ablation primitives, post-hoc manifold geometry, matplotlib heatmaps, and activation diff. Loads on GPU in **bf16** (with optional **`--load-in-4bit`** NF4 for big models).
 - **`token-heatmap`** — CLI that takes a model + prompt (or a YAML config) and writes a full trace bundle to disk: `trace` (generate + capture) and `manifold` (analyze the activation clouds).
-- **`web/frontend`** — React + Vite SPA: a static, file-based **trace viewer** — a **lens workspace** with a grouped lens rail (**Generation / Internals / Geometry**), a persistent generation spine (token strip + entropy / selected-probability timelines), and a resizable inspector. Lenses: **Token Heatmap**, **Model** (architecture overview), **Output** (complete generated-text render), **Attention**, **Logit Lens**, **Activations** (per-step ↔ whole-trace **TWERA** ranking toggle), **Attribution** (**direct logit attribution** — each token's logit split by layer, expandable to **per head**), **Graph** (the same attribution as a pruned node-link **attribution graph**), **Manifold** (3-D rotatable cloud + probe/helix readouts); plus step detail, CSV/PNG export, and a diff view. It loads traces from a dropped file or the bundled sample — no backend server. (Interactive ablation will return later via the CLI precomputing ablations into the trace.)
+- **`app`** — the desktop-app frontend (React + Vite UI in a [Tauri](https://tauri.app/) shell): a static, file-based **trace viewer** — a **lens workspace** with a grouped lens rail (**Generation / Internals / Geometry**), a persistent generation spine (token strip + entropy / selected-probability timelines), and a resizable inspector. Lenses: **Token Heatmap**, **Model** (architecture overview), **Output** (complete generated-text render), **Attention**, **Logit Lens**, **Activations** (per-step ↔ whole-trace **TWERA** ranking toggle), **Attribution** (**direct logit attribution** — each token's logit split by layer, expandable to **per head**), **Graph** (the same attribution as a pruned node-link **attribution graph**), **Manifold** (3-D rotatable cloud + probe/helix readouts); plus step detail, CSV/PNG export, and a diff view. It loads traces from a dropped file or the bundled sample — no backend server. (Interactive ablation will return later via the CLI precomputing ablations into the trace.)
 - **`token-heatmap web build`** — builds the static viewer for deployment on servers without Node.js.
-- **Desktop app** — the viewer packaged as a native [Tauri](https://tauri.app/) app (no browser/Node.js needed). Grab an installer from the [Releases](https://github.com/zangjiucheng/Token-Heatmap/releases), or build it with `cd web/frontend && npm run app:build`. See [`docs/web-app.md`](docs/web-app.md#desktop-app-tauri).
+- **Desktop app** — the viewer packaged as a native [Tauri](https://tauri.app/) app (no browser/Node.js needed). Grab an installer from the [Releases](https://github.com/zangjiucheng/Token-Heatmap/releases), or build it with `cd app && npm run app:build`. See [`docs/web-app.md`](docs/web-app.md#desktop-app-tauri).
 - **`token-heatmap hpc run <config>`** — one command from your laptop: do the GPU compute on an HPC (Slurm), then rsync the whole run back so viewing needs no GPU. Companion: `token-heatmap hpc setup` (build the GPU venv).
 
 ## Documentation
@@ -87,7 +87,7 @@ the trace bundle to disk; you then open the JSON in the viewer:
 
 ```bash
 token-heatmap trace --config configs/example.yaml   # writes outputs/example-run/
-cd web/frontend && npm run dev                       # http://localhost:5173
+cd app && npm run dev                       # http://localhost:5173
 # then drag outputs/example-run/adaptive_token_trace.json onto the page
 ```
 
@@ -101,7 +101,7 @@ token-heatmap hpc run configs/example.yaml   # runs on Slurm, rsyncs results bac
 
 Prefer a native window? Grab a desktop installer from the
 [Releases](https://github.com/zangjiucheng/Token-Heatmap/releases) or build it with
-`cd web/frontend && npm run app:build`, then open the JSON in the app.
+`cd app && npm run app:build`, then open the JSON in the app.
 
 Full guide — manual file drop, the bundled sample, prebuilt `dist/`, desktop app:
 [`docs/web-app.md`](docs/web-app.md). Slurm/qos notes:

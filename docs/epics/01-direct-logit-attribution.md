@@ -41,7 +41,7 @@ attribution) to a complete layer/block decomposition.
 - `llm_token_heatmap/direct_logit_attribution.py` (new), `cli.py` (wire after the
   neuron-attribution block), `trace_payload.py` (`serialize_trace_to_json` param),
   `docs/web/trace.schema.json` (+ `DirectLogitAttribution` `$defs`).
-- `web/frontend`: `src/features/dla/*`, `lenses.ts`, `useViewState.ts`,
+- `app`: `src/features/dla/*`, `lenses.ts`, `useViewState.ts`,
   `TraceViewerPage.tsx`, `icons.tsx`, regenerated `types/trace.ts` + bundled schema.
 
 ## Acceptance

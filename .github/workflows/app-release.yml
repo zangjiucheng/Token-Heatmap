@@ -59,7 +59,7 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: web/frontend/package-lock.json
+          cache-dependency-path: app/package-lock.json
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -69,10 +69,10 @@ jobs:
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: web/frontend/src-tauri -> target
+          workspaces: app/src-tauri -> target
 
       - name: Install frontend dependencies
-        working-directory: web/frontend
+        working-directory: app
         run: npm ci
 
       # Builds the app (runs `npm run build` via beforeBuildCommand, then cargo)
@@ -83,6 +83,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          projectPath: web/frontend
+          projectPath: app
           releaseId: ${{ github.event.release.id }}
           args: ${{ matrix.args }}
