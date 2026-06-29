@@ -8,7 +8,7 @@ JSON payload that ``token-heatmap trace`` writes to
 This mirrors the inline-JSON core of :func:`llm_token_heatmap.cli.run_trace`
 (model load → generate → metadata → serialize) but trims the CSV/PNG/sidecar
 side effects. The serializer
-(:func:`llm_token_heatmap.trace_payload.serialize_trace_to_json`) stays the
+(:func:`llm_token_heatmap.serialize.trace_payload.serialize_trace_to_json`) stays the
 single source of truth for the payload shape; only the orchestration is
 duplicated here.
 
@@ -25,7 +25,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any
 
-from llm_token_heatmap.trace_payload import (
+from llm_token_heatmap.serialize.trace_payload import (
     build_model_architecture,
     serialize_trace_to_json,
 )
@@ -173,7 +173,7 @@ class IntervenePayloadConfig:
 def intervene_payload(config: IntervenePayloadConfig) -> dict[str, Any]:
     """Run a component-level intervention on the (cached) model and return the
     baseline-vs-patched next-token diff. Reuses the resident-model cache + lock."""
-    from llm_token_heatmap.intervention import run_intervention
+    from llm_token_heatmap.analysis.intervention import run_intervention
 
     with _GEN_LOCK:
         model, tokenizer, _device = _load_model_and_tokenizer(config.model)

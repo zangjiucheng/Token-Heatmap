@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from llm_token_heatmap.export import ATTENTION_AGGREGATE_COLUMNS, trace_to_dataframe
+from llm_token_heatmap.serialize.export import ATTENTION_AGGREGATE_COLUMNS, trace_to_dataframe
 
 EXPECTED_COLUMNS = [
     "step",

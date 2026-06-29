@@ -17,13 +17,13 @@ import torch
 from jsonschema import Draft202012Validator
 
 from llm_token_heatmap import SCHEMA_VERSION
-from llm_token_heatmap.attention_probe import (
+from llm_token_heatmap.probes.attention_probe import (
     AttentionLayerStats,
     AttentionProbe,
     AttentionProbeConfig,
     AttentionStats,
 )
-from llm_token_heatmap.attention_serializer import (
+from llm_token_heatmap.serialize.attention_serializer import (
     SIDECAR_SCHEMA_VERSION,
     attention_stats_to_payload,
     read_sidecar,
@@ -34,7 +34,7 @@ from tests.fixtures.tiny_attention_model import build_tiny_model
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = REPO_ROOT / "docs" / "web" / "trace.schema.json"
 SIDECAR_SCHEMA_PATH = REPO_ROOT / "docs" / "web" / "attention-sidecar.schema.json"
-SAMPLE_TRACE_PATH = REPO_ROOT / "web" / "frontend" / "src" / "lib" / "sample" / "trace.json"
+SAMPLE_TRACE_PATH = REPO_ROOT / "app" / "src" / "lib" / "sample" / "trace.json"
 
 
 def _load_schema(path: Path) -> dict:

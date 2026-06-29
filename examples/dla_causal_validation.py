@@ -31,17 +31,17 @@ import torch
 import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from llm_token_heatmap.activation_probe import (
+from llm_token_heatmap.probes.activation_probe import (
     ActivationProbe,
     ActivationProbeConfig,
     _resolve_decoder_layers,
     _resolve_submodule_target,
 )
-from llm_token_heatmap.direct_logit_attribution import (
+from llm_token_heatmap.analysis.direct_logit_attribution import (
     compute_direct_logit_attribution,
 )
-from llm_token_heatmap.intervention import run_intervention
-from llm_token_heatmap.logit_lens import _resolve_final_norm
+from llm_token_heatmap.analysis.intervention import run_intervention
+from llm_token_heatmap.probes.logit_lens import _resolve_final_norm
 
 REPO = Path(__file__).resolve().parent.parent
 

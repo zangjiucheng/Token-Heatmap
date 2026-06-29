@@ -5,12 +5,12 @@ from typing import Any
 
 import torch
 
-from llm_token_heatmap.activation_probe import ActivationProbe
-from llm_token_heatmap.adaptive_probe import AdaptiveTokenProbe
-from llm_token_heatmap.attention_probe import AttentionProbe
-from llm_token_heatmap.attention_serializer import attention_stats_to_payload
-from llm_token_heatmap.logit_lens import LogitLens, LogitLensStats
-from llm_token_heatmap.sampling import sample_next_token
+from llm_token_heatmap.probes.activation_probe import ActivationProbe
+from llm_token_heatmap.probes.attention_probe import AttentionProbe
+from llm_token_heatmap.probes.logit_lens import LogitLens, LogitLensStats
+from llm_token_heatmap.serialize.attention_serializer import attention_stats_to_payload
+from llm_token_heatmap.tracing.adaptive_probe import AdaptiveTokenProbe
+from llm_token_heatmap.tracing.sampling import sample_next_token
 
 
 def _stats_to_cpu(stats: dict[str, Any]) -> dict[str, Any]:

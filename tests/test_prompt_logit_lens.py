@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from llm_token_heatmap.prompt_logit_lens import compute_prompt_logit_lens
+from llm_token_heatmap.probes.prompt_logit_lens import compute_prompt_logit_lens
 from tests.fixtures.tiny_attention_model import build_tiny_model
 
 

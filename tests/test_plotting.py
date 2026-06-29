@@ -9,9 +9,9 @@ import pandas as pd
 import pytest
 import torch
 
-from llm_token_heatmap.attention_probe import AttentionLayerStats, AttentionStats
-from llm_token_heatmap.attention_stats import compute_attention_stats
-from llm_token_heatmap.plotting import (
+from llm_token_heatmap.probes.attention_probe import AttentionLayerStats, AttentionStats
+from llm_token_heatmap.analysis.attention_stats import compute_attention_stats
+from llm_token_heatmap.viz.plotting import (
     plot_activation_delta,
     plot_adaptive_heatmap,
     plot_attention_layer_head_grid,

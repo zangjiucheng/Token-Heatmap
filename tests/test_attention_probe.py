@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from llm_token_heatmap.attention_probe import (
+from llm_token_heatmap.probes.attention_probe import (
     AttentionProbe,
     AttentionProbeConfig,
     AttentionProbeError,

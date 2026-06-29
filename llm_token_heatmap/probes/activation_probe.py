@@ -116,7 +116,7 @@ class ActivationFullStats:
     """Raw per-``(layer, submodule)`` activation tensors retained when
     ``ActivationProbeConfig.capture_full`` is True.
 
-    Consumed by :func:`llm_token_heatmap.activation_serializer.write_sidecar`
+    Consumed by :func:`llm_token_heatmap.serialize.activation_serializer.write_sidecar`
     to produce the Tier 2 ``.npz`` sidecar. Each tensor is a 1-D vector along
     the hidden dimension corresponding to a single token position (the last
     position after ``capture_step``, or one particular position after

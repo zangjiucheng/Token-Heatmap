@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import torch
 
-from llm_token_heatmap.neuron_attribution import compute_neuron_attribution
+from llm_token_heatmap.analysis.neuron_attribution import compute_neuron_attribution
 
 
 def _entry(layer_tensors: dict[tuple[int, str], torch.Tensor]) -> dict:

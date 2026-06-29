@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import torch
 
-from llm_token_heatmap.intervention import run_intervention
+from llm_token_heatmap.analysis.intervention import run_intervention
 from tests.fixtures.tiny_attention_model import build_tiny_model
 
 

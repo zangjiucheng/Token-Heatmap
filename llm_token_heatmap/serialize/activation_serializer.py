@@ -1,7 +1,7 @@
 """Serialize raw ``ActivationFullStats`` into Tier 2 ``.npz`` sidecars.
 
 This module is the activation-side parallel of
-:mod:`llm_token_heatmap.attention_serializer`: it persists the bulky per-
+:mod:`llm_token_heatmap.serialize.attention_serializer`: it persists the bulky per-
 ``(layer, submodule)`` activation tensors that ``ActivationProbe`` retains
 when ``ActivationProbeConfig.capture_full=True``, so the inline summary stats
 on each step remain cheap to load while the full tensors can be re-hydrated
@@ -31,7 +31,7 @@ from typing import Any
 import numpy as np
 import torch
 
-from llm_token_heatmap.activation_probe import ActivationFullStats
+from llm_token_heatmap.probes.activation_probe import ActivationFullStats
 
 SIDECAR_SCHEMA_VERSION = "1.0.0"
 

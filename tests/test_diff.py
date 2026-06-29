@@ -17,7 +17,7 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 
-from llm_token_heatmap.diff import DIFF_SCHEMA_VERSION, compare_activations
+from llm_token_heatmap.analysis.diff import DIFF_SCHEMA_VERSION, compare_activations
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ACTIVATION_DIFF_SCHEMA_PATH = REPO_ROOT / "docs" / "web" / "activation-diff.schema.json"

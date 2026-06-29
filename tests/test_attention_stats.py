@@ -1,4 +1,4 @@
-"""Tests for :mod:`llm_token_heatmap.attention_stats`.
+"""Tests for :mod:`llm_token_heatmap.analysis.attention_stats`.
 
 All tests are pure-Python / pure-PyTorch over synthetic ``AttentionStats``
 payloads; no model download or network access.
@@ -12,18 +12,18 @@ from typing import Any
 
 import torch
 
-from llm_token_heatmap.adaptive_probe import AdaptiveProbeConfig, AdaptiveTokenProbe
-from llm_token_heatmap.attention_probe import (
+from llm_token_heatmap.tracing.adaptive_probe import AdaptiveProbeConfig, AdaptiveTokenProbe
+from llm_token_heatmap.probes.attention_probe import (
     AttentionLayerStats,
     AttentionProbe,
     AttentionProbeConfig,
     AttentionStats,
 )
-from llm_token_heatmap.attention_stats import (
+from llm_token_heatmap.analysis.attention_stats import (
     AttentionDerivedStats,
     compute_attention_stats,
 )
-from llm_token_heatmap.generation import generate_with_adaptive_probe
+from llm_token_heatmap.tracing.generation import generate_with_adaptive_probe
 from tests.fixtures.tiny_attention_model import TinyCausalLM, build_tiny_model
 
 

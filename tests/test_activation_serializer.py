@@ -24,12 +24,12 @@ from pathlib import Path
 import torch
 from jsonschema import Draft202012Validator
 
-from llm_token_heatmap.activation_probe import (
+from llm_token_heatmap.probes.activation_probe import (
     ActivationFullStats,
     ActivationProbe,
     ActivationProbeConfig,
 )
-from llm_token_heatmap.activation_serializer import (
+from llm_token_heatmap.serialize.activation_serializer import (
     SIDECAR_SCHEMA_VERSION,
     read_sidecar,
     write_sidecar,

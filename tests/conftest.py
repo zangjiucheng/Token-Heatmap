@@ -16,8 +16,8 @@ import torch
 # Force a non-interactive backend so tests never need a display.
 matplotlib.use("Agg")
 
-from llm_token_heatmap.adaptive_probe import AdaptiveProbeConfig, AdaptiveTokenProbe
-from llm_token_heatmap.generation import generate_with_adaptive_probe
+from llm_token_heatmap.tracing.adaptive_probe import AdaptiveProbeConfig, AdaptiveTokenProbe
+from llm_token_heatmap.tracing.generation import generate_with_adaptive_probe
 
 
 class _FakeEncoding(dict):

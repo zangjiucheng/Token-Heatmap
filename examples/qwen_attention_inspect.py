@@ -40,7 +40,7 @@ from llm_token_heatmap import (
     plot_logit_lens,
     plot_logit_lens_selected_rank,
 )
-from llm_token_heatmap.trace_payload import serialize_trace_to_json
+from llm_token_heatmap.serialize.trace_payload import serialize_trace_to_json
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
 PROMPT = "Explain in one sentence why attention works."

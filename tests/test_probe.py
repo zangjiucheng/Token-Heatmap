@@ -1,10 +1,10 @@
-"""Tests for the supervised linear-probe toolbox (``llm_token_heatmap.probe``)."""
+"""Tests for the supervised linear-probe toolbox (``llm_token_heatmap.analysis.probe``)."""
 
 from __future__ import annotations
 
 import numpy as np
 
-from llm_token_heatmap.probe import (
+from llm_token_heatmap.analysis.probe import (
     circular_features,
     helix_probe,
     line_position_scalar,

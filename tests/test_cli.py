@@ -20,7 +20,7 @@ from llm_token_heatmap.cli import (
     build_parser,
     run_diff,
 )
-from llm_token_heatmap.trace_payload import project_activation_subset
+from llm_token_heatmap.serialize.trace_payload import project_activation_subset
 
 ALL_FLAGS = [
     "--model",
@@ -357,7 +357,7 @@ def _synthetic_activation_trace_payload(prompt: str = "hi") -> dict[str, Any]:
 
     import torch
 
-    from llm_token_heatmap.trace_payload import serialize_trace_to_json
+    from llm_token_heatmap.serialize.trace_payload import serialize_trace_to_json
 
     def _stats(token_id: int) -> dict[str, Any]:
         return {
@@ -593,7 +593,7 @@ def test_serialize_trace_writes_activation_sidecar_refs() -> None:
 
     import torch
 
-    from llm_token_heatmap.trace_payload import serialize_trace_to_json
+    from llm_token_heatmap.serialize.trace_payload import serialize_trace_to_json
 
     def _stats(token_id: int) -> dict[str, Any]:
         return {
@@ -698,7 +698,7 @@ def test_activation_full_stats_stashed_in_step_entry() -> None:
     one-liner guarded by the same `config.capture_full` flag tested here)."""
 
     import torch
-    from llm_token_heatmap.activation_probe import ActivationProbe, ActivationProbeConfig
+    from llm_token_heatmap.probes.activation_probe import ActivationProbe, ActivationProbeConfig
     from tests.fixtures.tiny_attention_model import build_tiny_model
 
     model = build_tiny_model(num_hidden_layers=2)

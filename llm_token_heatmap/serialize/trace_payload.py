@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from llm_token_heatmap import SCHEMA_VERSION
-from llm_token_heatmap.head_roles import compute_head_roles
+from llm_token_heatmap.analysis.head_roles import compute_head_roles
 
 # Keys the trace schema allows under `metadata`. Anything else
 # (e.g. our internal capture_* flags) is dropped before serialization

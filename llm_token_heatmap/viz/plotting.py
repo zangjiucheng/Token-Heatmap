@@ -11,7 +11,7 @@ import pandas as pd
 import torch
 from matplotlib import font_manager, ft2font
 
-from llm_token_heatmap.attention_stats import AttentionDerivedStats
+from llm_token_heatmap.analysis.attention_stats import AttentionDerivedStats
 
 CJK_FONT_CANDIDATES = (
     "Noto Sans CJK SC",

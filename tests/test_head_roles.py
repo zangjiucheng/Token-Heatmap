@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from llm_token_heatmap.head_roles import compute_head_roles
+from llm_token_heatmap.analysis.head_roles import compute_head_roles
 
 
 def _trace() -> dict:

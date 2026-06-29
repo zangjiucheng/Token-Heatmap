@@ -14,16 +14,16 @@ from pathlib import Path
 import pytest
 import torch
 
-from llm_token_heatmap.adaptive_probe import AdaptiveProbeConfig, AdaptiveTokenProbe
-from llm_token_heatmap.attention_probe import AttentionProbe, AttentionProbeConfig
-from llm_token_heatmap.generation import generate_with_adaptive_probe
-from llm_token_heatmap.logit_lens import (
+from llm_token_heatmap.tracing.adaptive_probe import AdaptiveProbeConfig, AdaptiveTokenProbe
+from llm_token_heatmap.probes.attention_probe import AttentionProbe, AttentionProbeConfig
+from llm_token_heatmap.tracing.generation import generate_with_adaptive_probe
+from llm_token_heatmap.probes.logit_lens import (
     LogitLens,
     LogitLensConfig,
     LogitLensError,
     LogitLensStats,
 )
-from llm_token_heatmap.plotting import (
+from llm_token_heatmap.viz.plotting import (
     plot_logit_lens,
     plot_logit_lens_selected_rank,
 )

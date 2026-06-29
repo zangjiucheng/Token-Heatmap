@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from llm_token_heatmap.activation_probe import (
+from llm_token_heatmap.probes.activation_probe import (
     _resolve_decoder_layers,
     _resolve_submodule_target,
 )

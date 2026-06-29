@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 
 import torch
 
-from llm_token_heatmap.attention_probe import AttentionLayerStats, AttentionStats
+from llm_token_heatmap.probes.attention_probe import AttentionLayerStats, AttentionStats
 
 DEFAULT_TOP_K = 8
 DEFAULT_FINGERPRINT_BINS = 16

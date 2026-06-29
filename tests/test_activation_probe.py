@@ -18,12 +18,12 @@ import pytest
 import torch
 import torch.nn as nn
 
-from llm_token_heatmap.activation_probe import (
+from llm_token_heatmap.probes.activation_probe import (
     ActivationProbe,
     ActivationProbeConfig,
 )
-from llm_token_heatmap.adaptive_probe import AdaptiveProbeConfig, AdaptiveTokenProbe
-from llm_token_heatmap.generation import generate_with_adaptive_probe
+from llm_token_heatmap.tracing.adaptive_probe import AdaptiveProbeConfig, AdaptiveTokenProbe
+from llm_token_heatmap.tracing.generation import generate_with_adaptive_probe
 from tests.fixtures.tiny_attention_model import TinyCausalLM, build_tiny_model
 
 REPO_ROOT = Path(__file__).resolve().parent.parent

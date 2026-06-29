@@ -13,8 +13,8 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 
-from llm_token_heatmap.adaptive_probe import AdaptiveProbeConfig, AdaptiveTokenProbe
-from llm_token_heatmap.generation import generate_with_adaptive_probe
+from llm_token_heatmap.tracing.adaptive_probe import AdaptiveProbeConfig, AdaptiveTokenProbe
+from llm_token_heatmap.tracing.generation import generate_with_adaptive_probe
 
 EXPECTED_STEP_KEYS = {"step", "raw", "processed"}
 
@@ -301,7 +301,7 @@ class _FakeLogitLens:
     """Records every ``capture_step`` call; emits an empty LogitLensStats."""
 
     def __init__(self) -> None:
-        from llm_token_heatmap.logit_lens import LogitLensStats
+        from llm_token_heatmap.probes.logit_lens import LogitLensStats
 
         self.is_attached = True
         self.calls = 0
@@ -317,7 +317,7 @@ def test_generate_invokes_attention_probe_per_step(
 ) -> None:
     """The attention probe's `capture_step` fires exactly once per generated token."""
 
-    from llm_token_heatmap import generation as gen_mod
+    from llm_token_heatmap.tracing import generation as gen_mod
 
     seen_token_ids: list[list[int] | None] = []
 

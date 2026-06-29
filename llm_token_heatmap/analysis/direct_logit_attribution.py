@@ -141,7 +141,7 @@ def compute_direct_logit_attribution(
         unembedding: ``W_U`` of shape ``[vocab, hidden]``
             (``model.get_output_embeddings().weight``).
         final_norm: the model's final norm module (e.g. from
-            ``llm_token_heatmap.logit_lens._resolve_final_norm``). ``None`` falls
+            ``llm_token_heatmap.probes.logit_lens._resolve_final_norm``). ``None`` falls
             back to an identity-weight RMSNorm (logit-lens style).
 
     Returns:

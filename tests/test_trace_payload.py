@@ -15,7 +15,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 
 from llm_token_heatmap import SCHEMA_VERSION
-from llm_token_heatmap.trace_payload import (
+from llm_token_heatmap.serialize.trace_payload import (
     distribution_payload,
     logit_lens_payload,
     serialize_trace_to_json,

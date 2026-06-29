@@ -31,11 +31,11 @@ from typing import Any
 import numpy as np
 import torch
 
-from llm_token_heatmap.attention_probe import AttentionLayerStats, AttentionStats
-from llm_token_heatmap.attention_stats import (
+from llm_token_heatmap.analysis.attention_stats import (
     AttentionLayerDerivedStats,
     compute_attention_stats,
 )
+from llm_token_heatmap.probes.attention_probe import AttentionLayerStats, AttentionStats
 
 SIDECAR_SCHEMA_VERSION = "2.0.0"
 

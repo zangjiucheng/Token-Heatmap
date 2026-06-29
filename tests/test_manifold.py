@@ -14,7 +14,7 @@ import json
 import numpy as np
 import pytest
 
-from llm_token_heatmap.manifold import (
+from llm_token_heatmap.analysis.manifold import (
     analyze_manifold,
     detect_periodicity,
     intrinsic_dimension_twonn,

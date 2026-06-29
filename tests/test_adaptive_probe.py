@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from llm_token_heatmap.adaptive_probe import AdaptiveProbeConfig, AdaptiveTokenProbe
+from llm_token_heatmap.tracing.adaptive_probe import AdaptiveProbeConfig, AdaptiveTokenProbe
 
 EXPECTED_KEYS_NO_SELECTED = {
     "top_ids",

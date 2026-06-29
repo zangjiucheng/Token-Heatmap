@@ -8,7 +8,7 @@ the answer. To see it, we project the residual at every prompt position through
 the final norm + unembedding and keep the top-k decoded tokens.
 
 One forward pass over the prompt; hooks each decoder layer to grab all positions
-(reusing the resolver helpers in :mod:`llm_token_heatmap.logit_lens`), so it works
+(reusing the resolver helpers in :mod:`llm_token_heatmap.probes.logit_lens`), so it works
 on any HF-style causal LM without relying on ``output_hidden_states``.
 """
 
@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from llm_token_heatmap.logit_lens import (
+from llm_token_heatmap.probes.logit_lens import (
     _resolve_decoder_layers,
     _resolve_final_norm,
     _resolve_lm_head,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from llm_token_heatmap.sampling import sample_next_token
+from llm_token_heatmap.tracing.sampling import sample_next_token
 
 
 def _logits_with_argmax_at(index: int, vocab: int = 16) -> torch.Tensor:

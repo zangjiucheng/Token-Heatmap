@@ -13,7 +13,7 @@ from types import SimpleNamespace
 
 import torch
 
-from llm_token_heatmap.direct_logit_attribution import (
+from llm_token_heatmap.analysis.direct_logit_attribution import (
     compute_direct_logit_attribution,
 )
 

@@ -15,16 +15,16 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from llm_token_heatmap.trace_payload import (
+from llm_token_heatmap.serialize.trace_payload import (
     build_model_architecture as _build_model_architecture_summary,
 )
-from llm_token_heatmap.trace_payload import (
+from llm_token_heatmap.serialize.trace_payload import (
     dump_trace_json as _dump_trace_json,
 )
-from llm_token_heatmap.trace_payload import (
+from llm_token_heatmap.serialize.trace_payload import (
     selected_token_payload as _selected_token_payload,
 )
-from llm_token_heatmap.trace_payload import (
+from llm_token_heatmap.serialize.trace_payload import (
     serialize_trace_to_json as _serialize_trace_to_json,
 )
 
@@ -128,7 +128,7 @@ def _load_yaml_config(path: Path) -> dict:
 
 # Built-in probe scalar names, mirrored from `probe.SCALARS`. Kept as a literal
 # here so building the parser never imports numpy (the real registry lives in
-# `llm_token_heatmap.probe` and is loaded lazily inside `run_manifold`).
+# `llm_token_heatmap.analysis.probe` and is loaded lazily inside `run_manifold`).
 _PROBE_SCALARS = ("line_position",)
 
 
@@ -749,7 +749,7 @@ def run_trace(args: argparse.Namespace) -> int:
 
     activation_sidecar_refs: dict[int, str] | None = None
     if args.capture_full_activations:
-        from llm_token_heatmap.activation_serializer import (
+        from llm_token_heatmap.serialize.activation_serializer import (
             write_sidecar as write_activation_sidecar,
         )
 
@@ -771,19 +771,19 @@ def run_trace(args: argparse.Namespace) -> int:
 
     # TWERA-style neuron attribution (a single-trace approximation). Needs the
     # full per-step activation vectors (--capture-full-activations) and the
-    # unembedding; skipped otherwise. See llm_token_heatmap.neuron_attribution.
+    # unembedding; skipped otherwise. See llm_token_heatmap.analysis.neuron_attribution.
     neuron_attribution = None
     direct_logit_attribution = None
     if args.capture_full_activations:
-        from llm_token_heatmap.activation_probe import (
+        from llm_token_heatmap.analysis.direct_logit_attribution import (
+            compute_direct_logit_attribution,
+        )
+        from llm_token_heatmap.analysis.neuron_attribution import compute_neuron_attribution
+        from llm_token_heatmap.probes.activation_probe import (
             _resolve_decoder_layers,
             _resolve_submodule_target,
         )
-        from llm_token_heatmap.direct_logit_attribution import (
-            compute_direct_logit_attribution,
-        )
-        from llm_token_heatmap.logit_lens import _resolve_final_norm
-        from llm_token_heatmap.neuron_attribution import compute_neuron_attribution
+        from llm_token_heatmap.probes.logit_lens import _resolve_final_norm
 
         out_emb = model.get_output_embeddings()
         if out_emb is not None and getattr(out_emb, "weight", None) is not None:
@@ -856,7 +856,7 @@ def run_trace(args: argparse.Namespace) -> int:
     # answer position. One extra forward; gated on --capture-logit-lens.
     prompt_logit_lens = None
     if args.capture_logit_lens:
-        from llm_token_heatmap.prompt_logit_lens import compute_prompt_logit_lens
+        from llm_token_heatmap.probes.prompt_logit_lens import compute_prompt_logit_lens
 
         try:
             _prompt_ids = tokenizer(args.prompt)["input_ids"]
@@ -1042,13 +1042,13 @@ def run_manifold(args: argparse.Namespace) -> int:
 
     Re-hydrates the full per-(layer, submodule) activation vectors from the
     sidecars referenced by each step, stacks them into a ``(positions, hidden)``
-    matrix, runs :func:`llm_token_heatmap.manifold.analyze_manifold` on each, and
+    matrix, runs :func:`llm_token_heatmap.analysis.manifold.analyze_manifold` on each, and
     writes the results back into the trace under a top-level ``manifold`` key.
     """
     import numpy as np
 
-    from llm_token_heatmap.activation_serializer import read_sidecar
-    from llm_token_heatmap.manifold import MANIFOLD_SCHEMA_VERSION, analyze_manifold
+    from llm_token_heatmap.analysis.manifold import MANIFOLD_SCHEMA_VERSION, analyze_manifold
+    from llm_token_heatmap.serialize.activation_serializer import read_sidecar
 
     trace_path: Path = args.trace
     if not trace_path.is_file():
@@ -1115,7 +1115,7 @@ def run_manifold(args: argparse.Namespace) -> int:
     scalar_by_step: dict[int, float] | None = None
     scalar_block: dict[str, Any] | None = None
     if args.probe:
-        from llm_token_heatmap.probe import SCALARS, helix_probe, linear_probe
+        from llm_token_heatmap.analysis.probe import SCALARS, helix_probe, linear_probe
 
         token_texts = [str(s.get("selected", {}).get("token", "")) for s in steps]
         step_numbers = [int(s["step"]) for s in steps]
