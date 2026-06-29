@@ -24,8 +24,14 @@ function makeTraceWithPromptLens(): Trace {
           token_id: 1,
           token: ' Dallas',
           layers: [
-            { layer_idx: 0, top_k: [{ rank: 1, token_id: 5, token: ' the', prob: 0.2 }] },
-            { layer_idx: 2, top_k: [{ rank: 1, token_id: 9, token: ' Texas', prob: 0.6 }] },
+            {
+              layer_idx: 0,
+              top_k: [{ rank: 1, token_id: 5, token: ' the', prob: 0.2 }],
+            },
+            {
+              layer_idx: 2,
+              top_k: [{ rank: 1, token_id: 9, token: ' Texas', prob: 0.6 }],
+            },
           ],
         },
         {
@@ -33,7 +39,10 @@ function makeTraceWithPromptLens(): Trace {
           token_id: 2,
           token: ' is',
           layers: [
-            { layer_idx: 2, top_k: [{ rank: 1, token_id: 7, token: ' Austin', prob: 0.7 }] },
+            {
+              layer_idx: 2,
+              top_k: [{ rank: 1, token_id: 7, token: ' Austin', prob: 0.7 }],
+            },
           ],
         },
       ],
@@ -53,20 +62,35 @@ describe('LogitLensTab', () => {
   });
 
   it('renders the LogitLensTable when logit_lens data is present', () => {
-    render(
-      <LogitLensTab trace={makeAttentionTrace()} selectedStep={0} />,
-    );
+    render(<LogitLensTab trace={makeAttentionTrace()} selectedStep={0} />);
     expect(screen.getByTestId('logit-lens-tab-content')).toBeInTheDocument();
     expect(screen.getByTestId('logit-lens-table')).toBeInTheDocument();
   });
 
   it('passes selectedStep=null prompt down to LogitLensTable', () => {
-    render(
-      <LogitLensTab trace={makeAttentionTrace()} selectedStep={null} />,
-    );
+    render(<LogitLensTab trace={makeAttentionTrace()} selectedStep={null} />);
     expect(screen.getByTestId('logit-lens-tab-content')).toBeInTheDocument();
     expect(screen.getByTestId('logit-lens-table')).toHaveTextContent(
       /select a generation step/i,
     );
+  });
+
+  it('switches to a prompt position and decodes its residual per layer', () => {
+    render(<LogitLensTab trace={makeTraceWithPromptLens()} selectedStep={0} />);
+    // With prompt-lens data present a position selector appears; the default
+    // 'answer' view still shows the per-step table.
+    const select = screen.getByTestId('logit-lens-position-select');
+    expect(screen.getByTestId('logit-lens-table')).toBeInTheDocument();
+    expect(
+      screen.queryByTestId('prompt-logit-lens-table'),
+    ).not.toBeInTheDocument();
+
+    // Selecting a prompt position swaps in the per-layer prompt decode.
+    fireEvent.change(select, { target: { value: '0' } });
+    expect(screen.getByTestId('prompt-logit-lens-table')).toBeInTheDocument();
+    expect(screen.getByTestId('prompt-logit-lens-row-2')).toHaveTextContent(
+      'Texas',
+    );
+    expect(screen.queryByTestId('logit-lens-table')).not.toBeInTheDocument();
   });
 });
