@@ -57,12 +57,12 @@
 }
 
 .manifold-tab__scatter {
-  /* Hug the (capped) plot and sit flush left instead of stretching a big empty
-     bordered box across the column. */
+  /* Fill the grid column; the SVG scales to fit via its viewBox so the plot
+     grows and shrinks with the available width instead of hugging left and
+     leaving a big empty gap. */
   position: relative;
-  justify-self: start;
-  width: fit-content;
-  max-width: 100%;
+  width: 100%;
+  min-width: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg-elevated);
@@ -71,11 +71,10 @@
 
 .manifold-scatter {
   width: 100%;
-  /* A comfortably-readable size anchored on the left (use the Expand button for
-     a full-screen, zoomable view). */
-  max-width: 560px;
   height: auto;
-  max-height: 48vh;
+  /* Cap the height so a wide column doesn't let the plot dominate the pane;
+     the SVG's viewBox keeps it centred (use Expand for a full, zoomable view). */
+  max-height: 46vh;
   display: block;
 }
 
@@ -235,9 +234,10 @@
   stroke-width: 1.5;
 }
 
-/* Stack the plot above the metrics once the canvas itself (not the viewport) is
-   too narrow for a side-by-side layout. */
-@container (max-width: 640px) {
+/* Stack the plot above the metrics only once the canvas itself (not the
+   viewport) is genuinely too narrow for a side-by-side layout — at the common
+   width (rail + inspector open) the two should still sit side by side. */
+@container (max-width: 520px) {
   .manifold-tab__body {
     grid-template-columns: 1fr;
   }
