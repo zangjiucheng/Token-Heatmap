@@ -31,11 +31,11 @@ installers for macOS (Apple Silicon + Intel), Windows (`.msi`), and Linux
 cd app
 npm install              # first time only
 
-npm run app:dev          # hot-reloading desktop dev window (tauri dev)
-npm run app:build        # produce a release installer for the current OS
+npm run dev:app          # hot-reloading desktop dev window (tauri dev)
+npm run build:app        # produce a release installer for the current OS
 ```
 
-`app:build` runs the frontend build (`npm run build`) and then `tauri build`.
+`build:app` runs the frontend build (`npm run build`) and then `tauri build`.
 The installers land in:
 
 ```
