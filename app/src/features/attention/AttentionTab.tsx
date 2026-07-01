@@ -1,6 +1,7 @@
 import type { Trace } from '@/types/trace';
 import type { SelectedHead } from '@/hooks/useViewState';
 import { AttentionLayerHeadGrid } from './AttentionLayerHeadGrid';
+import { HeadRolesScatter } from './HeadRolesScatter';
 import './AttentionTab.css';
 
 export interface AttentionTabProps {
@@ -32,21 +33,9 @@ export function AttentionTab({
     );
   }
 
-  if (selectedStep == null) {
-    return (
-      <div
-        className="attention-tab attention-tab--empty"
-        data-testid="attention-tab-step-empty"
-        role="region"
-        aria-label="Attention tab step selection prompt"
-      >
-        <p>
-          Select a generation step from the token strip, heatmap, or overview
-          timelines to inspect attention heads and logit-lens predictions.
-        </p>
-      </div>
-    );
-  }
+  const hasHeadRoles =
+    ((trace as { head_roles?: { heads?: unknown[] } }).head_roles?.heads
+      ?.length ?? 0) > 0;
 
   return (
     <div
@@ -55,14 +44,29 @@ export function AttentionTab({
       role="region"
       aria-label="Attention tab"
     >
-      <div className="attention-tab__grid">
-        <AttentionLayerHeadGrid
-          trace={trace}
-          selectedStep={selectedStep}
-          selectedHead={selectedHead}
-          onSelectHead={(layer, head) => onSelectHead({ layer, head })}
-        />
-      </div>
+      {hasHeadRoles && <HeadRolesScatter trace={trace} />}
+      {selectedStep == null ? (
+        <div
+          className="attention-tab--empty"
+          data-testid="attention-tab-step-empty"
+          role="region"
+          aria-label="Attention tab step selection prompt"
+        >
+          <p>
+            Select a generation step from the token strip, heatmap, or overview
+            timelines to inspect attention heads and logit-lens predictions.
+          </p>
+        </div>
+      ) : (
+        <div className="attention-tab__grid">
+          <AttentionLayerHeadGrid
+            trace={trace}
+            selectedStep={selectedStep}
+            selectedHead={selectedHead}
+            onSelectHead={(layer, head) => onSelectHead({ layer, head })}
+          />
+        </div>
+      )}
     </div>
   );
 }

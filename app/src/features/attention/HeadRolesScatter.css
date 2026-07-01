@@ -1,0 +1,121 @@
+.head-roles {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.head-roles__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.head-roles__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.head-roles__title span {
+  color: var(--color-accent-text);
+}
+
+.head-roles__subtitle {
+  color: var(--color-text-muted) !important;
+  font-weight: 500;
+}
+
+.head-roles__toggle {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-muted);
+}
+
+.head-roles__toggle button {
+  padding: 3px 10px;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.head-roles__toggle button[data-selected='true'] {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.head-roles__toggle button:hover[data-selected='false'] {
+  color: var(--color-text);
+}
+
+.head-roles__hint {
+  margin: 0;
+  max-width: 74ch;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.head-roles__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 40vh;
+}
+
+.head-roles__axis {
+  stroke: var(--color-border-strong);
+  stroke-width: 1;
+}
+
+.head-roles__tick,
+.head-roles__legend,
+.head-roles__axis-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--color-text-muted);
+}
+
+.head-roles__axis-title {
+  font-size: 11px;
+  fill: var(--color-text);
+}
+
+.head-roles__legend-count {
+  fill: var(--color-text);
+  font-weight: 600;
+}
+
+.head-roles__tooltip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  pointer-events: none;
+  box-shadow: var(--shadow-sm, 0 2px 8px rgb(0 0 0 / 20%));
+}
