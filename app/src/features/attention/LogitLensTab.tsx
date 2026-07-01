@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { LogitLensCandidate, Trace } from '@/types/trace';
 import { escapeToken } from '@/features/detail/escapeToken';
 import { LogitLensTable, type LogitLensTokenizer } from './LogitLensTable';
+import { LogitLensDecisionMap } from './LogitLensDecisionMap';
 import './AttentionTab.css';
 import './LogitLensTable.css';
 
@@ -9,6 +10,8 @@ export interface LogitLensTabProps {
   trace: Trace;
   selectedStep: number | null;
   tokenizer?: LogitLensTokenizer;
+  /** Jump to a step when a decision-map column is clicked (linked brushing). */
+  onSelectStep?: (step: number) => void;
 }
 
 interface PromptLensLayer {
@@ -109,7 +112,12 @@ function PromptPositionTable({
   );
 }
 
-export function LogitLensTab({ trace, selectedStep, tokenizer }: LogitLensTabProps) {
+export function LogitLensTab({
+  trace,
+  selectedStep,
+  tokenizer,
+  onSelectStep,
+}: LogitLensTabProps) {
   const pll = (trace as { prompt_logit_lens?: PromptLogitLens }).prompt_logit_lens;
   const promptPositions = pll?.positions ?? [];
   const hasStepLens = trace.steps.some(
@@ -178,7 +186,20 @@ export function LogitLensTab({ trace, selectedStep, tokenizer }: LogitLensTabPro
       {promptPos ? (
         <PromptPositionTable position={promptPos} tokenizer={tokenizer} />
       ) : (
-        <LogitLensTable trace={trace} selectedStep={selectedStep} tokenizer={tokenizer} />
+        <>
+          {hasStepLens && (
+            <LogitLensDecisionMap
+              trace={trace}
+              selectedStep={selectedStep}
+              onSelectStep={onSelectStep}
+            />
+          )}
+          <LogitLensTable
+            trace={trace}
+            selectedStep={selectedStep}
+            tokenizer={tokenizer}
+          />
+        </>
       )}
     </div>
   );
