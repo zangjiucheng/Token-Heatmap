@@ -4,11 +4,14 @@ import type {
   DirectLogitAttributionStep,
   DirectLogitAttributionHead,
 } from '@/types/trace';
+import { CausalHeatmap } from './CausalHeatmap';
 import './DirectLogitAttributionTab.css';
 
 export interface DirectLogitAttributionTabProps {
   trace: Trace;
   selectedStep: number | null;
+  /** Jump to a step when a causal-map column is clicked (linked brushing). */
+  onSelectStep?: (step: number) => void;
 }
 
 interface Component {
@@ -39,6 +42,7 @@ function pickStep(
 export function DirectLogitAttributionTab({
   trace,
   selectedStep,
+  onSelectStep,
 }: DirectLogitAttributionTabProps) {
   const dla = trace.direct_logit_attribution;
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
@@ -112,6 +116,14 @@ export function DirectLogitAttributionTab({
 
   return (
     <div className="dla-tab" data-testid="direct-logit-attribution-tab-content">
+      {(trace as { causal_grid?: { steps?: unknown[] } }).causal_grid?.steps
+        ?.length ? (
+        <CausalHeatmap
+          trace={trace}
+          selectedStep={selectedStep}
+          onSelectStep={onSelectStep}
+        />
+      ) : null}
       <header className="dla-tab__header">
         <div>
           <p className="eyebrow">Direct logit attribution</p>

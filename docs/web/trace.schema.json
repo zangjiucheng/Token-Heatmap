@@ -38,6 +38,11 @@
       "additionalProperties": true,
       "description": "Functional head taxonomy: each attention head labelled by role (sink / induction / worker / local / minor / other) with its mean logit contribution, fused from per-head attention stats and direct logit attribution. Derived post-hoc and contribution-first — importance is anti-correlated with attention magnitude (attention sinks fire hardest yet write nothing). Present only when both per-head attention stats and direct logit attribution exist."
     },
+    "causal_grid": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Causal-effect grid written by `token-heatmap causal`: for every generated token (step) and every decoder layer, the effect of ablating that layer's attention and/or MLP block at the final position on the realized token's probability. Each cell records `kl` and `dp` (signed probability change). The causal counterpart to direct logit attribution, in the same layer x token coordinate system as the token heatmap. Present only when the causal pass has been run."
+    },
     "prompt_logit_lens": {
       "type": "object",
       "additionalProperties": true,

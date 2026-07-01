@@ -23,6 +23,12 @@ export interface Trace {
     [k: string]: unknown | undefined;
   };
   /**
+   * Causal-effect grid written by `token-heatmap causal`: for every generated token (step) and every decoder layer, the effect of ablating that layer's attention and/or MLP block at the final position on the realized token's probability. Each cell records `kl` and `dp` (signed probability change). The causal counterpart to direct logit attribution, in the same layer x token coordinate system as the token heatmap. Present only when the causal pass has been run.
+   */
+  causal_grid?: {
+    [k: string]: unknown | undefined;
+  };
+  /**
    * Prompt-position logit lens: the residual at every PROMPT position decoded through the unembedding at every layer (top-k tokens). Unlike the per-step logit lens (answer position only), this surfaces intermediate computations that live over earlier tokens — e.g. the 'Texas' bridge over the 'Dallas' token in a two-hop recall. Present only when captured with --capture-logit-lens.
    */
   prompt_logit_lens?: {

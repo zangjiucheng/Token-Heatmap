@@ -294,7 +294,11 @@ export function TraceViewerPage() {
       );
     } else if (activeTab === 'direct-logit-attribution') {
       canvas = (
-        <DirectLogitAttributionTab trace={trace} selectedStep={selectedStep} />
+        <DirectLogitAttributionTab
+          trace={trace}
+          selectedStep={selectedStep}
+          onSelectStep={setSelectedStep}
+        />
       );
     } else if (activeTab === 'attribution-graph') {
       canvas = (

@@ -496,6 +496,55 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
     )
     manifold_parser.set_defaults(func=run_manifold)
 
+    causal_parser = subparsers.add_parser(
+        "causal",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        help="Add a causal-effect grid (ablation per layer × token) to a trace JSON.",
+        description=(
+            "Load a trace and its model, ablate each layer's attention and/or MLP "
+            "block at every generated token, and write a `causal_grid` field back "
+            "into the trace so the web app renders the layer × token causal-effect "
+            "heatmap — the causal counterpart to Direct Logit Attribution. Runs the "
+            "model, so it needs the same environment as `trace`."
+        ),
+        epilog=(
+            "example:\n"
+            "  token-heatmap causal --trace outputs/ioi/adaptive_token_trace.json"
+        ),
+    )
+    causal_parser.add_argument(
+        "--trace",
+        type=Path,
+        required=True,
+        help="Path to an adaptive_token_trace.json (needs tokens + steps).",
+    )
+    causal_parser.add_argument(
+        "--model",
+        default=None,
+        help="Model id to load (default: the trace's metadata.model).",
+    )
+    causal_parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Where to write the augmented trace (default: overwrite --trace in place).",
+    )
+    causal_parser.add_argument(
+        "--components",
+        nargs="*",
+        default=["attn", "mlp"],
+        choices=["attn", "mlp"],
+        help="Blocks to ablate per layer (default: attn mlp).",
+    )
+    causal_parser.add_argument(
+        "--layers",
+        type=int,
+        nargs="*",
+        default=None,
+        help="Subset of layer indices to ablate (default: all layers).",
+    )
+    causal_parser.set_defaults(func=run_causal)
+
     # Operational sub-commands (web build / hpc …) live in
     # `llm_token_heatmap.commands` so they replace scripts/*.sh without bloating
     # this module. They import only stdlib, so registering them keeps `--help`
@@ -1179,6 +1228,60 @@ def run_manifold(args: argparse.Namespace) -> int:
     print(
         f"Added manifold analysis ({len(layers_out)} layer/submodule "
         f"cloud{'s' if len(layers_out) != 1 else ''}) to {out_path}"
+    )
+    return 0
+
+
+def run_causal(args: argparse.Namespace) -> int:
+    """Execute the `causal` sub-command: ablate each layer's block at every
+    generated token and write a `causal_grid` (layer × token effects) back into
+    the trace. Runs the model (reuses the `trace` loader)."""
+    from llm_token_heatmap.analysis.causal_grid import compute_causal_grid
+    from llm_token_heatmap.tracing.runner import _load_model_and_tokenizer
+
+    trace_path: Path = args.trace
+    if not trace_path.is_file():
+        print(f"error: trace file not found: {trace_path}", file=sys.stderr)
+        return 2
+
+    payload = json.loads(trace_path.read_text(encoding="utf-8"))
+    tokens = payload.get("tokens") or {}
+    if not payload.get("steps") or not tokens.get("prompt_token_ids"):
+        print(
+            "error: trace lacks steps / tokens.prompt_token_ids; regenerate with "
+            "`token-heatmap trace`.",
+            file=sys.stderr,
+        )
+        return 2
+
+    model_id = args.model or (payload.get("metadata") or {}).get("model")
+    if not model_id:
+        print(
+            "error: no model id (pass --model or ensure metadata.model is set).",
+            file=sys.stderr,
+        )
+        return 2
+
+    print(f"[causal] loading model {model_id} ...")
+    model, tokenizer, _device = _load_model_and_tokenizer(model_id)
+    n_steps = len(payload["steps"])
+    print(
+        f"[causal] ablating {args.components} across layers for {n_steps} "
+        "tokens (this runs the model) ..."
+    )
+    grid = compute_causal_grid(
+        model,
+        tokenizer,
+        payload,
+        components=tuple(args.components),
+        layers=args.layers,
+    )
+    payload["causal_grid"] = grid
+    out_path: Path = args.out or trace_path
+    out_path.write_text(_dump_trace_json(payload), encoding="utf-8")
+    print(
+        f"[causal] wrote causal_grid ({len(grid['steps'])} tokens × "
+        f"{grid['num_layers']} layers) -> {out_path}"
     )
     return 0
 
