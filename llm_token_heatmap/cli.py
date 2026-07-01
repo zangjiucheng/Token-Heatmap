@@ -545,6 +545,47 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
     )
     causal_parser.set_defaults(func=run_causal)
 
+    tuned_parser = subparsers.add_parser(
+        "tuned-lens",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        help="Add a tuned-lens decode (affine probe per layer) to a trace JSON.",
+        description=(
+            "Fit a per-layer affine probe (ridge least-squares to the final hidden "
+            "state) on a small bundled corpus, then decode each trace step's residual "
+            "through it plus the model's unembedding, writing `tuned_logit_lens` back. "
+            "Fixes the vanilla logit lens's early-layer basis mismatch. A pragmatic, "
+            "closed-form variant of the KL-trained tuned lens; runs the model."
+        ),
+        epilog=(
+            "example:\n"
+            "  token-heatmap tuned-lens --trace outputs/ioi/adaptive_token_trace.json"
+        ),
+    )
+    tuned_parser.add_argument(
+        "--trace",
+        type=Path,
+        required=True,
+        help="Path to an adaptive_token_trace.json (needs tokens + steps).",
+    )
+    tuned_parser.add_argument(
+        "--model",
+        default=None,
+        help="Model id to load (default: the trace's metadata.model).",
+    )
+    tuned_parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Where to write the augmented trace (default: overwrite --trace in place).",
+    )
+    tuned_parser.add_argument(
+        "--ridge",
+        type=float,
+        default=1.0,
+        help="Ridge regularization for the affine probe fit (default: 1.0).",
+    )
+    tuned_parser.set_defaults(func=run_tuned_lens)
+
     # Operational sub-commands (web build / hpc …) live in
     # `llm_token_heatmap.commands` so they replace scripts/*.sh without bloating
     # this module. They import only stdlib, so registering them keeps `--help`
@@ -1282,6 +1323,50 @@ def run_causal(args: argparse.Namespace) -> int:
     print(
         f"[causal] wrote causal_grid ({len(grid['steps'])} tokens × "
         f"{grid['num_layers']} layers) -> {out_path}"
+    )
+    return 0
+
+
+def run_tuned_lens(args: argparse.Namespace) -> int:
+    """Execute the `tuned-lens` sub-command: fit per-layer affine probes on a
+    bundled corpus and decode each step's residual through them, writing a
+    `tuned_logit_lens` back into the trace. Runs the model."""
+    from llm_token_heatmap.probes.tuned_lens import compute_tuned_lens
+    from llm_token_heatmap.tracing.runner import _load_model_and_tokenizer
+
+    trace_path: Path = args.trace
+    if not trace_path.is_file():
+        print(f"error: trace file not found: {trace_path}", file=sys.stderr)
+        return 2
+
+    payload = json.loads(trace_path.read_text(encoding="utf-8"))
+    tokens = payload.get("tokens") or {}
+    if not payload.get("steps") or not tokens.get("prompt_token_ids"):
+        print(
+            "error: trace lacks steps / tokens.prompt_token_ids; regenerate with "
+            "`token-heatmap trace`.",
+            file=sys.stderr,
+        )
+        return 2
+
+    model_id = args.model or (payload.get("metadata") or {}).get("model")
+    if not model_id:
+        print(
+            "error: no model id (pass --model or ensure metadata.model is set).",
+            file=sys.stderr,
+        )
+        return 2
+
+    print(f"[tuned-lens] loading model {model_id} ...")
+    model, tokenizer, _device = _load_model_and_tokenizer(model_id)
+    print("[tuned-lens] fitting per-layer affine probes on the bundled corpus ...")
+    tuned = compute_tuned_lens(model, tokenizer, payload, ridge=args.ridge)
+    payload["tuned_logit_lens"] = tuned
+    out_path: Path = args.out or trace_path
+    out_path.write_text(_dump_trace_json(payload), encoding="utf-8")
+    print(
+        f"[tuned-lens] wrote tuned_logit_lens ({len(tuned['steps'])} tokens × "
+        f"{tuned['num_layers']} layers) -> {out_path}"
     )
     return 0
 

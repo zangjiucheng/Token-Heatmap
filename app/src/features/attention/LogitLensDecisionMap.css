@@ -31,6 +31,12 @@
   font-weight: 500;
 }
 
+.decision-map__toggles {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .decision-map__toggle {
   display: inline-flex;
   padding: 2px;

@@ -146,11 +146,27 @@ class TinyDecoder(nn.Module):
         )
         self.norm = nn.LayerNorm(config.hidden_size)
 
-    def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, input_ids: torch.Tensor, output_hidden_states: bool = False
+    ) -> Any:
         hidden = self.embed_tokens(input_ids)
+        hs = [hidden] if output_hidden_states else None
         for layer in self.layers:
             hidden = layer(hidden)
-        return self.norm(hidden)
+            if hs is not None:
+                hs.append(hidden)
+        normed = self.norm(hidden)
+        if output_hidden_states:
+            return normed, tuple(hs)
+        return normed
+
+
+class _TinyOutput:
+    """Minimal HF-``ModelOutput``-like holder for the tuned-lens path."""
+
+    def __init__(self, logits: torch.Tensor, hidden_states: Any) -> None:
+        self.logits = logits
+        self.hidden_states = hidden_states
 
 
 class TinyCausalLM(nn.Module):
@@ -162,7 +178,12 @@ class TinyCausalLM(nn.Module):
         self.model = TinyDecoder(config)
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
-    def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, input_ids: torch.Tensor, output_hidden_states: bool = False
+    ) -> Any:
+        if output_hidden_states:
+            normed, hs = self.model(input_ids, output_hidden_states=True)
+            return _TinyOutput(self.lm_head(normed), hs)
         hidden = self.model(input_ids)
         return self.lm_head(hidden)
 

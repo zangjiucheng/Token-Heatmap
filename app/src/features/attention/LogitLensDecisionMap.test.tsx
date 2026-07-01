@@ -69,4 +69,47 @@ describe('LogitLensDecisionMap', () => {
     );
     expect(container.firstChild).toBeNull();
   });
+
+  it('hides the vanilla/tuned toggle without tuned_logit_lens', () => {
+    render(<LogitLensDecisionMap trace={makeTrace()} selectedStep={null} />);
+    expect(
+      screen.queryByTestId('decision-map-lens-tuned'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows and switches the vanilla/tuned lens when tuned data is present', () => {
+    const base = makeTrace() as unknown as { steps: unknown[] };
+    const trace = {
+      ...base,
+      tuned_logit_lens: {
+        steps: [
+          {
+            layers: [
+              { layer_idx: 0, selected_token_rank: 2, selected_token_prob: 0.4 },
+              { layer_idx: 1, selected_token_rank: 1, selected_token_prob: 0.8 },
+              { layer_idx: 2, selected_token_rank: 1, selected_token_prob: 0.95 },
+            ],
+          },
+          {
+            layers: [
+              { layer_idx: 0, selected_token_rank: 3, selected_token_prob: 0.2 },
+              { layer_idx: 1, selected_token_rank: 1, selected_token_prob: 0.6 },
+              { layer_idx: 2, selected_token_rank: 1, selected_token_prob: 0.9 },
+            ],
+          },
+        ],
+      },
+    } as unknown as Trace;
+
+    render(<LogitLensDecisionMap trace={trace} selectedStep={null} />);
+    const tuned = screen.getByTestId('decision-map-lens-tuned');
+    expect(screen.getByTestId('decision-map-lens-vanilla')).toHaveAttribute(
+      'data-selected',
+      'true',
+    );
+    fireEvent.click(tuned);
+    expect(tuned).toHaveAttribute('data-selected', 'true');
+    // still renders the grid from the tuned source
+    expect(screen.getByTestId('decision-cell-0-0')).toBeInTheDocument();
+  });
 });

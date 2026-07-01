@@ -50,6 +50,11 @@
       "additionalProperties": true,
       "description": "Causal-effect grid written by `token-heatmap causal`: for every generated token (step) and every decoder layer, the effect of ablating that layer's attention and/or MLP block at the final position on the realized token's probability. Each cell records `kl` and `dp` (signed probability change). The causal counterpart to direct logit attribution, in the same layer x token coordinate system as the token heatmap. Present only when the causal pass has been run."
     },
+    "tuned_logit_lens": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Tuned-lens decode written by `token-heatmap tuned-lens`: per generated token, the realized token's rank and probability at each layer after passing that layer's residual through a fitted affine probe (ridge least-squares to the final hidden state) and the model's unembedding. A pragmatic, closed-form variant of the tuned lens (Belrose et al.) that removes the vanilla logit lens's early-layer basis mismatch. Same per-step per-layer shape the decision map reads; present only when the tuned-lens pass has been run."
+    },
     "prompt_logit_lens": {
       "type": "object",
       "additionalProperties": true,

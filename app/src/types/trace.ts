@@ -29,6 +29,12 @@ export interface Trace {
     [k: string]: unknown | undefined;
   };
   /**
+   * Tuned-lens decode written by `token-heatmap tuned-lens`: per generated token, the realized token's rank and probability at each layer after passing that layer's residual through a fitted affine probe (ridge least-squares to the final hidden state) and the model's unembedding. A pragmatic, closed-form variant of the tuned lens (Belrose et al.) that removes the vanilla logit lens's early-layer basis mismatch. Same per-step per-layer shape the decision map reads; present only when the tuned-lens pass has been run.
+   */
+  tuned_logit_lens?: {
+    [k: string]: unknown | undefined;
+  };
+  /**
    * Prompt-position logit lens: the residual at every PROMPT position decoded through the unembedding at every layer (top-k tokens). Unlike the per-step logit lens (answer position only), this surfaces intermediate computations that live over earlier tokens — e.g. the 'Texas' bridge over the 'Dallas' token in a two-hop recall. Present only when captured with --capture-logit-lens.
    */
   prompt_logit_lens?: {

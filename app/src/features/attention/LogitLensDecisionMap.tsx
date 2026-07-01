@@ -47,24 +47,53 @@ export function LogitLensDecisionMap({
   onSelectStep,
 }: LogitLensDecisionMapProps) {
   const [metric, setMetric] = useState<Metric>('rank');
+  const [lens, setLens] = useState<'vanilla' | 'tuned'>('vanilla');
   const [hover, setHover] = useState<Cell | null>(null);
 
-  // Layer axis = the union of layer_idx across every step's logit_lens.
+  const tuned = (
+    trace as {
+      tuned_logit_lens?: {
+        steps?: {
+          layers: {
+            layer_idx: number;
+            selected_token_rank: number;
+            selected_token_prob: number;
+          }[];
+        }[];
+      };
+    }
+  ).tuned_logit_lens;
+  const hasTuned = (tuned?.steps?.length ?? 0) > 0;
+
+  // Per-step per-layer source, switched by the vanilla/tuned toggle. Both carry
+  // selected_token_rank / _prob, which is all the map reads.
+  const perLayer = (
+    s: (typeof trace.steps)[number],
+    i: number,
+  ): {
+    layer_idx: number;
+    selected_token_rank: number;
+    selected_token_prob: number;
+  }[] =>
+    lens === 'tuned' && tuned?.steps
+      ? (tuned.steps[i]?.layers ?? [])
+      : (s.logit_lens ?? []);
+
+  // Layer axis = the union of layer_idx across every step.
   const layers = useMemo(() => {
     const set = new Set<number>();
-    for (const s of trace.steps) {
-      for (const l of s.logit_lens ?? []) set.add(l.layer_idx);
-    }
+    trace.steps.forEach((s, i) => {
+      for (const l of perLayer(s, i)) set.add(l.layer_idx);
+    });
     return [...set].sort((a, b) => a - b);
-  }, [trace.steps]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trace.steps, lens, tuned]);
 
   const { cells, maxRank } = useMemo(() => {
     const out: Cell[] = [];
     let hiRank = 1;
     trace.steps.forEach((s, step) => {
-      const byLayer = new Map(
-        (s.logit_lens ?? []).map((l) => [l.layer_idx, l]),
-      );
+      const byLayer = new Map(perLayer(s, step).map((l) => [l.layer_idx, l]));
       for (const layer of layers) {
         const l = byLayer.get(layer);
         const rank = l ? l.selected_token_rank : null;
@@ -78,7 +107,8 @@ export function LogitLensDecisionMap({
       }
     });
     return { cells: out, maxRank: hiRank };
-  }, [trace.steps, layers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trace.steps, layers, lens, tuned]);
 
   const numSteps = trace.steps.length;
   const numLayers = layers.length;
@@ -116,33 +146,59 @@ export function LogitLensDecisionMap({
         <h3 className="decision-map__title">
           Decision map <span>· layer × token</span>
         </h3>
-        <div
-          className="decision-map__toggle"
-          role="group"
-          aria-label="Decision map metric"
-        >
-          <button
-            type="button"
-            data-selected={metric === 'rank'}
-            data-testid="decision-map-metric-rank"
-            onClick={() => setMetric('rank')}
+        <div className="decision-map__toggles">
+          {hasTuned && (
+            <div
+              className="decision-map__toggle"
+              role="group"
+              aria-label="Lens"
+            >
+              <button
+                type="button"
+                data-selected={lens === 'vanilla'}
+                data-testid="decision-map-lens-vanilla"
+                onClick={() => setLens('vanilla')}
+              >
+                Vanilla
+              </button>
+              <button
+                type="button"
+                data-selected={lens === 'tuned'}
+                data-testid="decision-map-lens-tuned"
+                onClick={() => setLens('tuned')}
+              >
+                Tuned
+              </button>
+            </div>
+          )}
+          <div
+            className="decision-map__toggle"
+            role="group"
+            aria-label="Decision map metric"
           >
-            Rank
-          </button>
-          <button
-            type="button"
-            data-selected={metric === 'prob'}
-            data-testid="decision-map-metric-prob"
-            onClick={() => setMetric('prob')}
-          >
-            Prob
-          </button>
+            <button
+              type="button"
+              data-selected={metric === 'rank'}
+              data-testid="decision-map-metric-rank"
+              onClick={() => setMetric('rank')}
+            >
+              Rank
+            </button>
+            <button
+              type="button"
+              data-selected={metric === 'prob'}
+              data-testid="decision-map-metric-prob"
+              onClick={() => setMetric('prob')}
+            >
+              Prob
+            </button>
+          </div>
         </div>
       </div>
       <p className="decision-map__hint">
-        Each column is a generated token; each row a layer (shallow → deep).
-        Bright = the token is already the layer&rsquo;s top prediction — so a
-        column brightening low down shows a token decided late.
+        {lens === 'tuned'
+          ? 'Tuned lens: each layer’s residual is mapped through a fitted affine probe before decoding, fixing the vanilla lens’s early-layer basis mismatch. Compare with Vanilla — early layers are far more decodable.'
+          : 'Each column is a generated token; each row a layer (shallow → deep). Bright = the token is already the layer’s top prediction — so a column brightening low down shows a token decided late.'}
       </p>
 
       <div className="decision-map__plot">
