@@ -1,0 +1,42 @@
+.ll-converge {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ll-converge__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.ll-converge__title span {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.ll-converge__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 28vh;
+}
+
+.ll-converge__axis {
+  stroke: var(--color-border-strong);
+  stroke-width: 1;
+}
+
+.ll-converge__tick,
+.ll-converge__legend {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--color-text-muted);
+}

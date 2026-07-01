@@ -3,6 +3,7 @@ import type { LogitLensCandidate, Trace } from '@/types/trace';
 import { escapeToken } from '@/features/detail/escapeToken';
 import { LogitLensTable, type LogitLensTokenizer } from './LogitLensTable';
 import { LogitLensDecisionMap } from './LogitLensDecisionMap';
+import { LogitLensConvergence } from './LogitLensConvergence';
 import './AttentionTab.css';
 import './LogitLensTable.css';
 
@@ -193,6 +194,17 @@ export function LogitLensTab({
               selectedStep={selectedStep}
               onSelectStep={onSelectStep}
             />
+          )}
+          {hasStepLens && <LogitLensConvergence trace={trace} />}
+          {hasStepLens && (
+            <p className="logit-lens-tab__caveat">
+              The logit lens shows <strong>decodability</strong> — what is
+              linearly readable from a layer — not{' '}
+              <strong>causal relevance</strong>. A direction can matter causally
+              yet be unreadable here; see the layer&nbsp;×&nbsp;token{' '}
+              <em>Causal effect</em> map in the Attribution tab, which can
+              disagree.
+            </p>
           )}
           <LogitLensTable
             trace={trace}

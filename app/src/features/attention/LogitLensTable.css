@@ -114,3 +114,28 @@
   font-size: 0.75rem;
   color: var(--color-text-muted);
 }
+
+/* Decodability≠causal caveat that cross-links to the Causal effect map. */
+.logit-lens-tab__caveat {
+  margin: 0 0 20px;
+  padding: 10px 12px;
+  max-width: 76ch;
+  border: 1px solid var(--color-border);
+  border-left: 2px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.55;
+}
+
+.logit-lens-tab__caveat strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.logit-lens-tab__caveat em {
+  color: var(--color-accent-text);
+  font-style: normal;
+  font-weight: 600;
+}
