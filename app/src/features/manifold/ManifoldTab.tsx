@@ -4,6 +4,7 @@ import { VizModal } from '@/components/VizModal';
 import { ManifoldScatter } from './ManifoldScatter';
 import { ManifoldScatter3D } from './ManifoldScatter3D';
 import { ManifoldScreePlot } from './ManifoldScreePlot';
+import { ManifoldDepthCurve } from './ManifoldDepthCurve';
 import './ManifoldTab.css';
 
 export interface ManifoldTabProps {
@@ -323,6 +324,8 @@ export function ManifoldTab({
           </div>
         </div>
       </div>
+
+      <ManifoldDepthCurve layers={layers} />
 
       <VizModal
         open={zoomOpen}

@@ -1,0 +1,81 @@
+.depth-curve {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.depth-curve__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.depth-curve__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.depth-curve__title span {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.depth-curve__toggle {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-muted);
+}
+
+.depth-curve__toggle button {
+  padding: 3px 10px;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.depth-curve__toggle button[data-selected='true'] {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.depth-curve__toggle button:hover[data-selected='false'] {
+  color: var(--color-text);
+}
+
+.depth-curve__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 30vh;
+}
+
+.depth-curve__axis {
+  stroke: var(--color-border-strong);
+  stroke-width: 1;
+}
+
+.depth-curve__tick,
+.depth-curve__legend {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--color-text-muted);
+}
