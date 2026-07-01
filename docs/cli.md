@@ -191,6 +191,60 @@ After augmenting a trace with `manifold`, drag its
 `adaptive_token_trace.json` onto the web viewer (`cd app && npm run dev`),
 or open it in the desktop app — see [`web-app.md`](web-app.md).
 
+## Causal-effect grid (`causal`)
+
+The **causal counterpart** to Direct Logit Attribution. Where DLA and the logit
+lens measure what is _decodable_ from a layer, this measures what is _causally
+load-bearing_: it re-runs the model and **ablates** (zeroes) each layer's
+attention and/or MLP block at every generated token, recording the KL divergence
+and the drop in the answer token's probability. The two can disagree — a
+direction can be decodable yet causally inert, or causally critical yet
+unreadable — which is exactly the contrast the web app surfaces.
+
+```bash
+# needs the model (re-runs it), like `trace`
+token-heatmap causal --trace outputs/example-run/adaptive_token_trace.json
+```
+
+This writes a top-level `causal_grid` field back into the trace, which the web
+app's **Attribution tab** renders as a diverging layer × token heatmap above the
+per-layer DLA bars (click a cell for linked brushing to that step).
+
+| Flag           | Default                  | Meaning                                                          |
+| -------------- | ------------------------ | --------------------------------------------------------------- |
+| `--trace`      | _required_               | Path to a trace JSON (needs `tokens` + `steps`).                |
+| `--model`      | the trace's model        | Model id to load (default: `metadata.model`).                   |
+| `--out`        | _overwrite `--trace`_    | Write the augmented trace elsewhere instead of in place.        |
+| `--components` | `attn mlp`               | Blocks to ablate per layer (`attn`, `mlp`, or both).            |
+| `--layers`     | all layers               | Subset of layer indices to ablate.                              |
+
+See [`interpreting.md`](interpreting.md) for how to read the map against DLA.
+
+## Tuned lens (`tuned-lens`)
+
+The vanilla logit lens decodes an early layer's residual through the _final_
+unembedding, which mismatches the early-layer basis and makes shallow layers look
+noisier than they are. The **tuned lens** ([Belrose et al. 2023](https://arxiv.org/abs/2303.08112))
+fixes this with a per-layer affine probe. This command fits a pragmatic,
+closed-form variant — a ridge least-squares map from each layer's hidden state to
+the final hidden state, on a small bundled corpus — then decodes every trace step
+through it plus the model's unembedding:
+
+```bash
+# needs the model (re-runs it to gather probe-fitting activations)
+token-heatmap tuned-lens --trace outputs/example-run/adaptive_token_trace.json
+```
+
+This writes a top-level `tuned_logit_lens` field, which drives the **Vanilla /
+Tuned** toggle on the Logit Lens tab's decision map and convergence curve.
+
+| Flag        | Default               | Meaning                                                     |
+| ----------- | --------------------- | ---------------------------------------------------------- |
+| `--trace`   | _required_            | Path to a trace JSON (needs `tokens` + `steps`).           |
+| `--model`   | the trace's model     | Model id to load (default: `metadata.model`).              |
+| `--out`     | _overwrite `--trace`_ | Write the augmented trace elsewhere instead of in place.   |
+| `--ridge`   | `1.0`                 | Ridge regularization strength for the affine probe fit.    |
+
 ## Building the frontend (`web build`)
 
 Run `npm install` + `npm run build` in `app` to produce a static

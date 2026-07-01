@@ -11,6 +11,29 @@ function expectedRowCount(t: Trace): number {
   return n;
 }
 
+/**
+ * Split CSV into logical records, respecting RFC-4180 quoted fields. A real
+ * trace's candidate tokens can contain literal newlines (e.g. a `.\n` token),
+ * which the exporter correctly quotes — so a naive `split('\n')` would
+ * over-count rows. Toggle `inQuotes` on each `"` (an escaped `""` toggles twice
+ * = no-op) and only break records on an unquoted newline.
+ */
+function splitCsvRecords(csv: string): string[] {
+  const out: string[] = [];
+  let start = 0;
+  let inQuotes = false;
+  for (let i = 0; i < csv.length; i += 1) {
+    const ch = csv[i];
+    if (ch === '"') inQuotes = !inQuotes;
+    else if (ch === '\n' && !inQuotes) {
+      out.push(csv.slice(start, i));
+      start = i + 1;
+    }
+  }
+  if (start < csv.length) out.push(csv.slice(start));
+  return out;
+}
+
 describe('traceToCsv', () => {
   it('emits the documented column order from README.md plus source', () => {
     const csv = traceToCsv(trace);
@@ -37,7 +60,7 @@ describe('traceToCsv', () => {
 
   it('produces one row per (step, source, candidate)', () => {
     const csv = traceToCsv(trace);
-    const lines = csv.trimEnd().split('\n');
+    const lines = splitCsvRecords(csv.trimEnd());
     expect(lines.length - 1).toBe(expectedRowCount(trace));
   });
 
@@ -56,7 +79,7 @@ describe('traceToCsv', () => {
 
   it('emits both raw and processed sources in order', () => {
     const csv = traceToCsv(trace);
-    const lines = csv.trimEnd().split('\n').slice(1);
+    const lines = splitCsvRecords(csv.trimEnd()).slice(1);
     const firstStepRawRows = trace.steps[0].raw.k_used;
     const firstStepProcessedRows = trace.steps[0].processed.k_used;
     for (let i = 0; i < firstStepRawRows; i += 1) {

@@ -1,12 +1,19 @@
-# token-heatmap trace config
-# Usage: token-heatmap trace --config configs/example.yaml [--serve]
+# token-heatmap trace config — the full-capture showcase example.
+# Usage: token-heatmap trace --config configs/example.yaml
 # All keys can be overridden on the command line, e.g.:
 #   token-heatmap trace --config configs/example.yaml --prompt "other prompt"
+#
+# This captures everything the web app's lenses can show. After generating,
+# add the post-hoc analyses to populate the remaining views:
+#   token-heatmap manifold   --trace outputs/example-run/adaptive_token_trace.json --components 6
+#   token-heatmap causal     --trace outputs/example-run/adaptive_token_trace.json
+#   token-heatmap tuned-lens --trace outputs/example-run/adaptive_token_trace.json
+# then drag outputs/example-run/adaptive_token_trace.json onto the viewer.
 
 model: Qwen/Qwen2.5-0.5B-Instruct
 prompt: "Explain what a large language model is in one sentence."
 
-max_new_tokens: 64
+max_new_tokens: 32
 temperature: 0.8
 top_p: 0.95
 min_k: 8
@@ -15,9 +22,18 @@ mass_threshold: 0.95
 
 out: outputs/example-run
 
+# Logit Lens — per-layer decode (drives the Decision map + tuned-lens toggle).
 capture_logit_lens: true
 lens_layers: all
 lens_top_k: 8
 
-capture_attention: false
-capture_activations: false
+# Attention — per-head stats (drives the Attention grid + the head-roles scatter,
+# fused with DLA below).
+capture_attention: true
+capture_full_attention: true
+attention_layers: all
+
+# Activations — full per-(layer, submodule) vectors, needed for Direct Logit
+# Attribution (per-layer + per-head), the Attribution Graph, and `manifold`.
+capture_activations: true
+capture_full_activations: true

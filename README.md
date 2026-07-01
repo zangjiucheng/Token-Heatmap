@@ -21,8 +21,8 @@ prompt + previous tokens → logits → probabilities → next token
 ## What you get
 
 - **`llm_token_heatmap`** — Python library: `AdaptiveTokenProbe`, a manual generation loop, sampling helpers, CSV/JSON/DataFrame export, attention + logit-lens + activation probes, a self-contained model-architecture summary, TWERA-style neuron attribution, **direct logit attribution (per-layer + per-head)**, component / head ablation primitives, post-hoc manifold geometry, matplotlib heatmaps, and activation diff. Loads on GPU in **bf16** (with optional **`--load-in-4bit`** NF4 for big models).
-- **`token-heatmap`** — CLI that takes a model + prompt (or a YAML config) and writes a full trace bundle to disk: `trace` (generate + capture) and `manifold` (analyze the activation clouds).
-- **`app`** — the desktop-app frontend (React + Vite UI in a [Tauri](https://tauri.app/) shell): a static, file-based **trace viewer** — a **lens workspace** with a grouped lens rail (**Generation / Internals / Geometry**), a persistent generation spine (token strip + entropy / selected-probability timelines), and a resizable inspector. Lenses: **Token Heatmap**, **Model** (architecture overview), **Output** (complete generated-text render), **Attention**, **Logit Lens**, **Activations** (per-step ↔ whole-trace **TWERA** ranking toggle), **Attribution** (**direct logit attribution** — each token's logit split by layer, expandable to **per head**), **Graph** (the same attribution as a pruned node-link **attribution graph**), **Manifold** (3-D rotatable cloud + probe/helix readouts); plus step detail, CSV/PNG export, and a diff view. It loads traces from a dropped file or the bundled sample — no backend server. (Interactive ablation will return later via the CLI precomputing ablations into the trace.)
+- **`token-heatmap`** — CLI that takes a model + prompt (or a YAML config) and writes a full trace bundle to disk: `trace` (generate + capture), `manifold` (activation-cloud geometry), `causal` (per-layer × token ablation grid), and `tuned-lens` (a fitted lens that fixes the vanilla logit lens's early-layer basis mismatch).
+- **`app`** — the desktop-app frontend (React + Vite UI in a [Tauri](https://tauri.app/) shell): a static, file-based **trace viewer** — a **lens workspace** with a grouped lens rail (**Generation / Internals / Geometry**), a persistent generation spine (token strip + entropy / selected-probability timelines), and a resizable inspector. Lenses: **Token Heatmap**, **Model** (architecture overview), **Output** (complete generated-text render), **Attention** (per-head grid + a **head-roles** scatter of attention magnitude vs contribution), **Logit Lens** (a layer × token **decision map**, a **tuned-lens** toggle, and a prediction-convergence curve), **Activations** (per-step ↔ whole-trace **TWERA** ranking toggle), **Attribution** (**direct logit attribution** — each token's logit split by layer, expandable to **per head** — plus a layer × token **causal-effect** ablation heatmap), **Graph** (the same attribution as a pruned node-link **attribution graph**), **Manifold** (3-D rotatable cloud + probe/helix readouts + an **intrinsic-dimension × depth** curve); plus step detail, CSV/PNG export, and a diff view. It loads traces from a dropped file or the bundled sample — no backend server. (Interactive ablation will return later via the CLI precomputing ablations into the trace.)
 - **`token-heatmap web build`** — builds the static viewer for deployment on servers without Node.js.
 - **Desktop app** — the viewer packaged as a native [Tauri](https://tauri.app/) app (no browser/Node.js needed). Grab an installer from the [Releases](https://github.com/zangjiucheng/Token-Heatmap/releases), or build it with `cd app && npm run build:app`. See [`docs/web-app.md`](docs/web-app.md#desktop-app-tauri).
 - **`token-heatmap hpc run <config>`** — one command from your laptop: do the GPU compute on an HPC (Slurm), then rsync the whole run back so viewing needs no GPU. Companion: `token-heatmap hpc setup` (build the GPU venv).
@@ -74,9 +74,16 @@ token-heatmap trace --config configs/example.yaml
 
 Any HuggingFace causal LM works — swap `--model` for a Llama / Mistral / Gemma /
 Phi id (gated repos need an `HF_TOKEN`). For large models on a single GPU add
-`--load-in-4bit`. To capture everything the web app can show, add
-`--capture-attention --capture-logit-lens --capture-activations
---capture-full-activations`, then `token-heatmap manifold --trace <trace>.json`.
+`--load-in-4bit`. To capture everything the web app can show, run the
+full-capture example and add the post-hoc analyses:
+
+```bash
+token-heatmap trace     --config configs/example.yaml               # full capture
+T=outputs/example-run/adaptive_token_trace.json
+token-heatmap manifold  --trace "$T" --components 6                 # Manifold + ID-depth curve
+token-heatmap causal    --trace "$T"                                # causal-effect heatmap
+token-heatmap tuned-lens --trace "$T"                               # tuned-lens toggle
+```
 
 Full CLI flags: [`docs/cli.md`](docs/cli.md). Python equivalent: [`docs/python-api.md`](docs/python-api.md).
 
