@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
+
 from llm_token_heatmap.probes.prompt_logit_lens import compute_prompt_logit_lens
+from llm_token_heatmap.viz.plotting import plot_prompt_logit_lens_heatmap
 from tests.fixtures.tiny_attention_model import build_tiny_model
 
 
@@ -40,3 +45,24 @@ def test_respects_layer_subset_and_topk() -> None:
 def test_returns_none_on_empty_input() -> None:
     model = build_tiny_model(num_hidden_layers=2, vocab_size=32)
     assert compute_prompt_logit_lens(model, None, [], layers="all") is None
+
+
+def test_plot_prompt_logit_lens_heatmap_smoke(tmp_path: Path) -> None:
+    model = build_tiny_model(num_hidden_layers=3, vocab_size=32)
+    ids = [1, 5, 9, 3]
+    payload = compute_prompt_logit_lens(model, None, ids, layers="all", top_k=4)
+    assert payload is not None
+
+    out_path = tmp_path / "prompt_logit_lens_heatmap.png"
+    fig = plot_prompt_logit_lens_heatmap(payload, save_path=out_path)
+    assert out_path.exists()
+    assert out_path.stat().st_size > 0
+
+    # Grid shape: one row per layer, one column per prompt position.
+    image = fig.axes[0].get_images()[0]
+    assert image.get_array().shape == (3, len(ids))
+
+
+def test_plot_prompt_logit_lens_heatmap_rejects_empty_payload() -> None:
+    with pytest.raises(ValueError):
+        plot_prompt_logit_lens_heatmap({"positions": []})

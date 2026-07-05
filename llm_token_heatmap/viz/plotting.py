@@ -593,6 +593,232 @@ def plot_logit_lens_selected_rank(
     return fig
 
 
+def _cell_text_color(im: Any, value: float) -> str:
+    """Pick black or white cell text against the colormapped cell background."""
+
+    r, g, b, _ = im.cmap(im.norm(value))
+    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    return "black" if luminance > 0.55 else "white"
+
+
+def _step_selected_token(entry: dict[str, Any], tokenizer: Any) -> str:
+    """Decode the token actually selected at a trace step, if recoverable."""
+
+    if tokenizer is None:
+        return ""
+    stats = entry.get("raw")
+    if not isinstance(stats, dict):
+        return ""
+    selected = stats.get("selected_ids")
+    if selected is None:
+        return ""
+    try:
+        return _decode_single(tokenizer, int(_as_list(selected)[0]))
+    except (TypeError, ValueError, IndexError):
+        return ""
+
+
+def plot_logit_lens_heatmap(
+    trace: list[dict[str, Any]],
+    tokenizer: Any,
+    save_path: str | Path | None = None,
+    cmap: str = "viridis",
+    figsize: tuple[float, float] | None = None,
+    annotate: bool = True,
+) -> plt.Figure:
+    """Render each layer's top-1 predicted token across all generation steps.
+
+    The classic logit-lens heatmap: every transformer layer is treated as if it
+    were the final layer — its residual stream is projected through the final
+    norm and output head — and the argmax token of the resulting distribution
+    is drawn in the cell. Color encodes that token's probability, so the plot
+    shows both *what* each layer predicts and *how confident* the distribution
+    is, sharpening (and often changing identity) with depth.
+
+    Args:
+        trace: List of step dicts with ``logit_lens`` entries.
+        tokenizer: Tokenizer used to decode token ids into strings.
+        save_path: Optional PNG output path.
+        cmap: Matplotlib colormap name.
+        figsize: Optional figure size override.
+        annotate: When True, draw the decoded top-1 token inside each cell.
+
+    Returns:
+        The matplotlib Figure.
+    """
+
+    if not trace:
+        raise ValueError("trace is empty")
+
+    steps_with_lens = [entry for entry in trace if "logit_lens" in entry]
+    if not steps_with_lens:
+        raise ValueError("no steps in trace contain a 'logit_lens' entry")
+
+    layer_indices = sorted(
+        {int(layer["layer_idx"]) for entry in steps_with_lens for layer in entry["logit_lens"]}
+    )
+    layer_position = {idx: pos for pos, idx in enumerate(layer_indices)}
+
+    n_layers = len(layer_indices)
+    n_steps = len(steps_with_lens)
+    grid = np.full((n_layers, n_steps), np.nan, dtype=float)
+    token_texts = np.full((n_layers, n_steps), "", dtype=object)
+
+    for col, entry in enumerate(steps_with_lens):
+        for layer in entry["logit_lens"]:
+            ids = _as_list(layer["top_k_token_ids"])
+            probs = _as_list(layer["top_k_probs"])
+            if not ids or not probs:
+                continue
+            row = layer_position[int(layer["layer_idx"])]
+            grid[row, col] = float(probs[0])
+            token_texts[row, col] = _decode_single(tokenizer, int(ids[0]))
+
+    if figsize is None:
+        figsize = (max(6.0, 0.9 * n_steps), max(3.0, 0.35 * n_layers))
+
+    fig, ax = plt.subplots(figsize=figsize)
+    im = ax.imshow(grid, aspect="auto", cmap=cmap, origin="upper", vmin=0.0, vmax=1.0)
+
+    ax.set_xlabel("Generation step (selected token)")
+    ax.set_ylabel("Layer")
+    step_labels = []
+    for i, entry in enumerate(steps_with_lens):
+        label = str(int(entry.get("step", i)))
+        selected = _step_selected_token(entry, tokenizer)
+        if selected:
+            label = f"{label}\n{selected}"
+        step_labels.append(label)
+    ax.set_xticks(np.arange(n_steps))
+    ax.set_xticklabels(step_labels, fontsize=8)
+    ax.set_yticks(np.arange(n_layers))
+    ax.set_yticklabels([str(idx) for idx in layer_indices], fontsize=8)
+
+    if annotate:
+        for r in range(n_layers):
+            for c in range(n_steps):
+                text = token_texts[r, c]
+                if text and not np.isnan(grid[r, c]):
+                    ax.text(
+                        c,
+                        r,
+                        text,
+                        ha="center",
+                        va="center",
+                        fontsize=7,
+                        color=_cell_text_color(im, grid[r, c]),
+                        **_text_font_kwargs(text),
+                    )
+
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label("Top-1 probability")
+
+    fig.tight_layout()
+
+    if save_path is not None:
+        out = _ensure_parent(save_path)
+        fig.savefig(out, dpi=150)
+
+    return fig
+
+
+def plot_prompt_logit_lens_heatmap(
+    prompt_logit_lens: dict[str, Any],
+    save_path: str | Path | None = None,
+    cmap: str = "viridis",
+    figsize: tuple[float, float] | None = None,
+    annotate: bool = True,
+) -> plt.Figure:
+    """Render each layer's top-1 predicted token at every prompt position.
+
+    Consumes the payload produced by
+    :func:`llm_token_heatmap.probes.prompt_logit_lens.compute_prompt_logit_lens`
+    (which already carries decoded token strings, so no tokenizer is needed).
+    Rows are layers, columns are prompt positions labeled with the actual
+    prompt token; each cell shows the token that layer would predict *next*
+    if it were the final layer, colored by its probability.
+
+    Args:
+        prompt_logit_lens: The ``prompt_logit_lens`` trace payload.
+        save_path: Optional PNG output path.
+        cmap: Matplotlib colormap name.
+        figsize: Optional figure size override.
+        annotate: When True, draw the decoded top-1 token inside each cell.
+
+    Returns:
+        The matplotlib Figure.
+    """
+
+    positions = prompt_logit_lens.get("positions") or []
+    if not positions:
+        raise ValueError("prompt_logit_lens payload has no positions")
+
+    layer_indices = sorted(
+        {int(layer["layer_idx"]) for pos in positions for layer in pos.get("layers", [])}
+    )
+    if not layer_indices:
+        raise ValueError("prompt_logit_lens payload has no layer entries")
+    layer_position = {idx: pos for pos, idx in enumerate(layer_indices)}
+
+    n_layers = len(layer_indices)
+    n_positions = len(positions)
+    grid = np.full((n_layers, n_positions), np.nan, dtype=float)
+    token_texts = np.full((n_layers, n_positions), "", dtype=object)
+
+    for col, pos_entry in enumerate(positions):
+        for layer in pos_entry.get("layers", []):
+            top_k = layer.get("top_k") or []
+            if not top_k:
+                continue
+            row = layer_position[int(layer["layer_idx"])]
+            grid[row, col] = float(top_k[0]["prob"])
+            token_texts[row, col] = str(top_k[0]["token"]).replace("\n", "\\n")
+
+    if figsize is None:
+        figsize = (max(6.0, 0.9 * n_positions), max(3.0, 0.35 * n_layers))
+
+    fig, ax = plt.subplots(figsize=figsize)
+    im = ax.imshow(grid, aspect="auto", cmap=cmap, origin="upper", vmin=0.0, vmax=1.0)
+
+    ax.set_xlabel("Prompt position (token)")
+    ax.set_ylabel("Layer")
+    position_labels = []
+    for i, pos_entry in enumerate(positions):
+        token = str(pos_entry.get("token", "")).replace("\n", "\\n")
+        position_labels.append(f"{int(pos_entry.get('position', i))}\n{token}")
+    ax.set_xticks(np.arange(n_positions))
+    ax.set_xticklabels(position_labels, fontsize=8)
+    ax.set_yticks(np.arange(n_layers))
+    ax.set_yticklabels([str(idx) for idx in layer_indices], fontsize=8)
+
+    if annotate:
+        for r in range(n_layers):
+            for c in range(n_positions):
+                text = token_texts[r, c]
+                if text and not np.isnan(grid[r, c]):
+                    ax.text(
+                        c,
+                        r,
+                        text,
+                        ha="center",
+                        va="center",
+                        fontsize=7,
+                        color=_cell_text_color(im, grid[r, c]),
+                        **_text_font_kwargs(text),
+                    )
+
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label("Top-1 probability")
+
+    fig.tight_layout()
+
+    if save_path is not None:
+        out = _ensure_parent(save_path)
+        fig.savefig(out, dpi=150)
+
+    return fig
+
+
 _ATTENTION_HEAD_METRICS = {
     "entropy",
     "self_weight",

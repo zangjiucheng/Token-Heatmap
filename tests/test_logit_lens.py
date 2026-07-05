@@ -25,6 +25,7 @@ from llm_token_heatmap.probes.logit_lens import (
 )
 from llm_token_heatmap.viz.plotting import (
     plot_logit_lens,
+    plot_logit_lens_heatmap,
     plot_logit_lens_selected_rank,
 )
 from tests.conftest import FakeTokenizer
@@ -327,6 +328,57 @@ def test_plot_logit_lens_selected_rank_smoke(tmp_path: Path) -> None:
         for layer in entry["logit_lens"]:
             if int(layer["layer_idx"]) == final_layer_idx:
                 assert int(layer["selected_token_rank"]) == 1
+
+
+def test_plot_logit_lens_heatmap_smoke(tmp_path: Path) -> None:
+    model = build_tiny_model(num_hidden_layers=3, vocab_size=32)
+    lens = LogitLens(LogitLensConfig(layers="all", top_k=4))
+    lens.attach(model)
+    trace: list[dict] = []
+    try:
+        torch.manual_seed(7)
+        for step in range(3):
+            input_ids = torch.randint(0, model.config.vocab_size, (1, 4))
+            final_logits = _final_position_logits(model, input_ids)
+            selected = int(final_logits.argmax().item())
+            stats = lens.capture_step(selected_token_id=selected)
+            trace.append(
+                {
+                    "step": step,
+                    "raw": {"selected_ids": torch.tensor([selected])},
+                    "logit_lens": [
+                        {
+                            "layer_idx": layer.layer_idx,
+                            "top_k_token_ids": layer.top_k_token_ids,
+                            "top_k_probs": layer.top_k_probs,
+                            "top_k_logprobs": layer.top_k_logprobs,
+                            "entropy": layer.entropy,
+                            "selected_token_rank": layer.selected_token_rank,
+                            "selected_token_prob": layer.selected_token_prob,
+                        }
+                        for layer in stats.layers.values()
+                    ],
+                }
+            )
+    finally:
+        lens.detach()
+
+    out_path = tmp_path / "logit_lens_heatmap.png"
+    tokenizer = FakeTokenizer(vocab_size=model.config.vocab_size)
+    fig = plot_logit_lens_heatmap(trace, tokenizer, save_path=out_path)
+    assert out_path.exists()
+    assert out_path.stat().st_size > 0
+
+    # Grid shape: one row per layer, one column per step.
+    image = fig.axes[0].get_images()[0]
+    assert image.get_array().shape == (3, 3)
+
+
+def test_plot_logit_lens_heatmap_requires_lens_entries() -> None:
+    with pytest.raises(ValueError):
+        plot_logit_lens_heatmap([], tokenizer=None)
+    with pytest.raises(ValueError):
+        plot_logit_lens_heatmap([{"step": 0}], tokenizer=None)
 
 
 def test_unsupported_model_raises_clear_error() -> None:

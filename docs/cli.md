@@ -94,6 +94,8 @@ Extra output files when these flags are active:
 - `attention_layer_head_grid.png` — per-step layer × head entropy grid.
 - `logit_lens.png` — per-layer top-k table (first step).
 - `selected_rank_heatmap.png` — selected-token rank by layer × step.
+- `logit_lens_heatmap.png` — each layer's top-1 predicted token by layer × generation step (every layer treated as the final layer), colored by probability.
+- `prompt_logit_lens_heatmap.png` — the same per-layer top-1 heatmap over every prompt position.
 
 The **Logit Lens** tab in the web app shows this data interactively, synced to the heatmap cursor.
 

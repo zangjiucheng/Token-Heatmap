@@ -586,7 +586,9 @@ def run_trace(args: argparse.Namespace) -> int:
         plot_attention_layer_head_grid,
         plot_entropy,
         plot_logit_lens,
+        plot_logit_lens_heatmap,
         plot_logit_lens_selected_rank,
+        plot_prompt_logit_lens_heatmap,
         plot_selected_probability,
         tokenizer_fingerprint,
         trace_to_dataframe,
@@ -923,6 +925,15 @@ def run_trace(args: argparse.Namespace) -> int:
                 plot_logit_lens_selected_rank(
                     trace, tokenizer, save_path=output_dir / "selected_rank_heatmap.png"
                 )
+                plot_logit_lens_heatmap(
+                    trace, tokenizer, save_path=output_dir / "logit_lens_heatmap.png"
+                )
+
+        if prompt_logit_lens is not None:
+            plot_prompt_logit_lens_heatmap(
+                prompt_logit_lens,
+                save_path=output_dir / "prompt_logit_lens_heatmap.png",
+            )
     except Exception as exc:  # noqa: BLE001 — plots must not fail the run after JSON is written.
         print(
             f"[token-heatmap] WARNING: plot generation failed "

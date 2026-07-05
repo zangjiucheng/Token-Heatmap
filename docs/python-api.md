@@ -95,6 +95,13 @@ Flattens the trace into a long-format DataFrame with one row per
 - `plot_entropy(df, source="raw", save_path=...)`
 - `plot_raw_vs_processed_heatmap(df, value_col, save_path=...)` — side by side with shared color scale
 - `plot_raw_vs_processed_selected_prob(df, save_path=...)`
+- `plot_logit_lens(trace_step, tokenizer, save_path=...)` — per-layer top-k table for one step
+- `plot_logit_lens_selected_rank(trace, tokenizer, save_path=...)` — selected-token rank by layer × step
+- `plot_logit_lens_heatmap(trace, tokenizer, save_path=...)` — each layer's top-1 predicted token by
+  layer × generation step, treating every layer as if it were the final one; cell color is the
+  token's probability, so the plot shows the prediction forming and sharpening with depth
+- `plot_prompt_logit_lens_heatmap(prompt_logit_lens, save_path=...)` — same heatmap over every
+  *prompt* position, consuming the payload from `compute_prompt_logit_lens` (no tokenizer needed)
 
 ### Serializing to the on-disk JSON
 
