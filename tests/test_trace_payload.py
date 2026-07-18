@@ -99,6 +99,28 @@ def test_logit_lens_payload_reshapes_to_schema_shape() -> None:
         assert layer["top_k"][0]["token"] == "<10>"
 
 
+def test_logit_lens_payload_carries_kl_metrics() -> None:
+    """KL fields pass through when present; a None kl_from_prev (earliest
+    layer) is omitted rather than serialized as null."""
+
+    tokenizer = _FakeTokenizer()
+    first = {**_logit_lens_layer(0), "kl_to_final": 2.5, "kl_from_prev": None}
+    later = {**_logit_lens_layer(3), "kl_to_final": 0.0, "kl_from_prev": 1.25}
+
+    out = logit_lens_payload([first, later], tokenizer)
+
+    assert out[0]["kl_to_final"] == 2.5
+    assert "kl_from_prev" not in out[0]
+    assert out[1]["kl_to_final"] == 0.0
+    assert out[1]["kl_from_prev"] == 1.25
+
+    # And the enriched shape still validates against the frontend schema.
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    lens_schema = {**schema["$defs"]["LogitLensLayer"], "$defs": schema["$defs"]}
+    for layer in out:
+        Draft202012Validator(lens_schema).validate(layer)
+
+
 def test_distribution_payload_clamps_unit_overshoots() -> None:
     """Float roundoff after softmax/cumsum can push probs marginally above 1.0.
 

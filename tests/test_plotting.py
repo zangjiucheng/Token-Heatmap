@@ -13,6 +13,7 @@ from llm_token_heatmap.probes.attention_probe import AttentionLayerStats, Attent
 from llm_token_heatmap.analysis.attention_stats import compute_attention_stats
 from llm_token_heatmap.viz.plotting import (
     plot_activation_delta,
+    plot_activation_distributions,
     plot_adaptive_heatmap,
     plot_attention_layer_head_grid,
     plot_attention_pattern,
@@ -180,6 +181,60 @@ def test_plot_activation_delta_rejects_unknown_metric():
     diff = _synthetic_activation_diff()
     with pytest.raises(ValueError):
         plot_activation_delta(diff, metric="manhattan")
+
+
+def _synthetic_activation_step(n_layers: int = 4, bins: int = 12) -> dict:
+    """Build a trace step whose activations carry histograms, as the current
+    ActivationProbe emits them (dataclasses already asdict'd by the loop)."""
+
+    rng = np.random.default_rng(0)
+    entries = []
+    for layer in range(n_layers):
+        for submodule in ("resid_post", "mlp_out"):
+            counts = rng.integers(0, 40, size=bins)
+            counts[bins // 2] += 60  # give the silhouette a visible mode
+            entries.append(
+                {
+                    "layer": layer,
+                    "submodule": submodule,
+                    "l2_norm": 1.0,
+                    "mean_abs": 0.1,
+                    "sparsity": 0.0,
+                    "top_neurons": [],
+                    "std": 0.5,
+                    "kurtosis": 0.0,
+                    "quantiles": {"p01": -1.0, "p25": -0.3, "p50": 0.0, "p75": 0.3, "p99": 1.0},
+                    "histogram": {
+                        "bin_min": -1.5,
+                        "bin_max": 1.5,
+                        "counts": [int(c) for c in counts],
+                    },
+                }
+            )
+    return {"step": 0, "activations": entries}
+
+
+def test_plot_activation_distributions_smoke(tmp_path):
+    save_path = tmp_path / "activation_distributions.png"
+    step = _synthetic_activation_step()
+    fig = plot_activation_distributions(step, save_path=save_path)
+
+    assert isinstance(fig, matplotlib.figure.Figure)
+    assert len(fig.axes) == 2  # one panel per submodule
+    assert save_path.exists()
+    assert save_path.stat().st_size > 0
+    plt.close(fig)
+
+
+def test_plot_activation_distributions_requires_histograms():
+    step = {
+        "step": 0,
+        "activations": [
+            {"layer": 0, "submodule": "resid_post", "l2_norm": 1.0, "histogram": None}
+        ],
+    }
+    with pytest.raises(ValueError, match="histogram"):
+        plot_activation_distributions(step)
 
 
 def test_plot_selected_probability_smoke(synthetic_df, tmp_path):

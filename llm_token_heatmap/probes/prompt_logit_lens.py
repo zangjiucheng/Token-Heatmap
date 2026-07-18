@@ -79,35 +79,53 @@ def compute_prompt_logit_lens(
 
     seq = ids.shape[1]
     k = max(1, int(top_k))
+
+    def _log_probs_at(layer_idx: int, pos: int) -> torch.Tensor | None:
+        hidden = buf.get(layer_idx)
+        if hidden is None:
+            return None
+        h = hidden[pos]
+        if final_norm is not None:
+            h = final_norm(h)
+        with torch.no_grad():
+            return torch.log_softmax(lm_head(h).float(), dim=-1)
+
+    def _kl(log_p: torch.Tensor, log_q: torch.Tensor) -> float:
+        return max(0.0, float((log_p.exp() * (log_p - log_q)).sum().item()))
+
+    captured = [idx for idx in target if idx in buf]
     positions: list[dict[str, Any]] = []
     for pos in range(seq):
+        # KL anchors: the final captured layer's distribution at this position,
+        # and a running previous-layer distribution.
+        final_lp = _log_probs_at(captured[-1], pos) if captured else None
+        prev_lp: torch.Tensor | None = None
         layer_entries: list[dict[str, Any]] = []
-        for idx in target:
-            hidden = buf.get(idx)
-            if hidden is None:
+        for idx in captured:
+            lp = _log_probs_at(idx, pos)
+            if lp is None:
                 continue
-            h = hidden[pos]
-            if final_norm is not None:
-                h = final_norm(h)
-            with torch.no_grad():
-                logits = lm_head(h).float()
-                probs = torch.softmax(logits, dim=-1)
-                kk = min(k, probs.shape[-1])
-                vals, idxs = torch.topk(probs, kk)
-            layer_entries.append(
-                {
-                    "layer_idx": int(idx),
-                    "top_k": [
-                        {
-                            "rank": r + 1,
-                            "token_id": int(t),
-                            "token": _decode(tokenizer, int(t)),
-                            "prob": float(p),
-                        }
-                        for r, (p, t) in enumerate(zip(vals.tolist(), idxs.tolist(), strict=False))
-                    ],
-                }
-            )
+            probs = lp.exp()
+            kk = min(k, probs.shape[-1])
+            vals, idxs = torch.topk(probs, kk)
+            entry: dict[str, Any] = {
+                "layer_idx": int(idx),
+                "top_k": [
+                    {
+                        "rank": r + 1,
+                        "token_id": int(t),
+                        "token": _decode(tokenizer, int(t)),
+                        "prob": float(p),
+                    }
+                    for r, (p, t) in enumerate(zip(vals.tolist(), idxs.tolist(), strict=False))
+                ],
+            }
+            if final_lp is not None:
+                entry["kl_to_final"] = _kl(final_lp, lp)
+            if prev_lp is not None:
+                entry["kl_from_prev"] = _kl(lp, prev_lp)
+            prev_lp = lp
+            layer_entries.append(entry)
         positions.append(
             {
                 "position": pos,

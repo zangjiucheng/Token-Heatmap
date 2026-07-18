@@ -70,4 +70,18 @@ describe('validateTrace', () => {
 
     expect(() => validateTrace(trace)).not.toThrow();
   });
+
+  it('validate_accepts_logit_lens_kl_metrics', () => {
+    const trace = cloneSample() as {
+      steps: Array<{
+        logit_lens?: Array<Record<string, unknown>>;
+      }>;
+    };
+    const layers = trace.steps[0].logit_lens!;
+    layers[0].kl_to_final = 2.5;
+    layers[1].kl_to_final = 0;
+    layers[1].kl_from_prev = 1.25;
+
+    expect(() => validateTrace(trace)).not.toThrow();
+  });
 });

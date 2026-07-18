@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { TraceWithActivations } from '@/types/activation';
 import { ActivationHeatmap } from './ActivationHeatmap';
+import { ActivationRidgeline } from './ActivationRidgeline';
 import {
   ActivationDetailPanel,
   type NeuronRankingMode,
@@ -8,6 +9,7 @@ import {
 import {
   ACTIVATION_METRICS,
   ACTIVATION_METRIC_LABELS,
+  traceHasHistograms,
   type ActivationMetric,
 } from './activation-types';
 import './ActivationsTab.css';
@@ -36,6 +38,10 @@ export function ActivationsTab({
   const [metric, setMetric] = useState<ActivationMetric>('l2_norm');
   const [selectedLayer, setSelectedLayer] = useState<number | null>(null);
   const [rankingMode, setRankingMode] = useState<NeuronRankingMode>('step');
+  // 'heatmap' = metric grid over (layer, step); 'distributions' = per-layer
+  // value ridgelines for one step. The latter needs histograms in the trace.
+  const [view, setView] = useState<'heatmap' | 'distributions'>('heatmap');
+  const hasHistograms = useMemo(() => traceHasHistograms(trace), [trace]);
 
   // The whole-trace TWERA ranking is only present when the producer captured
   // full activations; the toggle is hidden otherwise.
@@ -106,21 +112,40 @@ export function ActivationsTab({
             ))}
           </select>
         </div>
-        <div className="activations-tab__control">
-          <label htmlFor="activation-metric-select">Metric</label>
-          <select
-            id="activation-metric-select"
-            value={metric}
-            onChange={(e) => setMetric(e.target.value as ActivationMetric)}
-            data-testid="activation-metric-select"
-          >
-            {ACTIVATION_METRICS.map((m) => (
-              <option key={m} value={m}>
-                {ACTIVATION_METRIC_LABELS[m]}
-              </option>
-            ))}
-          </select>
-        </div>
+        {hasHistograms ? (
+          <div className="activations-tab__control">
+            <label htmlFor="activation-view-select">View</label>
+            <select
+              id="activation-view-select"
+              value={view}
+              onChange={(e) =>
+                setView(e.target.value as 'heatmap' | 'distributions')
+              }
+              data-testid="activation-view-select"
+              title="Heatmap shows one scalar metric over (layer, step); Distributions shows each layer's full value distribution for the selected step."
+            >
+              <option value="heatmap">Heatmap · metric</option>
+              <option value="distributions">Distributions · per layer</option>
+            </select>
+          </div>
+        ) : null}
+        {view === 'heatmap' && (
+          <div className="activations-tab__control">
+            <label htmlFor="activation-metric-select">Metric</label>
+            <select
+              id="activation-metric-select"
+              value={metric}
+              onChange={(e) => setMetric(e.target.value as ActivationMetric)}
+              data-testid="activation-metric-select"
+            >
+              {ACTIVATION_METRICS.map((m) => (
+                <option key={m} value={m}>
+                  {ACTIVATION_METRIC_LABELS[m]}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         {hasTwera ? (
           <div className="activations-tab__control">
             <label htmlFor="activation-ranking-select">Neuron ranking</label>
@@ -140,16 +165,24 @@ export function ActivationsTab({
         ) : null}
       </div>
       <div className="activations-tab__heatmap">
-        <ActivationHeatmap
-          trace={trace}
-          submodule={submodule}
-          metric={metric}
-          selectedStep={selectedStep}
-          selectedLayer={effectiveSelectedLayer}
-          onSelectCell={handleSelectCell}
-          hoveredStep={hoveredStep}
-          onHoverStep={onHoverStep}
-        />
+        {view === 'distributions' ? (
+          <ActivationRidgeline
+            trace={trace}
+            submodule={submodule}
+            selectedStep={selectedStep}
+          />
+        ) : (
+          <ActivationHeatmap
+            trace={trace}
+            submodule={submodule}
+            metric={metric}
+            selectedStep={selectedStep}
+            selectedLayer={effectiveSelectedLayer}
+            onSelectCell={handleSelectCell}
+            hoveredStep={hoveredStep}
+            onHoverStep={onHoverStep}
+          />
+        )}
       </div>
       <div className="activations-tab__detail">
         <ActivationDetailPanel

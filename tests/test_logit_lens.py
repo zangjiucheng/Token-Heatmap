@@ -26,6 +26,7 @@ from llm_token_heatmap.probes.logit_lens import (
 from llm_token_heatmap.viz.plotting import (
     plot_logit_lens,
     plot_logit_lens_heatmap,
+    plot_logit_lens_kl,
     plot_logit_lens_selected_rank,
 )
 from tests.conftest import FakeTokenizer
@@ -330,6 +331,58 @@ def test_plot_logit_lens_selected_rank_smoke(tmp_path: Path) -> None:
                 assert int(layer["selected_token_rank"]) == 1
 
 
+def test_kl_metrics_anchor_at_final_and_first_layer() -> None:
+    """kl_to_final is 0 at the final captured layer by construction and ≥ 0
+    everywhere; kl_from_prev is None only at the earliest captured layer."""
+
+    model = build_tiny_model(num_hidden_layers=3, vocab_size=32)
+    torch.manual_seed(9)
+    input_ids = torch.randint(0, model.config.vocab_size, (1, 4))
+
+    lens = LogitLens(LogitLensConfig(layers="all", top_k=3))
+    lens.attach(model)
+    try:
+        stats = _capture(model, lens, input_ids, selected=0)
+    finally:
+        lens.detach()
+
+    indices = sorted(stats.layers)
+    assert len(indices) == 3
+    for pos, idx in enumerate(indices):
+        layer = stats.layers[idx]
+        assert layer.kl_to_final >= 0.0
+        if pos == 0:
+            assert layer.kl_from_prev is None
+        else:
+            assert layer.kl_from_prev is not None
+            assert layer.kl_from_prev >= 0.0
+    assert stats.layers[indices[-1]].kl_to_final == pytest.approx(0.0, abs=1e-6)
+    # Earlier layers genuinely diverge from the final prediction on a random model.
+    assert stats.layers[indices[0]].kl_to_final > 0.0
+
+
+def test_kl_metrics_respect_layer_subset() -> None:
+    """With a layer subset, 'final' and 'previous' mean the captured subset —
+    the last captured layer anchors kl_to_final at 0 even when it is not the
+    model's true final layer."""
+
+    model = build_tiny_model(num_hidden_layers=4, vocab_size=32)
+    torch.manual_seed(10)
+    input_ids = torch.randint(0, model.config.vocab_size, (1, 4))
+
+    lens = LogitLens(LogitLensConfig(layers=[0, 2], top_k=3))
+    lens.attach(model)
+    try:
+        stats = _capture(model, lens, input_ids, selected=0)
+    finally:
+        lens.detach()
+
+    assert sorted(stats.layers) == [0, 2]
+    assert stats.layers[2].kl_to_final == pytest.approx(0.0, abs=1e-6)
+    assert stats.layers[0].kl_from_prev is None
+    assert stats.layers[2].kl_from_prev is not None
+
+
 def test_plot_logit_lens_heatmap_smoke(tmp_path: Path) -> None:
     model = build_tiny_model(num_hidden_layers=3, vocab_size=32)
     lens = LogitLens(LogitLensConfig(layers="all", top_k=4))
@@ -379,6 +432,47 @@ def test_plot_logit_lens_heatmap_requires_lens_entries() -> None:
         plot_logit_lens_heatmap([], tokenizer=None)
     with pytest.raises(ValueError):
         plot_logit_lens_heatmap([{"step": 0}], tokenizer=None)
+
+
+def test_plot_logit_lens_kl_smoke(tmp_path: Path) -> None:
+    model = build_tiny_model(num_hidden_layers=3, vocab_size=32)
+    lens = LogitLens(LogitLensConfig(layers="all", top_k=3))
+    lens.attach(model)
+    trace: list[dict] = []
+    try:
+        torch.manual_seed(12)
+        for step in range(2):
+            input_ids = torch.randint(0, model.config.vocab_size, (1, 4))
+            with torch.no_grad():
+                model(input_ids)
+            stats = lens.capture_step(selected_token_id=0)
+            trace.append(
+                {
+                    "step": step,
+                    "logit_lens": [
+                        {
+                            "layer_idx": layer.layer_idx,
+                            "kl_to_final": layer.kl_to_final,
+                            "kl_from_prev": layer.kl_from_prev,
+                        }
+                        for layer in stats.layers.values()
+                    ],
+                }
+            )
+    finally:
+        lens.detach()
+
+    out_path = tmp_path / "logit_lens_kl.png"
+    fig = plot_logit_lens_kl(trace, save_path=out_path)
+    assert out_path.exists()
+    assert out_path.stat().st_size > 0
+    assert len(fig.axes) == 2
+
+
+def test_plot_logit_lens_kl_rejects_traces_without_kl() -> None:
+    trace = [{"step": 0, "logit_lens": [{"layer_idx": 0, "entropy": 1.0}]}]
+    with pytest.raises(ValueError, match="kl_to_final"):
+        plot_logit_lens_kl(trace)
 
 
 def test_unsupported_model_raises_clear_error() -> None:

@@ -77,6 +77,7 @@ export function LogitLensTable({
   // layer. The AC-relaxed assertion (Q6) becomes: if the deepest captured
   // layer equals num_layers - 1 then its top-1 should equal selected_token.
   const sortedLayers = layers.slice().sort((a, b) => a.layer_idx - b.layer_idx);
+  const hasKl = sortedLayers.some((layer) => layer.kl_to_final != null);
 
   return (
     <div className="logit-lens-table" data-testid="logit-lens-table">
@@ -91,6 +92,16 @@ export function LogitLensTable({
             ))}
             <th scope="col">Entropy</th>
             <th scope="col">Selected rank</th>
+            {hasKl && (
+              <>
+                <th scope="col" title="KL(final ‖ layer): distance still to travel to the final prediction, in nats">
+                  KL→final
+                </th>
+                <th scope="col" title="KL(layer ‖ previous): how much this block moved the prediction, in nats">
+                  KL Δprev
+                </th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -146,6 +157,16 @@ export function LogitLensTable({
                 })}
                 <td>{layer.entropy.toFixed(3)}</td>
                 <td>{layer.selected_token_rank}</td>
+                {hasKl && (
+                  <>
+                    <td data-testid={`logit-lens-kl-final-${layer.layer_idx}`}>
+                      {layer.kl_to_final != null ? layer.kl_to_final.toFixed(2) : '—'}
+                    </td>
+                    <td data-testid={`logit-lens-kl-prev-${layer.layer_idx}`}>
+                      {layer.kl_from_prev != null ? layer.kl_from_prev.toFixed(2) : '—'}
+                    </td>
+                  </>
+                )}
               </tr>
             );
           })}

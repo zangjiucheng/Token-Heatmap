@@ -60,6 +60,13 @@ class LogitLensLayerStats:
     entropy: float
     selected_token_rank: int
     selected_token_prob: float
+    # KL(final ‖ layer) in nats: how far this layer's prediction still is from
+    # the final layer's. 0 at the final captured layer by construction; the
+    # depth where it collapses is the model's "prediction depth" for the step.
+    kl_to_final: float = 0.0
+    # KL(layer ‖ previous captured layer) in nats: how much THIS block moved
+    # the prediction. None for the earliest captured layer.
+    kl_from_prev: float | None = None
 
 
 @dataclass
@@ -67,6 +74,17 @@ class LogitLensStats:
     """All per-layer logit-lens captures for a single generation step."""
 
     layers: dict[int, LogitLensLayerStats]
+
+
+def _kl_divergence(log_p: torch.Tensor, log_q: torch.Tensor) -> float:
+    """KL(P ‖ Q) in nats from two log-prob tensors of shape ``[batch, vocab]``.
+
+    Reads batch index 0. Clamped at 0 to absorb float rounding on identical
+    distributions.
+    """
+
+    kl = (log_p.exp() * (log_p - log_q)).sum(dim=-1)[0]
+    return max(0.0, float(kl.item()))
 
 
 def _resolve_decoder_layers(model: Any) -> list[nn.Module]:
@@ -266,6 +284,17 @@ class LogitLens(nn.Module):
     def capture_step(self, selected_token_id: int | torch.Tensor | None = None) -> LogitLensStats:
         """Project captured hidden states through the output head per layer.
 
+        Besides each layer's own top-k distribution, this computes two
+        layer-to-layer divergences over the *full* vocabulary:
+
+        - ``kl_to_final`` — KL(final ‖ layer), the distance still to travel to
+          the final prediction (0 at the last captured layer);
+        - ``kl_from_prev`` — KL(layer ‖ previous layer), how much this block
+          moved the prediction (None at the earliest captured layer).
+
+        Full distributions are held transiently (final + previous + current);
+        only the scalars and the top-k are retained.
+
         Args:
             selected_token_id: The token actually selected at this step. If
                 provided, `selected_token_rank` and `selected_token_prob` are
@@ -286,19 +315,29 @@ class LogitLens(nn.Module):
             else:
                 selected_id = int(selected_token_id)
 
+        captured = [idx for idx in self._target_layers if idx in self._buf_hidden]
+        final_log_probs: torch.Tensor | None = None
+        if captured:
+            final_log_probs = self._layer_log_probs(self._buf_hidden[captured[-1]])
+
         layer_stats: dict[int, LogitLensLayerStats] = {}
-        for layer_idx in self._target_layers:
-            hidden = self._buf_hidden.get(layer_idx)
-            if hidden is None:
-                continue
-            layer_stats[layer_idx] = self._project_layer(layer_idx, hidden, selected_id)
+        prev_log_probs: torch.Tensor | None = None
+        for layer_idx in captured:
+            log_probs = self._layer_log_probs(self._buf_hidden[layer_idx])
+            stats = self._stats_from_log_probs(layer_idx, log_probs, selected_id)
+            if final_log_probs is not None:
+                stats.kl_to_final = _kl_divergence(final_log_probs, log_probs)
+            if prev_log_probs is not None:
+                stats.kl_from_prev = _kl_divergence(log_probs, prev_log_probs)
+            prev_log_probs = log_probs
+            layer_stats[layer_idx] = stats
 
         self._buf_hidden.clear()
         return LogitLensStats(layers=layer_stats)
 
-    def _project_layer(
-        self, layer_idx: int, hidden: torch.Tensor, selected_id: int | None
-    ) -> LogitLensLayerStats:
+    def _layer_log_probs(self, hidden: torch.Tensor) -> torch.Tensor:
+        """Project one layer's last-position hidden state to full log-probs."""
+
         x = hidden
         if self.config.apply_final_layernorm and self._final_norm is not None:
             x = self._final_norm(x)
@@ -306,8 +345,11 @@ class LogitLens(nn.Module):
         logits = self._lm_head(x)
         if logits.ndim == 3:
             logits = logits[:, -1, :]
-        logits = logits.float()
-        log_probs = F.log_softmax(logits, dim=-1)
+        return F.log_softmax(logits.float(), dim=-1)
+
+    def _stats_from_log_probs(
+        self, layer_idx: int, log_probs: torch.Tensor, selected_id: int | None
+    ) -> LogitLensLayerStats:
         probs = log_probs.exp()
 
         k = min(int(self.config.top_k), int(probs.shape[-1]))

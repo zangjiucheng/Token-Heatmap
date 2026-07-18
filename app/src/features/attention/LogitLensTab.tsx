@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { LogitLensCandidate, Trace } from '@/types/trace';
 import { escapeToken } from '@/features/detail/escapeToken';
 import { LogitLensTable, type LogitLensTokenizer } from './LogitLensTable';
+import { LogitLensKlChart } from './LogitLensKlChart';
 import './AttentionTab.css';
 import './LogitLensTable.css';
 
@@ -14,6 +15,8 @@ export interface LogitLensTabProps {
 interface PromptLensLayer {
   layer_idx: number;
   top_k: LogitLensCandidate[];
+  kl_to_final?: number;
+  kl_from_prev?: number;
 }
 interface PromptLensPosition {
   position: number;
@@ -141,6 +144,11 @@ export function LogitLensTab({ trace, selectedStep, tokenizer }: LogitLensTabPro
       ? (promptPositions.find((p) => p.position === view) ?? null)
       : null;
 
+  const stepForChart =
+    selectedStep != null && selectedStep >= 0 && selectedStep < trace.steps.length
+      ? trace.steps[selectedStep]
+      : null;
+
   return (
     <div
       className="attention-tab"
@@ -176,9 +184,23 @@ export function LogitLensTab({ trace, selectedStep, tokenizer }: LogitLensTabPro
         </div>
       )}
       {promptPos ? (
-        <PromptPositionTable position={promptPos} tokenizer={tokenizer} />
+        <>
+          <LogitLensKlChart
+            layers={promptPos.layers}
+            caption={`prompt position ${promptPos.position} · ${escapeToken(promptPos.token)}`}
+          />
+          <PromptPositionTable position={promptPos} tokenizer={tokenizer} />
+        </>
       ) : (
-        <LogitLensTable trace={trace} selectedStep={selectedStep} tokenizer={tokenizer} />
+        <>
+          {stepForChart?.logit_lens && stepForChart.logit_lens.length > 0 && (
+            <LogitLensKlChart
+              layers={stepForChart.logit_lens}
+              caption={`step ${stepForChart.step} · ${escapeToken(stepForChart.selected.token)}`}
+            />
+          )}
+          <LogitLensTable trace={trace} selectedStep={selectedStep} tokenizer={tokenizer} />
+        </>
       )}
     </div>
   );

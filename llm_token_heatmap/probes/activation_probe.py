@@ -84,6 +84,7 @@ class ActivationProbeConfig:
     top_k: int = 8
     sparsity_threshold: float = 1e-6
     capture_full: bool = False
+    histogram_bins: int = 48
 
 
 @dataclass
@@ -92,6 +93,21 @@ class TopNeuron:
 
     index: int
     value: float
+
+
+@dataclass
+class ActivationHistogram:
+    """Equal-width histogram of one activation vector's values.
+
+    ``counts`` has ``ActivationProbeConfig.histogram_bins`` entries covering
+    ``[bin_min, bin_max]``; together with the quantile/kurtosis summaries it
+    exposes the *shape* of the per-layer distribution (heavy tails, outlier
+    features) that scalar norms hide.
+    """
+
+    bin_min: float
+    bin_max: float
+    counts: list[int]
 
 
 @dataclass
@@ -109,6 +125,12 @@ class ActivationLayerEntry:
     mean_abs: float
     sparsity: float
     top_neurons: list[TopNeuron]
+    std: float = 0.0
+    # Fisher excess kurtosis: 0 for a Gaussian; large positive values are the
+    # signature of "massive activation" outlier features.
+    kurtosis: float = 0.0
+    quantiles: dict[str, float] = field(default_factory=dict)
+    histogram: ActivationHistogram | None = None
 
 
 @dataclass
@@ -408,6 +430,36 @@ class ActivationProbe(nn.Module):
             _, top_idx = torch.topk(vec.abs(), k=k)
             for idx in top_idx.tolist():
                 top_neurons.append(TopNeuron(index=int(idx), value=float(vec[idx].item())))
+
+        std = float(vec.std(unbiased=False).item()) if n else 0.0
+        if n and std > 0.0:
+            centered = vec - vec.mean()
+            kurtosis = float((centered.pow(4).mean() / std**4).item()) - 3.0
+        else:
+            kurtosis = 0.0
+
+        quantiles: dict[str, float] = {}
+        if n:
+            q = torch.quantile(vec, torch.tensor([0.01, 0.25, 0.5, 0.75, 0.99]))
+            quantiles = {
+                key: float(val)
+                for key, val in zip(("p01", "p25", "p50", "p75", "p99"), q.tolist(), strict=True)
+            }
+
+        histogram: ActivationHistogram | None = None
+        bins = max(1, int(self.config.histogram_bins))
+        if n:
+            vmin = float(vec.min().item())
+            vmax = float(vec.max().item())
+            if vmax <= vmin:  # constant vector: histc needs a non-degenerate range
+                vmax = vmin + 1e-6
+            counts = torch.histc(vec, bins=bins, min=vmin, max=vmax)
+            histogram = ActivationHistogram(
+                bin_min=vmin,
+                bin_max=vmax,
+                counts=[int(c) for c in counts.tolist()],
+            )
+
         return ActivationLayerEntry(
             layer=int(layer_idx),
             submodule=canonical,
@@ -415,6 +467,10 @@ class ActivationProbe(nn.Module):
             mean_abs=mean_abs,
             sparsity=sparsity,
             top_neurons=top_neurons,
+            std=std,
+            kurtosis=kurtosis,
+            quantiles=quantiles,
+            histogram=histogram,
         )
 
     @staticmethod

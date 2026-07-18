@@ -36,6 +36,28 @@ can see how sampling reshapes the distribution.
 | High `selected_rank` | The chosen token wasn't among the top candidates — useful for debugging sampling settings |
 | Big gap between raw and processed `k_used` | Sampling filters are aggressively pruning the natural distribution |
 
+## Logit-lens depth metrics
+
+With `--capture-logit-lens`, every layer's residual stream is decoded as if it
+were the final layer. Beyond each layer's top-k, two full-vocabulary KL
+divergences track how the prediction *moves* through the stack:
+
+| Metric | Meaning | What to look for |
+| --- | --- | --- |
+| `kl_to_final` | KL(final ‖ layer), nats. 0 at the final captured layer by construction. | The depth where it collapses toward 0 is the step's **prediction depth** — from there on the model has effectively decided. If it stays high until the very last layers, the raw logit lens may be unfaithful for this model (consider a tuned lens). |
+| `kl_from_prev` | KL(layer ‖ previous layer), nats. Absent at the earliest captured layer. | Spikes localize the **block that moved the prediction most** — often where a fact is retrieved or a token identity flips. |
+| Top-1 flips (red outlines in `logit_lens_heatmap.png`) | Layers where the argmax token changed identity vs. the layer above. | Late flips on factual prompts are where the answer is written; a final-layer flip means the last block overturned the running hypothesis. |
+
+## Activation distributions
+
+With `--capture-activations`, each `(layer, submodule)` records its value
+*distribution* alongside the scalar norms: a fixed-bin `histogram`,
+`quantiles` (p01/p25/p50/p75/p99), `std`, and Fisher excess `kurtosis`
+(0 for a Gaussian). `activation_distributions.png` renders these as per-layer
+ridgelines. High kurtosis with a widening p99−p01 spread flags **outlier
+"massive activation" features** — individual neurons orders of magnitude above
+the bulk — which `l2_norm` and `mean_abs` average away.
+
 ## Direct Logit Attribution (the Attribution lens)
 
 With `--capture-full-activations`, each generated token's logit is decomposed

@@ -94,15 +94,20 @@ Extra output files when these flags are active:
 - `attention_layer_head_grid.png` — per-step layer × head entropy grid.
 - `logit_lens.png` — per-layer top-k table (first step).
 - `selected_rank_heatmap.png` — selected-token rank by layer × step.
-- `logit_lens_heatmap.png` — each layer's top-1 predicted token by layer × generation step (every layer treated as the final layer), colored by probability.
+- `logit_lens_heatmap.png` — each layer's top-1 predicted token by layer × generation step (every layer treated as the final layer), colored by probability; cells outlined in red mark the depths where the top-1 token changed identity.
 - `prompt_logit_lens_heatmap.png` — the same per-layer top-1 heatmap over every prompt position.
+- `logit_lens_kl.png` — KL(final ‖ layer) and KL(layer ‖ previous) per layer, one line per step: where the prediction converges, and which block moved it most.
 
 The **Logit Lens** tab in the web app shows this data interactively, synced to the heatmap cursor.
 
 ## Capturing activations
 
-`ActivationProbe` captures per-layer / per-submodule summary statistics and,
-optionally, full activation tensors as `.npz` sidecars.
+`ActivationProbe` captures per-layer / per-submodule summary statistics —
+scalar norms plus the value *distribution* (histogram, quantiles, std, excess
+kurtosis) — and, optionally, full activation tensors as `.npz` sidecars.
+An `activation_distributions.png` ridgeline (one density silhouette per layer,
+per submodule) is written alongside the other plots; high kurtosis rows flag
+outlier "massive activation" features that norms alone hide.
 
 ```bash
 token-heatmap trace \

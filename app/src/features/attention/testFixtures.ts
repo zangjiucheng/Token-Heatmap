@@ -80,6 +80,7 @@ export function makeAttentionTrace(): Trace {
             entropy: 4.0,
             selected_token_rank: 2,
             selected_token_prob: 0.1,
+            kl_to_final: 2.4,
           },
           {
             layer_idx: 3,
@@ -96,6 +97,8 @@ export function makeAttentionTrace(): Trace {
             entropy: 1.2,
             selected_token_rank: 1,
             selected_token_prob: 0.6,
+            kl_to_final: 0.0,
+            kl_from_prev: 1.1,
           },
         ],
         attention: [0, 1, 2, 3].map(makeAttentionEntry),

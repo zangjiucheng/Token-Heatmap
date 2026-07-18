@@ -253,9 +253,11 @@ def test_activation_probe_summary_stats_field_names_match_schema() -> None:
     schema = json.loads(ACTIVATION_SCHEMA_PATH.read_text())
     layer_entry_def = schema["$defs"]["ActivationLayerEntry"]
     top_neuron_def = schema["$defs"]["TopNeuron"]
-    # `additionalProperties: false` + no optional fields → required IS the
-    # exact key set every captured dict must produce.
-    expected_entry_keys = set(layer_entry_def["required"])
+    # `additionalProperties: false` → every emitted key must be a declared
+    # property, and every required property must be emitted. (The distribution
+    # fields — std/kurtosis/quantiles/histogram — are declared but optional.)
+    required_entry_keys = set(layer_entry_def["required"])
+    allowed_entry_keys = set(layer_entry_def["properties"])
     expected_neuron_keys = set(top_neuron_def["required"])
 
     model = build_tiny_model(num_hidden_layers=2)
@@ -278,7 +280,61 @@ def test_activation_probe_summary_stats_field_names_match_schema() -> None:
     assert entries, "probe produced no entries"
     for entry in entries:
         as_dict = asdict(entry)
-        assert set(as_dict.keys()) == expected_entry_keys
+        assert required_entry_keys <= set(as_dict.keys()) <= allowed_entry_keys
         assert as_dict["top_neurons"], "top_neurons should be populated"
         for neuron in as_dict["top_neurons"]:
             assert set(neuron.keys()) == expected_neuron_keys
+
+
+def test_activation_probe_distribution_stats() -> None:
+    """The distribution summaries (std/kurtosis/quantiles/histogram) describe
+    the captured vector: quantiles are ordered within the histogram range and
+    the histogram counts every neuron exactly once."""
+
+    model = build_tiny_model(num_hidden_layers=2)
+    config = ActivationProbeConfig(layers="all", submodules=["resid_post"], histogram_bins=16)
+    probe = ActivationProbe(config)
+    probe.attach(model)
+    try:
+        torch.manual_seed(3)
+        with torch.no_grad():
+            model(torch.randint(0, model.config.vocab_size, (1, 4)))
+        entries = probe.capture_step()
+    finally:
+        probe.detach()
+
+    assert entries
+    for entry in entries:
+        assert entry.std >= 0.0
+        q = entry.quantiles
+        assert list(q) == ["p01", "p25", "p50", "p75", "p99"]
+        assert q["p01"] <= q["p25"] <= q["p50"] <= q["p75"] <= q["p99"]
+
+        hist = entry.histogram
+        assert hist is not None
+        assert len(hist.counts) == config.histogram_bins
+        assert hist.bin_min <= q["p01"] and q["p99"] <= hist.bin_max
+        assert sum(hist.counts) == model.config.hidden_size
+
+
+def test_activation_probe_distribution_stats_on_constant_vector() -> None:
+    """A zeroed capture must not crash the degenerate-range histogram path:
+    std and kurtosis are 0 and every neuron lands in the first bin."""
+
+    model = build_tiny_model(num_hidden_layers=1)
+    _zero_parameters(model)
+    probe = ActivationProbe(ActivationProbeConfig(layers="all", submodules=["resid_post"]))
+    probe.attach(model)
+    try:
+        with torch.no_grad():
+            model(torch.zeros((1, 3), dtype=torch.long))
+        entries = probe.capture_step()
+    finally:
+        probe.detach()
+
+    assert entries
+    for entry in entries:
+        assert entry.std == pytest.approx(0.0, abs=1e-6)
+        assert entry.kurtosis == pytest.approx(0.0, abs=1e-6)
+        assert entry.histogram is not None
+        assert entry.histogram.counts[0] == sum(entry.histogram.counts)

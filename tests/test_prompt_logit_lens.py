@@ -47,6 +47,24 @@ def test_returns_none_on_empty_input() -> None:
     assert compute_prompt_logit_lens(model, None, [], layers="all") is None
 
 
+def test_kl_metrics_per_position() -> None:
+    """Every (position, layer) entry carries kl_to_final (0 at the final
+    captured layer) and kl_from_prev on all but the earliest layer."""
+
+    model = build_tiny_model(num_hidden_layers=3, vocab_size=32)
+    out = compute_prompt_logit_lens(model, None, [1, 5, 9], layers="all", top_k=3)
+    assert out is not None
+
+    for pos_entry in out["positions"]:
+        layers = pos_entry["layers"]
+        assert layers[0].get("kl_from_prev") is None
+        for i, layer in enumerate(layers):
+            assert layer["kl_to_final"] >= 0.0
+            if i > 0:
+                assert layer["kl_from_prev"] >= 0.0
+        assert layers[-1]["kl_to_final"] == 0.0
+
+
 def test_plot_prompt_logit_lens_heatmap_smoke(tmp_path: Path) -> None:
     model = build_tiny_model(num_hidden_layers=3, vocab_size=32)
     ids = [1, 5, 9, 3]

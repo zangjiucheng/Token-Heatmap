@@ -161,6 +161,48 @@
           "items": {
             "$ref": "#/$defs/TopNeuron"
           }
+        },
+        "std": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Population standard deviation of the activation values."
+        },
+        "kurtosis": {
+          "type": "number",
+          "description": "Fisher excess kurtosis (0 for a Gaussian). Large positive values signal outlier 'massive activation' features."
+        },
+        "quantiles": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Selected quantiles of the activation values.",
+          "properties": {
+            "p01": {
+              "type": "number"
+            },
+            "p25": {
+              "type": "number"
+            },
+            "p50": {
+              "type": "number"
+            },
+            "p75": {
+              "type": "number"
+            },
+            "p99": {
+              "type": "number"
+            }
+          }
+        },
+        "histogram": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ActivationHistogram"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Histogram of the activation values; null when the vector was empty."
         }
       }
     },
@@ -180,6 +222,34 @@
         "value": {
           "type": "number",
           "description": "Signed activation value at this neuron index (not absolute)."
+        }
+      }
+    },
+    "ActivationHistogram": {
+      "type": "object",
+      "description": "Equal-width histogram of the activation vector's values: `counts[i]` covers the i-th of len(counts) bins spanning [bin_min, bin_max]. Together with quantiles/kurtosis this exposes the distribution shape (heavy tails, outlier 'massive activation' features) that scalar norms hide.",
+      "required": [
+        "bin_min",
+        "bin_max",
+        "counts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "bin_min": {
+          "type": "number",
+          "description": "Lower edge of the first bin."
+        },
+        "bin_max": {
+          "type": "number",
+          "description": "Upper edge of the last bin."
+        },
+        "counts": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "description": "Neuron counts per bin."
         }
       }
     }

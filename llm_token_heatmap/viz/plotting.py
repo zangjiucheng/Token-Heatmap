@@ -601,6 +601,30 @@ def _cell_text_color(im: Any, value: float) -> str:
     return "black" if luminance > 0.55 else "white"
 
 
+def _mark_top1_flips(ax: plt.Axes, token_texts: np.ndarray) -> None:
+    """Outline cells whose top-1 token differs from the layer directly above.
+
+    Each outlined cell marks a depth at which the model changed its mind about
+    the predicted token for that column.
+    """
+
+    n_rows, n_cols = token_texts.shape
+    for r in range(1, n_rows):
+        for c in range(n_cols):
+            here, above = token_texts[r, c], token_texts[r - 1, c]
+            if here and above and here != above:
+                ax.add_patch(
+                    plt.Rectangle(
+                        (c - 0.5, r - 0.5),
+                        1.0,
+                        1.0,
+                        fill=False,
+                        edgecolor="crimson",
+                        linewidth=1.4,
+                    )
+                )
+
+
 def _step_selected_token(entry: dict[str, Any], tokenizer: Any) -> str:
     """Decode the token actually selected at a trace step, if recoverable."""
 
@@ -625,6 +649,7 @@ def plot_logit_lens_heatmap(
     cmap: str = "viridis",
     figsize: tuple[float, float] | None = None,
     annotate: bool = True,
+    mark_flips: bool = True,
 ) -> plt.Figure:
     """Render each layer's top-1 predicted token across all generation steps.
 
@@ -642,6 +667,8 @@ def plot_logit_lens_heatmap(
         cmap: Matplotlib colormap name.
         figsize: Optional figure size override.
         annotate: When True, draw the decoded top-1 token inside each cell.
+        mark_flips: When True, outline cells whose top-1 token differs from
+            the layer above — the depths where the prediction changed identity.
 
     Returns:
         The matplotlib Figure.
@@ -710,6 +737,9 @@ def plot_logit_lens_heatmap(
                         **_text_font_kwargs(text),
                     )
 
+    if mark_flips:
+        _mark_top1_flips(ax, token_texts)
+
     cbar = fig.colorbar(im, ax=ax)
     cbar.set_label("Top-1 probability")
 
@@ -728,6 +758,7 @@ def plot_prompt_logit_lens_heatmap(
     cmap: str = "viridis",
     figsize: tuple[float, float] | None = None,
     annotate: bool = True,
+    mark_flips: bool = True,
 ) -> plt.Figure:
     """Render each layer's top-1 predicted token at every prompt position.
 
@@ -807,8 +838,169 @@ def plot_prompt_logit_lens_heatmap(
                         **_text_font_kwargs(text),
                     )
 
+    if mark_flips:
+        _mark_top1_flips(ax, token_texts)
+
     cbar = fig.colorbar(im, ax=ax)
     cbar.set_label("Top-1 probability")
+
+    fig.tight_layout()
+
+    if save_path is not None:
+        out = _ensure_parent(save_path)
+        fig.savefig(out, dpi=150)
+
+    return fig
+
+
+def plot_logit_lens_kl(
+    trace: list[dict[str, Any]],
+    save_path: str | Path | None = None,
+    figsize: tuple[float, float] | None = None,
+    cmap: str = "viridis",
+) -> plt.Figure:
+    """Render layer-to-layer prediction movement as two KL-vs-depth panels.
+
+    Left panel: ``kl_to_final`` — KL(final ‖ layer) per layer, one line per
+    generation step. The depth where a line collapses toward 0 is the step's
+    *prediction depth*: from there on the model has effectively decided.
+    Right panel: ``kl_from_prev`` — KL(layer ‖ previous layer): spikes localize
+    the block that moved the prediction most.
+
+    Args:
+        trace: List of step dicts whose ``logit_lens`` entries carry the KL
+            fields (captured by the current `LogitLens`; older traces raise).
+        save_path: Optional PNG output path.
+        figsize: Optional figure size override.
+        cmap: Colormap used to color the per-step lines by step index.
+
+    Returns:
+        The matplotlib Figure.
+    """
+
+    steps_with_lens = [entry for entry in trace if "logit_lens" in entry]
+    if not steps_with_lens:
+        raise ValueError("no steps in trace contain a 'logit_lens' entry")
+    if not any(
+        layer.get("kl_to_final") is not None
+        for entry in steps_with_lens
+        for layer in entry["logit_lens"]
+    ):
+        raise ValueError(
+            "trace has no 'kl_to_final' values; re-capture it with the current "
+            "LogitLens (older traces predate the KL metrics)."
+        )
+
+    if figsize is None:
+        figsize = (11.0, 4.0)
+    fig, (ax_final, ax_prev) = plt.subplots(1, 2, figsize=figsize, sharex=True)
+
+    n_steps = len(steps_with_lens)
+    colors = plt.get_cmap(cmap)(np.linspace(0.0, 0.85, max(n_steps, 2)))
+
+    for i, entry in enumerate(steps_with_lens):
+        layers = sorted(entry["logit_lens"], key=lambda layer: int(layer["layer_idx"]))
+        label = f"step {int(entry.get('step', i))}"
+
+        xs = [int(layer["layer_idx"]) for layer in layers if layer.get("kl_to_final") is not None]
+        ys = [float(layer["kl_to_final"]) for layer in layers if layer.get("kl_to_final") is not None]
+        ax_final.plot(xs, ys, color=colors[i], linewidth=1.6, marker="o", markersize=3, label=label)
+
+        xs = [int(layer["layer_idx"]) for layer in layers if layer.get("kl_from_prev") is not None]
+        ys = [float(layer["kl_from_prev"]) for layer in layers if layer.get("kl_from_prev") is not None]
+        ax_prev.plot(xs, ys, color=colors[i], linewidth=1.6, marker="o", markersize=3, label=label)
+
+    ax_final.set_xlabel("Layer")
+    ax_final.set_ylabel("KL(final ‖ layer)  [nats]")
+    ax_final.set_title("Distance to the final prediction")
+    ax_prev.set_xlabel("Layer")
+    ax_prev.set_ylabel("KL(layer ‖ previous)  [nats]")
+    ax_prev.set_title("Prediction movement per block")
+    for ax in (ax_final, ax_prev):
+        ax.grid(True, alpha=0.25)
+
+    if n_steps <= 12:
+        ax_final.legend(fontsize=7)
+
+    fig.tight_layout()
+
+    if save_path is not None:
+        out = _ensure_parent(save_path)
+        fig.savefig(out, dpi=150)
+
+    return fig
+
+
+def plot_activation_distributions(
+    trace_step: dict[str, Any],
+    save_path: str | Path | None = None,
+    figsize: tuple[float, float] | None = None,
+    cmap: str = "viridis",
+) -> plt.Figure:
+    """Render per-layer activation value distributions as ridgelines.
+
+    One subplot per captured submodule; within each, one density silhouette per
+    layer (earliest layer at the top), built from the inline histograms the
+    `ActivationProbe` records. Watching the silhouettes widen or grow heavy
+    tails with depth is the distribution-level counterpart of the scalar
+    ``l2_norm`` trend.
+
+    Args:
+        trace_step: A single trace entry whose ``activations`` list carries
+            ``histogram`` fields (captured by the current `ActivationProbe`).
+        save_path: Optional PNG output path.
+        figsize: Optional figure size override.
+        cmap: Colormap used to color rows by depth.
+
+    Returns:
+        The matplotlib Figure.
+    """
+
+    entries = trace_step.get("activations") or []
+    with_hist = [e for e in entries if e.get("histogram")]
+    if not with_hist:
+        raise ValueError(
+            "trace step has no activation histograms; re-capture with the "
+            "current ActivationProbe (older traces predate distribution stats)."
+        )
+
+    submodules = sorted({str(e["submodule"]) for e in with_hist})
+    n_sub = len(submodules)
+
+    layer_indices = sorted({int(e["layer"]) for e in with_hist})
+    n_layers = len(layer_indices)
+    row_of = {idx: pos for pos, idx in enumerate(layer_indices)}
+    colors = plt.get_cmap(cmap)(np.linspace(0.0, 0.85, max(n_layers, 2)))
+
+    if figsize is None:
+        figsize = (6.0 * n_sub, max(3.0, 0.42 * n_layers))
+    fig, axes = plt.subplots(1, n_sub, figsize=figsize, sharey=True)
+    axes_list = [axes] if n_sub == 1 else list(np.atleast_1d(axes))
+
+    for ax, submodule in zip(axes_list, submodules, strict=True):
+        for entry in with_hist:
+            if str(entry["submodule"]) != submodule:
+                continue
+            hist = entry["histogram"]
+            counts = np.asarray(hist["counts"], dtype=float)
+            if counts.size == 0 or counts.max() <= 0:
+                continue
+            row = row_of[int(entry["layer"])]
+            centers = np.linspace(float(hist["bin_min"]), float(hist["bin_max"]), counts.size)
+            # Scale each layer's silhouette to 0.85 row heights; rows grow
+            # downward so layer 0 sits at the top like the heatmaps.
+            heights = counts / counts.max() * 0.85
+            ax.fill_between(
+                centers, row, row - heights, color=colors[row], alpha=0.8, linewidth=0.5
+            )
+        ax.set_title(submodule, fontsize=10)
+        ax.set_xlabel("Activation value")
+        ax.grid(True, axis="x", alpha=0.2)
+
+    axes_list[0].set_ylabel("Layer")
+    axes_list[0].set_yticks([row_of[idx] for idx in layer_indices])
+    axes_list[0].set_yticklabels([str(idx) for idx in layer_indices], fontsize=8)
+    axes_list[0].invert_yaxis()
 
     fig.tight_layout()
 

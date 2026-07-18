@@ -239,15 +239,20 @@ def logit_lens_payload(layers: list[dict[str, Any]], tokenizer: Any) -> list[dic
                     "logprob": float(logprob),
                 }
             )
-        out.append(
-            {
-                "layer_idx": int(_scalar(layer["layer_idx"])),
-                "top_k": candidates,
-                "entropy": float(_scalar(layer["entropy"])),
-                "selected_token_rank": int(_scalar(layer["selected_token_rank"])),
-                "selected_token_prob": _clamp_unit(float(_scalar(layer["selected_token_prob"]))),
-            }
-        )
+        entry = {
+            "layer_idx": int(_scalar(layer["layer_idx"])),
+            "top_k": candidates,
+            "entropy": float(_scalar(layer["entropy"])),
+            "selected_token_rank": int(_scalar(layer["selected_token_rank"])),
+            "selected_token_prob": _clamp_unit(float(_scalar(layer["selected_token_prob"]))),
+        }
+        # Layer-to-layer divergences (absent on traces captured before they
+        # were added; kl_from_prev is always absent on the earliest layer).
+        if layer.get("kl_to_final") is not None:
+            entry["kl_to_final"] = max(0.0, float(_scalar(layer["kl_to_final"])))
+        if layer.get("kl_from_prev") is not None:
+            entry["kl_from_prev"] = max(0.0, float(_scalar(layer["kl_from_prev"])))
+        out.append(entry)
     return out
 
 

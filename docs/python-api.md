@@ -99,9 +99,17 @@ Flattens the trace into a long-format DataFrame with one row per
 - `plot_logit_lens_selected_rank(trace, tokenizer, save_path=...)` — selected-token rank by layer × step
 - `plot_logit_lens_heatmap(trace, tokenizer, save_path=...)` — each layer's top-1 predicted token by
   layer × generation step, treating every layer as if it were the final one; cell color is the
-  token's probability, so the plot shows the prediction forming and sharpening with depth
+  token's probability, so the plot shows the prediction forming and sharpening with depth.
+  Cells outlined in red mark top-1 *flips* — the depths where the predicted token changed
+  identity (disable with `mark_flips=False`)
 - `plot_prompt_logit_lens_heatmap(prompt_logit_lens, save_path=...)` — same heatmap over every
   *prompt* position, consuming the payload from `compute_prompt_logit_lens` (no tokenizer needed)
+- `plot_logit_lens_kl(trace, save_path=...)` — two KL-vs-depth panels from the per-layer
+  `kl_to_final` / `kl_from_prev` metrics: where each step's prediction converges to the final
+  answer, and which block moved the prediction most
+- `plot_activation_distributions(trace_step, save_path=...)` — ridgeline of per-layer activation
+  value distributions (one silhouette per layer, one panel per submodule), built from the
+  histograms the `ActivationProbe` records inline
 
 ### Serializing to the on-disk JSON
 

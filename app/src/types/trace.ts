@@ -701,6 +701,14 @@ export interface LogitLensLayer {
    * Probability assigned to the step's selected token by this layer's distribution.
    */
   selected_token_prob: number;
+  /**
+   * KL(final layer's distribution ‖ this layer's distribution) in nats, over the full vocabulary. 0 at the final captured layer by construction; the depth where it collapses toward 0 is the model's 'prediction depth' for this step.
+   */
+  kl_to_final?: number;
+  /**
+   * KL(this layer's distribution ‖ previous captured layer's) in nats: how much this block moved the prediction. Absent on the earliest captured layer.
+   */
+  kl_from_prev?: number;
 }
 /**
  * This interface was referenced by `Trace`'s JSON-Schema
@@ -796,6 +804,28 @@ export interface ActivationLayerEntry {
   mean_abs: number;
   sparsity: number;
   top_neurons: ActivationTopNeuron[];
+  /**
+   * Population standard deviation of the activation values.
+   */
+  std?: number;
+  /**
+   * Fisher excess kurtosis (0 for a Gaussian). Large positive values signal outlier 'massive activation' features.
+   */
+  kurtosis?: number;
+  /**
+   * Selected quantiles of the activation values.
+   */
+  quantiles?: {
+    p01?: number;
+    p25?: number;
+    p50?: number;
+    p75?: number;
+    p99?: number;
+  };
+  /**
+   * Histogram of the activation values; null when the vector was empty.
+   */
+  histogram?: ActivationHistogram | null;
 }
 /**
  * This interface was referenced by `Trace`'s JSON-Schema
@@ -804,4 +834,24 @@ export interface ActivationLayerEntry {
 export interface ActivationTopNeuron {
   index: number;
   value: number;
+}
+/**
+ * Equal-width histogram of the activation vector's values: `counts[i]` covers the i-th of len(counts) bins spanning [bin_min, bin_max]. Together with quantiles/kurtosis this exposes the distribution shape (heavy tails, outlier 'massive activation' features) that scalar norms hide.
+ *
+ * This interface was referenced by `Trace`'s JSON-Schema
+ * via the `definition` "ActivationHistogram".
+ */
+export interface ActivationHistogram {
+  /**
+   * Lower edge of the first bin.
+   */
+  bin_min: number;
+  /**
+   * Upper edge of the last bin.
+   */
+  bin_max: number;
+  /**
+   * Neuron counts per bin.
+   */
+  counts: number[];
 }

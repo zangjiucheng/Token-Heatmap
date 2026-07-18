@@ -106,6 +106,28 @@ export interface ActivationLayerEntry {
    * Highest-magnitude neurons within this (step, layer, submodule), sorted by descending `|value|`.
    */
   top_neurons: TopNeuron[];
+  /**
+   * Population standard deviation of the activation values.
+   */
+  std?: number;
+  /**
+   * Fisher excess kurtosis (0 for a Gaussian). Large positive values signal outlier 'massive activation' features.
+   */
+  kurtosis?: number;
+  /**
+   * Selected quantiles of the activation values.
+   */
+  quantiles?: {
+    p01?: number;
+    p25?: number;
+    p50?: number;
+    p75?: number;
+    p99?: number;
+  };
+  /**
+   * Histogram of the activation values; null when the vector was empty.
+   */
+  histogram?: ActivationHistogram | null;
 }
 /**
  * This interface was referenced by `ActivationTrace`'s JSON-Schema
@@ -120,6 +142,26 @@ export interface TopNeuron {
    * Signed activation value at this neuron index (not absolute).
    */
   value: number;
+}
+/**
+ * Equal-width histogram of the activation vector's values: `counts[i]` covers the i-th of len(counts) bins spanning [bin_min, bin_max]. Together with quantiles/kurtosis this exposes the distribution shape (heavy tails, outlier 'massive activation' features) that scalar norms hide.
+ *
+ * This interface was referenced by `ActivationTrace`'s JSON-Schema
+ * via the `definition` "ActivationHistogram".
+ */
+export interface ActivationHistogram {
+  /**
+   * Lower edge of the first bin.
+   */
+  bin_min: number;
+  /**
+   * Upper edge of the last bin.
+   */
+  bin_max: number;
+  /**
+   * Neuron counts per bin.
+   */
+  counts: number[];
 }
 /**
  * On-disk payload produced by `compare_activations(trace_a, trace_b, ...)`. Carries per-step `delta` records, one per (step, layer, submodule), plus alignment metadata describing how the two source traces were matched up (`token_id` vs `position`). Consumed by the CLI `diff` subcommand and the diff-mode UI. One file == one (trace_a, trace_b) pair.

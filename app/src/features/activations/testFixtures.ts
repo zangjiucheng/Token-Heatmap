@@ -43,6 +43,22 @@ function makeLayerEntry(
       { index: layer * 10 + 1, value: -(base + submoduleOffset) * 0.7 },
       { index: layer * 10 + 2, value: (base + submoduleOffset) * 0.4 },
     ],
+    std: base * 0.2,
+    kurtosis: layer * 1.5,
+    quantiles: {
+      p01: -base,
+      p25: -base * 0.25,
+      p50: 0,
+      p75: base * 0.25,
+      p99: base,
+    },
+    // A center-heavy histogram whose range widens with depth, mirroring the
+    // real "distribution spreads through the stack" shape.
+    histogram: {
+      bin_min: -base * 1.5,
+      bin_max: base * 1.5,
+      counts: [1, 2, 6, 14, 6, 2, 1, 0],
+    },
   };
 }
 

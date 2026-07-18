@@ -1,0 +1,114 @@
+.lens-kl-chart {
+  margin: 0 0 1rem;
+}
+
+.lens-kl-chart__caption {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  margin-bottom: 0.35rem;
+}
+
+.lens-kl-chart__legend {
+  display: flex;
+  gap: 1rem;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.lens-kl-chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lens-kl-chart__chip {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.lens-kl-chart__chip--final {
+  background: var(--color-accent);
+}
+
+.lens-kl-chart__chip--prev {
+  background: var(--color-text-muted);
+}
+
+.lens-kl-chart__chip--flip {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  background: #e5484d;
+}
+
+.lens-kl-chart__plot {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.lens-kl-chart__plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.lens-kl-chart__grid {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.lens-kl-chart__tick {
+  fill: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.lens-kl-chart__line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.lens-kl-chart__line--final {
+  stroke: var(--color-accent);
+}
+
+.lens-kl-chart__line--prev {
+  stroke: var(--color-text-muted);
+  stroke-dasharray: 5 4;
+}
+
+.lens-kl-chart__flip {
+  fill: #e5484d;
+}
+
+.lens-kl-chart__cursor {
+  stroke: var(--color-border-strong);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  pointer-events: none;
+}
+
+.lens-kl-chart__tooltip {
+  position: absolute;
+  top: 8px;
+  transform: translateX(8px);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.55rem;
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.lens-kl-chart__tooltip-title {
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+}

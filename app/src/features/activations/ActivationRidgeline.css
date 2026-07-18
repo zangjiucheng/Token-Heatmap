@@ -1,0 +1,79 @@
+.activation-ridgeline {
+  margin: 0;
+}
+
+.activation-ridgeline--empty {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  padding: 1rem;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.activation-ridgeline__caption {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  margin-bottom: 0.35rem;
+}
+
+.activation-ridgeline__caption code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.activation-ridgeline__plot {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.activation-ridgeline__plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.activation-ridgeline__grid {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.activation-ridgeline__tick {
+  fill: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.activation-ridgeline__silhouette {
+  fill: var(--color-accent);
+  fill-opacity: 0.55;
+  stroke: var(--color-accent-strong);
+  stroke-width: 0.75;
+}
+
+.activation-ridgeline__silhouette--hovered {
+  fill-opacity: 0.85;
+}
+
+.activation-ridgeline__hit {
+  fill: transparent;
+}
+
+.activation-ridgeline__tooltip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.55rem;
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.activation-ridgeline__tooltip-title {
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+}
