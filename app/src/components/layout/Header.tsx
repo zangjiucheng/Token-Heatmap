@@ -1,9 +1,10 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
 import {
   GithubIcon,
   HelpIcon,
   MoonIcon,
+  OpenTraceIcon,
   SunIcon,
 } from '@/features/workspace/icons';
 import './Header.css';
@@ -19,6 +20,10 @@ function openKeymapHelp() {
 
 export function Header() {
   const { theme, toggleTheme } = useTheme();
+  const { pathname } = useLocation();
+  // Only meaningful once a trace is open; on the landing page the dropzone is
+  // already the whole screen.
+  const viewingTrace = pathname.startsWith('/trace');
 
   return (
     <header className="app-header" role="banner">
@@ -32,6 +37,23 @@ export function Header() {
       </NavLink>
 
       <div className="app-header__utils">
+        {/*
+          The desktop app has no browser Back button, so without an explicit
+          control here the viewer is a dead end: once a trace is open there is no
+          discoverable way to pick a different one. The wordmark does navigate
+          home, but nobody reads a logo as "open another file".
+        */}
+        {viewingTrace && (
+          <NavLink
+            to="/"
+            className="app-header__icon-button app-header__open-trace"
+            aria-label="Open another trace"
+            title="Open another trace"
+          >
+            <OpenTraceIcon />
+            <span className="app-header__open-trace-label">Open trace</span>
+          </NavLink>
+        )}
         <button
           type="button"
           className="app-header__icon-button"

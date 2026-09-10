@@ -154,6 +154,17 @@ export function PauseIcon({ size = 16, className }: IconProps) {
   );
 }
 
+export function OpenTraceIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...baseProps(size)} className={className}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+      <path d="M12 18v-6" />
+      <path d="M9.5 14.5 12 12l2.5 2.5" />
+    </svg>
+  );
+}
+
 export function HelpIcon({ size = 16, className }: IconProps) {
   return (
     <svg {...baseProps(size)} className={className}>

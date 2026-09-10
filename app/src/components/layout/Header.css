@@ -73,3 +73,30 @@
     display: none;
   }
 }
+
+/* "Open another trace" — a labelled variant of the icon button. The label is
+   what makes it discoverable as a way out of the viewer; it collapses to the
+   bare icon on narrow windows where the header runs out of room. */
+.app-header__open-trace {
+  width: auto;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border-color: var(--color-border);
+}
+
+.app-header__open-trace-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .app-header__open-trace {
+    width: 32px;
+    padding: 0;
+  }
+
+  .app-header__open-trace-label {
+    display: none;
+  }
+}

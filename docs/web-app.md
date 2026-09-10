@@ -35,6 +35,14 @@ npm run dev:app          # hot-reloading desktop dev window (tauri dev)
 npm run build:app        # produce a release installer for the current OS
 ```
 
+**`dragDropEnabled: false` is load-bearing.** Tauri's window config defaults it
+to `true`, which routes file drops to the *native* handler — the webview never
+receives the HTML5 `dragover`/`drop` events, so the viewer's "drop a trace file
+here" zone silently does nothing in the desktop build while working fine in a
+browser. `app/src-tauri/tauri.conf.json` turns it off so drag-and-drop reaches
+the page. Do not remove it without replacing the dropzone with Tauri's own
+`onDragDropEvent` listener.
+
 `build:app` runs the frontend build (`npm run build`) and then `tauri build`.
 The installers land in:
 

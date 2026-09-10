@@ -17,12 +17,13 @@ function mockMatchMedia(matches: boolean) {
   }));
 }
 
-function renderShell() {
+function renderShell(initialEntry = '/') {
   return render(
-    <MemoryRouter initialEntries={['/']}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route element={<AppShell />}>
           <Route index element={<div>inner content</div>} />
+          <Route path="trace/:id" element={<div>viewer content</div>} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -41,6 +42,25 @@ describe('AppShell', () => {
     expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(screen.getByText(/skip to content/i)).toBeInTheDocument();
     expect(screen.getByText(/inner content/i)).toBeInTheDocument();
+  });
+
+  it('offers a way out of the viewer back to trace selection', async () => {
+    // The desktop app has no browser Back button, so this control is the only
+    // discoverable route from an open trace back to picking a different one.
+    renderShell('/trace/uploaded');
+    expect(screen.getByText(/viewer content/i)).toBeInTheDocument();
+
+    const open = screen.getByRole('link', { name: /open another trace/i });
+    await userEvent.click(open);
+
+    expect(screen.getByText(/inner content/i)).toBeInTheDocument();
+  });
+
+  it('hides the open-trace control on the landing page', () => {
+    renderShell('/');
+    expect(
+      screen.queryByRole('link', { name: /open another trace/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('theme toggle flips the data-theme attribute and writes to localStorage', async () => {
