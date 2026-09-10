@@ -18,7 +18,7 @@ so for RMSNorm models (Qwen/Llama/Mistral/…) the decomposition is *exact*: the
 sum of contributions equals the model's logit. We still report a per-step
 ``error`` so any residual — the final-norm linearization, a norm variant we
 didn't special-case, or missing layers — is visible rather than hidden (the
-paper's "error node" discipline; see docs/epics/04-faithfulness-error-reporting).
+paper's "error node" discipline).
 
 Honest caveats (mirroring the paper):
 - Direct path only: this explains the OV/residual-direct contribution to the

@@ -42,8 +42,10 @@ plot_selected_probability(df, save_path="outputs/selected.png")
 plot_raw_vs_processed_heatmap(df, value_col="logprob", save_path="outputs/raw_vs_processed.png")
 ```
 
-A runnable end-to-end example that also captures attention and the logit
-lens lives at [`examples/qwen_attention_inspect.py`](https://github.com/zangjiucheng/Token-Heatmap/blob/main/examples/qwen_attention_inspect.py).
+A runnable end-to-end equivalent is the CLI itself:
+`token-heatmap trace --config configs/example.yaml`, which captures attention and
+the logit lens and writes the same trace JSON plus the heatmap / logit-lens /
+rank plots.
 
 ## API reference
 
@@ -115,5 +117,5 @@ payload = serialize_trace_to_json(
 )
 ```
 
-The CLI does this for you; see [`examples/qwen_attention_inspect.py`](https://github.com/zangjiucheng/Token-Heatmap/blob/main/examples/qwen_attention_inspect.py)
-for a hand-rolled version that also captures attention and the logit lens.
+The CLI does this for you — `token-heatmap trace --capture-attention
+--capture-logit-lens` runs exactly this loop and writes the trace plus plots.

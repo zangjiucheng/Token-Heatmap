@@ -4,10 +4,6 @@ repo_url: https://github.com/zangjiucheng/Token-Heatmap
 docs_dir: docs
 site_dir: site
 use_directory_urls: false
-# The interpretability epics are internal roadmap/design notes — kept in the repo
-# (docs/epics/) and readable on GitHub, but excluded from the published site.
-exclude_docs: |
-  epics/
 theme:
   name: mkdocs
 nav:
