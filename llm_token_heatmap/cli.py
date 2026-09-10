@@ -19,22 +19,19 @@ from llm_token_heatmap.serialize.trace_payload import (
     build_model_architecture as _build_model_architecture_summary,
 )
 from llm_token_heatmap.serialize.trace_payload import (
-    dump_trace_json as _dump_trace_json,
-)
-from llm_token_heatmap.serialize.trace_payload import (
     read_trace_json as _read_trace_json,
 )
 from llm_token_heatmap.serialize.trace_payload import (
     resolve_trace_path as _resolve_trace_path,
 )
 from llm_token_heatmap.serialize.trace_payload import (
-    write_trace_json as _write_trace_json,
-)
-from llm_token_heatmap.serialize.trace_payload import (
     selected_token_payload as _selected_token_payload,
 )
 from llm_token_heatmap.serialize.trace_payload import (
     serialize_trace_to_json as _serialize_trace_to_json,
+)
+from llm_token_heatmap.serialize.trace_payload import (
+    write_trace_json as _write_trace_json,
 )
 
 EAGER_ATTENTION_WARNING = (
@@ -1246,7 +1243,7 @@ def run_diff(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 2
-        differing = [i for i, (x, y) in enumerate(zip(ids_a, ids_b)) if x != y]
+        differing = [i for i, (x, y) in enumerate(zip(ids_a, ids_b, strict=True)) if x != y]
         print(
             f"[token-heatmap diff] prompt mismatch allowed: {len(differing)} of "
             f"{len(ids_a)} prompt tokens differ, at positions {differing}."

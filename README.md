@@ -47,14 +47,19 @@ The docs index lives at [`docs/README.md`](docs/README.md).
 git clone <repo-url> llm-token-heatmap
 cd llm-token-heatmap
 
-# Option A — pip + venv
-./scripts/setup.sh
+# Option A — Makefile (pip + venv + frontend deps in one step)
+make install
 source .venv/bin/activate
 
 # Option B — conda (no Node.js required on this machine)
 conda env create -f environment.yml
 conda activate token-heatmap
 ```
+
+`make` on its own lists every target — `test`, `lint`, `build`, `app` (desktop
+installer), `dev`, `docs`, `clean`, and `trace` / `hpc` for running an
+experiment. `make install` wraps `./scripts/setup.sh`, which is still there if
+you prefer to call it directly.
 
 ```bash
 # CLI: generate a trace bundle
