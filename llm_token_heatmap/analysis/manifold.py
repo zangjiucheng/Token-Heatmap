@@ -94,7 +94,9 @@ def participation_ratio(eigenvalues: Any) -> float:
     return float((ev.sum() ** 2) / denom)
 
 
-def intrinsic_dimension_twonn(x: Any, *, discard_fraction: float = 0.1) -> float:
+def intrinsic_dimension_twonn(
+    x: Any, *, discard_fraction: float = 0.1, max_points: int = 4096
+) -> float:
     """Estimate intrinsic dimension via the TwoNN estimator (Facco et al. 2017).
 
     For each point, ``mu = r2 / r1`` is the ratio of its second- to first-
@@ -112,13 +114,42 @@ def intrinsic_dimension_twonn(x: Any, *, discard_fraction: float = 0.1) -> float
     shines on larger clouds pooled across many contexts.
     """
     mat = _as_matrix(x)
+    if mat.shape[0] > max_points:
+        # The pairwise distance matrix is O(T^2) in both time and memory, so a
+        # long chain-of-thought trace (8k+ steps) would spend hours here for an
+        # estimate that has long since converged. Thin to evenly spaced rows:
+        # the trajectory's shape is preserved, and TwoNN reads the *ratio*
+        # r2/r1, which uniform thinning leaves ~unchanged. Deterministic, so a
+        # trace analysed twice gives the same number.
+        idx = np.linspace(0, mat.shape[0] - 1, max_points).round().astype(int)
+        mat = mat[np.unique(idx)]
     n = mat.shape[0]
     if n < 4:
         return float("nan")
 
     # Pairwise Euclidean distances; the diagonal (self) is set to +inf.
-    diff = mat[:, None, :] - mat[None, :, :]
-    dist = np.sqrt(np.einsum("ijk,ijk->ij", diff, diff))
+    #
+    # Computed blockwise from the Gram matrix rather than the obvious
+    # `mat[:, None, :] - mat[None, :, :]`, which materializes a (T, T, d)
+    # intermediate: at T=2048, d=2560 that single line is 86 GB of float64 and
+    # OOM-killed the analysis on a 93 GB node. The identity
+    # |x - y|^2 = |x|^2 + |y|^2 - 2 x.y needs only (T, T) — 33 MB at the same
+    # size. The cost is precision for near-coincident points, which is why the
+    # negative values that cancellation can produce are clamped before sqrt;
+    # TwoNN only consumes the two smallest distances per row, so this is well
+    # within tolerance.
+    # Center first: distances are translation-invariant, so this is exact, and
+    # it shrinks |x|^2 so the subtraction below cancels far less.
+    mat = mat - mat.mean(axis=0, keepdims=True)
+    sq = np.einsum("ij,ij->i", mat, mat)
+    dist = np.empty((n, n), dtype=np.float64)
+    # ~16 M float64 (128 MB) per block, so peak stays flat as T grows.
+    block = max(1, int((1 << 24) // max(n, 1)))
+    for start in range(0, n, block):
+        stop = min(start + block, n)
+        d2 = sq[start:stop, None] + sq[None, :] - 2.0 * (mat[start:stop] @ mat.T)
+        np.maximum(d2, 0.0, out=d2)
+        dist[start:stop] = np.sqrt(d2, out=d2)
     np.fill_diagonal(dist, np.inf)
 
     dist.sort(axis=1)
@@ -128,7 +159,14 @@ def intrinsic_dimension_twonn(x: Any, *, discard_fraction: float = 0.1) -> float
     # finite and well-defined (degenerate duplicates would give r1 == 0).
     valid = (r1 > 0) & np.isfinite(r2)
     mu = r2[valid] / r1[valid]
-    mu = mu[mu > 1.0]
+    # Guard the degenerate regime this estimator is known to have (see the
+    # caveat above): on a regularly-spaced trajectory a point's two nearest
+    # neighbours are nearly equidistant, so mu -> 1, log(mu) -> 0, and the
+    # through-origin slope explodes — the old code happily returned ~1e13 as an
+    # "intrinsic dimension", which is not a number any caller should act on.
+    # Requiring mu to clear 1 by more than float noise turns that into an honest
+    # NaN, which the payload already encodes as null.
+    mu = mu[mu > 1.0 + 1e-9]
     if mu.size < 4:
         return float("nan")
 
