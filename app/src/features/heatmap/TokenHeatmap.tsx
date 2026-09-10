@@ -30,9 +30,9 @@ export interface TokenHeatmapProps {
   selectedStep: number | null;
   onSelectStep: (step: number) => void;
   /**
-   * Transient step from an external source — either a timeline hover or a
-   * sibling heatmap in `SplitHeatmap`. Painted as a soft column highlight,
-   * distinct from the stronger `selectedStep` indicator.
+   * Transient step from an external source, e.g. a timeline hover. Painted as
+   * a soft column highlight, distinct from the stronger `selectedStep`
+   * indicator.
    */
   externalHoveredStep?: number | null;
   /** Optional callback fired after each repaint with the elapsed ms. */
@@ -44,8 +44,7 @@ export interface TokenHeatmapProps {
   resizeDebounceMs?: number;
   /**
    * Which distribution to render. Defaults to `'processed'` to match the
-   * historical behaviour; `'raw'` and the side-by-side comparison are used
-   * by `SplitHeatmap`.
+   * historical behaviour; the Distribution toggle switches it to `'raw'`.
    */
   source?: DistributionSource;
   /**
@@ -65,7 +64,7 @@ export interface TokenHeatmapProps {
   onHoverStep?: (step: number | null) => void;
   /** Optional label suffix appended to the accessible name. */
   ariaLabelSuffix?: string;
-  /** Hides the toolbar (reset + legend rail) when rendering inside SplitHeatmap. */
+  /** Hides the toolbar (reset + legend rail). */
   hideToolbar?: boolean;
   /** Minimum cell width in CSS pixels; cells never shrink below this floor. */
   minCellWidth?: number;
@@ -77,8 +76,7 @@ export interface TokenHeatmapProps {
   maxCellHeight?: number | null;
   /**
    * Controlled horizontal scroll position. When provided, the heatmap's
-   * scroll wrapper is kept in sync with this value (used by `SplitHeatmap`
-   * to lock the two panes together).
+   * scroll wrapper is kept in sync with this value.
    */
   scrollLeft?: number;
   /** Notified when the user scrolls the heatmap horizontally. */
@@ -502,7 +500,7 @@ export function TokenHeatmap({
     ctx.clip();
 
     // Soft highlight for a step driven from an external source — either a
-    // timeline hover or a sibling heatmap in SplitHeatmap. Painted first so
+    // timeline hover. Painted first so
     // a stronger selection overlay can still cover it.
     if (
       externalHoveredStep != null &&

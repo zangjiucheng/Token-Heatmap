@@ -15,7 +15,7 @@ export interface KeymapHelpDialogProps {
 const CATEGORY_ORDER: ReadonlyArray<KeymapCategory> = [
   'selection',
   'view',
-  'comparison',
+  'distribution',
   'layout',
   'navigation',
   'help',

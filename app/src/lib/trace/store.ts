@@ -17,14 +17,7 @@ interface Entry {
   trace: Trace;
 }
 
-interface DiffPairEntry {
-  id: string;
-  traceA: Trace;
-  traceB: Trace;
-}
-
 let cached: Entry | null = null;
-let cachedDiffPair: DiffPairEntry | null = null;
 
 export function putTrace(id: string, trace: Trace): void {
   cached = { id, trace };
@@ -39,18 +32,4 @@ export function takeTrace(id: string): Trace | null {
 
 export function clearTraceCache(): void {
   cached = null;
-  cachedDiffPair = null;
-}
-
-export function putDiffPair(id: string, traceA: Trace, traceB: Trace): void {
-  cachedDiffPair = { id, traceA, traceB };
-}
-
-export function takeDiffPair(
-  id: string,
-): { traceA: Trace; traceB: Trace } | null {
-  if (cachedDiffPair?.id === id) {
-    return { traceA: cachedDiffPair.traceA, traceB: cachedDiffPair.traceB };
-  }
-  return null;
 }

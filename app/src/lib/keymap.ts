@@ -22,7 +22,7 @@ export type KeymapCategory =
   | 'navigation'
   | 'selection'
   | 'view'
-  | 'comparison'
+  | 'distribution'
   | 'layout'
   | 'help';
 
@@ -100,12 +100,12 @@ export const KEYMAP: ReadonlyArray<KeymapBinding> = [
     display: 'R',
   },
 
-  // Comparison
+  // Distribution
   {
-    id: 'comparison.cycle',
+    id: 'distribution.cycle',
     trigger: { key: 'c' },
-    category: 'comparison',
-    description: 'Cycle distribution mode (raw → processed → split)',
+    category: 'distribution',
+    description: 'Cycle distribution (raw → processed)',
     display: 'C',
   },
 
@@ -162,7 +162,7 @@ export const CATEGORY_LABELS: Record<KeymapCategory, string> = {
   navigation: 'Navigation',
   selection: 'Selection',
   view: 'View',
-  comparison: 'Comparison',
+  distribution: 'Distribution',
   layout: 'Layout',
   help: 'Help',
 };

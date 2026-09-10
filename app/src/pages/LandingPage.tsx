@@ -4,8 +4,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { useTrace } from '@/hooks/useTrace';
-import { loadTraceFromFile } from '@/lib/trace/load';
-import { putDiffPair, putTrace } from '@/lib/trace/store';
+import { putTrace } from '@/lib/trace/store';
 import './LandingPage.css';
 
 export function LandingPage() {
@@ -38,27 +37,6 @@ export function LandingPage() {
     await load({ type: 'file', file });
   };
 
-  const handleTwoFilesDropped = async (fileA: File, fileB: File) => {
-    setDismissed(false);
-    try {
-      const [traceA, traceB] = await Promise.all([
-        loadTraceFromFile(fileA),
-        loadTraceFromFile(fileB),
-      ]);
-      const id = `diff-${Date.now().toString(36)}-${Math.random()
-        .toString(36)
-        .slice(2, 8)}`;
-      putDiffPair(id, traceA, traceB);
-      navigate(`/diff/${id}`);
-    } catch (err) {
-      // Route the error through the existing load() machinery so the same
-      // ErrorState rendering applies. Re-throwing the parsed trace error
-      // from a single-trace load() also produces a friendly message.
-      await load({ type: 'file', file: fileA });
-      void err;
-    }
-  };
-
   if (status === 'loading') {
     return <LoadingState label="Loading trace" />;
   }
@@ -87,7 +65,6 @@ export function LandingPage() {
       <EmptyState
         onLoadSample={handleLoadSample}
         onFileDropped={handleFileDropped}
-        onTwoFilesDropped={handleTwoFilesDropped}
       />
     </div>
   );

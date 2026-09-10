@@ -20,7 +20,7 @@ describe('ControlBar', () => {
     renderControlBar();
     const bar = screen.getByTestId('trace-viewer-controls');
     expect(bar).toBeInTheDocument();
-    expect(screen.getByTestId('comparison-toggle')).toBeInTheDocument();
+    expect(screen.getByTestId('distribution-toggle')).toBeInTheDocument();
     expect(screen.getByTestId('value-column-toggle')).toBeInTheDocument();
     expect(screen.getByTestId('step-range-filter')).toBeInTheDocument();
     expect(screen.getByTestId('color-range-controls')).toBeInTheDocument();

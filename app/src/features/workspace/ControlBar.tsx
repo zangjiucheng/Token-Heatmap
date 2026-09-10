@@ -1,9 +1,10 @@
 import { useMemo, type RefObject } from 'react';
 import type { Trace } from '@/types/trace';
 import { buildGrid } from '@/features/heatmap';
-import { ComparisonToggle } from '@/features/comparison';
+
 import {
   ColorRangeControls,
+  DistributionToggle,
   StepRangeFilter,
   ValueColumnToggle,
   type ColorRangeValue,
@@ -55,7 +56,7 @@ export function ControlBar({ trace, heatmapRef }: ControlBarProps) {
       role="group"
       aria-label="Heatmap view settings"
     >
-      <ComparisonToggle value={state.mode} onChange={setMode} />
+      <DistributionToggle value={state.mode} onChange={setMode} />
       <ValueColumnToggle value={state.valueCol} onChange={setValueCol} />
       <StepRangeFilter
         min={0}

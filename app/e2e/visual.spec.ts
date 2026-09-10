@@ -42,13 +42,4 @@ test.describe('visual regression', () => {
     await expect(page.getByTestId('step-detail-panel-step')).toHaveText(/Step 0/);
     await expect(page).toHaveScreenshot('viewer-with-trace.png', { fullPage: true });
   });
-
-  test('split-mode', async ({ page }) => {
-    await gotoLanding(page);
-    await loadBundledSample(page);
-    await waitForViewerReady(page);
-    await page.getByTestId('comparison-toggle-split').check();
-    await expect(page.getByTestId('split-heatmap')).toBeVisible();
-    await expect(page).toHaveScreenshot('split-mode.png', { fullPage: true });
-  });
 });

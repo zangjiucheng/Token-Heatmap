@@ -155,7 +155,7 @@ const DIFF_SUBMODULES = ['resid_post'] as const;
 /**
  * Build a (layer, step, submodule)-dependent activation vector of length
  * DIFF_HIDDEN_DIM. The vector is fully captured in `top_neurons` so the
- * sparse-vector math in compareActivations is exact for this fixture.
+ * sparse-vector math over these activations is exact for this fixture.
  */
 function diffVector(side: 'A' | 'B', step: number, layer: number): number[] {
   const base = step * 0.5 + layer * 0.25 + (side === 'A' ? 0 : 0.5);
@@ -246,7 +246,7 @@ function makeDiffTrace(
 /**
  * Two synthetic activation traces designed for parity testing. The
  * `top_neurons` for every (step, layer) covers all DIFF_HIDDEN_DIM
- * dimensions, so the sparse-vector math used by `compareActivations` is
+ * dimensions, so the sparse-vector math over these activations is
  * numerically exact against the documented compare semantics.
  */
 export function makeTwoActivationTraces(): {

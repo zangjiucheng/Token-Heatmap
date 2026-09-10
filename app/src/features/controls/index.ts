@@ -8,3 +8,5 @@ export type {
   ColorRangeMode,
   ColorRangeValue,
 } from './ColorRangeControls';
+export { DistributionToggle } from './DistributionToggle';
+export type { DistributionMode, DistributionToggleProps } from './DistributionToggle';

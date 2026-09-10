@@ -32,10 +32,10 @@ describe('useViewState', () => {
   it('parses mode, valueCol, stepRange, and color bounds from the URL', () => {
     const { result } = renderHook(() => useViewState(), {
       wrapper: withRouter([
-        '/trace?mode=split&valueCol=prob&stepRange=1-4&colorMin=-3&colorMax=0',
+        '/trace?mode=processed&valueCol=prob&stepRange=1-4&colorMin=-3&colorMax=0',
       ]),
     });
-    expect(result.current.state.mode).toBe('split');
+    expect(result.current.state.mode).toBe('processed');
     expect(result.current.state.valueCol).toBe('prob');
     expect(result.current.state.stepRange).toEqual([1, 4]);
     expect(result.current.state.colorRange).toEqual({
@@ -57,14 +57,14 @@ describe('useViewState', () => {
     const { result } = renderHook(useViewStateWithLocation, {
       wrapper: withRouter(['/trace']),
     });
-    act(() => result.current.vs.setMode('split'));
+    act(() => result.current.vs.setMode('processed'));
     act(() => result.current.vs.setValueCol('prob'));
     act(() => result.current.vs.setStepRange([2, 5]));
     act(() =>
       result.current.vs.setColorRange({ mode: 'manual', min: -2, max: 1 }),
     );
     const search = result.current.location.search;
-    expect(search).toContain('mode=split');
+    expect(search).toContain('mode=processed');
     expect(search).toContain('valueCol=prob');
     expect(search).toContain('stepRange=2-5');
     expect(search).toContain('colorMin=-2');
@@ -86,7 +86,7 @@ describe('useViewState', () => {
     const { result } = renderHook(useViewStateWithLocation, {
       wrapper: withRouter(['/trace?mode=split']),
     });
-    act(() => result.current.vs.setMode('raw'));
+    act(() => result.current.vs.setMode('processed'));
     expect(result.current.location.search).not.toContain('mode=raw');
   });
 

@@ -1,4 +1,4 @@
-.comparison-toggle {
+.distribution-toggle {
   border: none;
   margin: 0;
   padding: 0;
@@ -7,7 +7,7 @@
   gap: var(--space-2);
 }
 
-.comparison-toggle__legend {
+.distribution-toggle__legend {
   font-family: var(--font-display);
   font-size: var(--text-xs);
   font-weight: 600;
@@ -16,7 +16,7 @@
   letter-spacing: var(--track-label);
 }
 
-.comparison-toggle__options {
+.distribution-toggle__options {
   display: inline-flex;
   padding: 2px;
   border: 1px solid var(--color-border);
@@ -24,7 +24,7 @@
   background: var(--color-bg-muted);
 }
 
-.comparison-toggle__option {
+.distribution-toggle__option {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -40,17 +40,17 @@
     background var(--transition-fast);
 }
 
-.comparison-toggle__option:hover:not([data-selected='true']) {
+.distribution-toggle__option:hover:not([data-selected='true']) {
   color: var(--color-text);
 }
 
-.comparison-toggle__option[data-selected='true'] {
+.distribution-toggle__option[data-selected='true'] {
   background: var(--color-accent);
   color: var(--color-accent-contrast);
   box-shadow: var(--shadow-panel);
 }
 
-.comparison-toggle__option input {
+.distribution-toggle__option input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -62,7 +62,7 @@
   border: 0;
 }
 
-.comparison-toggle__option:focus-within {
+.distribution-toggle__option:focus-within {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }

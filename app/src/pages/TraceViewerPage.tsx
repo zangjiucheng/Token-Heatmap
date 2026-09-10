@@ -8,10 +8,9 @@ import { useViewState } from '@/hooks/useViewState';
 import { useKeymap } from '@/hooks/useKeymap';
 import { usePlayback } from '@/hooks/usePlayback';
 import { announceLiveRegion } from '@/lib/a11y/announceLiveRegion';
-import type { ComparisonMode } from '@/features/comparison';
+import type { DistributionMode } from '@/features/controls';
 import { takeTrace } from '@/lib/trace/store';
 import { TokenHeatmap } from '@/features/heatmap';
-import { SplitHeatmap } from '@/features/comparison';
 import {
   GeneratedTokenStrip,
   PlaybackControls,
@@ -42,7 +41,7 @@ import type { Trace } from '@/types/trace';
 import type { TraceWithActivations } from '@/types/activation';
 import './TraceViewerPage.css';
 
-const COMPARISON_CYCLE: ComparisonMode[] = ['raw', 'processed', 'split'];
+const DISTRIBUTION_CYCLE: DistributionMode[] = ['raw', 'processed'];
 
 function TimelineOverview({
   trace,
@@ -157,11 +156,11 @@ export function TraceViewerPage() {
       if (!trace) return;
       playback.toggle();
     },
-    'comparison.cycle': () => {
-      const idx = COMPARISON_CYCLE.indexOf(state.mode);
-      const next = COMPARISON_CYCLE[(idx + 1) % COMPARISON_CYCLE.length];
+    'distribution.cycle': () => {
+      const idx = DISTRIBUTION_CYCLE.indexOf(state.mode);
+      const next = DISTRIBUTION_CYCLE[(idx + 1) % DISTRIBUTION_CYCLE.length];
       setMode(next);
-      announceLiveRegion(`Comparison mode: ${next}`);
+      announceLiveRegion(`Distribution: ${next}`);
     },
     'view.reset': () => {
       // The heatmap exposes a Reset view button — trigger it programmatically.
@@ -247,28 +246,18 @@ export function TraceViewerPage() {
 
     const traceWithActivations = trace as TraceWithActivations;
 
-    const heatmapBody =
-      state.mode === 'split' ? (
-        <SplitHeatmap
-          trace={trace}
-          valueCol={state.valueCol}
-          selectedStep={selectedStep}
-          onSelectStep={setSelectedStep}
-          stepRange={state.stepRange ?? undefined}
-          valueRange={valueRangeOverride}
-        />
-      ) : (
-        <TokenHeatmap
-          trace={trace}
-          valueCol={state.valueCol}
-          source={state.mode === 'raw' ? 'raw' : 'processed'}
-          selectedStep={selectedStep}
-          onSelectStep={setSelectedStep}
-          externalHoveredStep={hoveredStep}
-          stepRange={state.stepRange ?? undefined}
-          valueRange={valueRangeOverride}
-        />
-      );
+    const heatmapBody = (
+      <TokenHeatmap
+        trace={trace}
+        valueCol={state.valueCol}
+        source={state.mode}
+        selectedStep={selectedStep}
+        onSelectStep={setSelectedStep}
+        externalHoveredStep={hoveredStep}
+        stepRange={state.stepRange ?? undefined}
+        valueRange={valueRangeOverride}
+      />
+    );
 
     let canvas: React.ReactNode;
     if (activeTab === 'model') {

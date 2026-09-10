@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { ComparisonMode } from '@/features/comparison';
+import type { DistributionMode } from '@/features/controls';
 import type { ValueCol } from '@/features/heatmap';
 import type { ColorRangeValue } from '@/features/controls';
 
@@ -21,7 +21,7 @@ export interface SelectedHead {
 }
 
 export interface ViewState {
-  mode: ComparisonMode;
+  mode: DistributionMode;
   valueCol: ValueCol;
   /** `null` means "full trace" / no clipping. */
   stepRange: [number, number] | null;
@@ -47,7 +47,7 @@ export const DEFAULT_VIEW_STATE: ViewState = {
   selectedHead: null,
 };
 
-const VALID_MODES: ComparisonMode[] = ['raw', 'processed', 'split'];
+const VALID_MODES: DistributionMode[] = ['raw', 'processed'];
 const VALID_VALUE_COLS: ValueCol[] = ['logprob', 'prob'];
 const VALID_TABS: ViewerTab[] = [
   'heatmap',
@@ -61,9 +61,9 @@ const VALID_TABS: ViewerTab[] = [
   'manifold',
 ];
 
-function parseMode(raw: string | null): ComparisonMode {
+function parseMode(raw: string | null): DistributionMode {
   if (raw && (VALID_MODES as string[]).includes(raw)) {
-    return raw as ComparisonMode;
+    return raw as DistributionMode;
   }
   return DEFAULT_VIEW_STATE.mode;
 }
@@ -133,7 +133,7 @@ function setOrDelete(
 
 export interface UseViewStateResult {
   state: ViewState;
-  setMode: (mode: ComparisonMode) => void;
+  setMode: (mode: DistributionMode) => void;
   setValueCol: (valueCol: ValueCol) => void;
   setStepRange: (range: [number, number] | null) => void;
   setColorRange: (range: ColorRangeValue) => void;
@@ -167,7 +167,7 @@ function serializeSelectedHead(value: SelectedHead | null): string | null {
 }
 
 /**
- * Round-trips the comparison-view state to and from the URL search params so
+ * Round-trips the view state to and from the URL search params so
  * the view is shareable and survives a page reload.
  */
 export function useViewState(): UseViewStateResult {
@@ -218,7 +218,7 @@ export function useViewState(): UseViewStateResult {
   );
 
   const setMode = useCallback(
-    (mode: ComparisonMode) => {
+    (mode: DistributionMode) => {
       update((params) => {
         if (mode === DEFAULT_VIEW_STATE.mode) {
           params.delete('mode');

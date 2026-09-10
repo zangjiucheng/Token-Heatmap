@@ -11,11 +11,11 @@ test.describe('view state persistence', () => {
     await loadBundledSample(page);
     await waitForViewerReady(page);
 
-    // Set a non-default state: split comparison + prob value column.
-    await page.getByTestId('comparison-toggle-split').check();
+    // Set a non-default state: processed distribution + prob value column.
+    await page.getByTestId('distribution-toggle-processed').check();
     await page.getByTestId('value-column-select').selectOption('prob');
 
-    await expect(page).toHaveURL(/[?&]mode=split/);
+    await expect(page).toHaveURL(/[?&]mode=processed/);
     await expect(page).toHaveURL(/[?&]valueCol=prob/);
 
     const urlBefore = page.url();
@@ -25,9 +25,8 @@ test.describe('view state persistence', () => {
 
     // URL is preserved verbatim and controls re-hydrate from it.
     expect(page.url()).toBe(urlBefore);
-    await expect(page.getByTestId('comparison-toggle-split')).toBeChecked();
+    await expect(page.getByTestId('distribution-toggle-processed')).toBeChecked();
     await expect(page.getByTestId('value-column-select')).toHaveValue('prob');
-    await expect(page.getByTestId('split-heatmap')).toBeVisible();
   });
 
   test('inspector collapse persists across a reload via the URL', async ({

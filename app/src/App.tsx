@@ -14,7 +14,6 @@ import { useKeymap } from '@/hooks/useKeymap';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useTheme } from '@/hooks/useTheme';
 import { useViewState } from '@/hooks/useViewState';
-import { DiffViewerPage } from '@/pages/DiffViewerPage';
 import { LandingPage } from '@/pages/LandingPage';
 import { TraceViewerPage } from '@/pages/TraceViewerPage';
 
@@ -115,7 +114,6 @@ export default function App() {
             <Route index element={<LandingPage />} />
             <Route path="trace" element={<TraceViewerPage />} />
             <Route path="trace/:id" element={<TraceViewerPage />} />
-            <Route path="diff/:id" element={<DiffViewerPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
