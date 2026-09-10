@@ -22,6 +22,15 @@ from llm_token_heatmap.serialize.trace_payload import (
     dump_trace_json as _dump_trace_json,
 )
 from llm_token_heatmap.serialize.trace_payload import (
+    read_trace_json as _read_trace_json,
+)
+from llm_token_heatmap.serialize.trace_payload import (
+    resolve_trace_path as _resolve_trace_path,
+)
+from llm_token_heatmap.serialize.trace_payload import (
+    write_trace_json as _write_trace_json,
+)
+from llm_token_heatmap.serialize.trace_payload import (
     selected_token_payload as _selected_token_payload,
 )
 from llm_token_heatmap.serialize.trace_payload import (
@@ -132,6 +141,24 @@ def _load_yaml_config(path: Path) -> dict:
 _PROBE_SCALARS = ("line_position",)
 
 
+def _add_compress_flag(parser: argparse.ArgumentParser) -> None:
+    """Attach ``--no-compress`` to a sub-command that writes a trace payload.
+
+    Traces are gzipped by default: the payload is numeric arrays with highly
+    repetitive keys, so DEFLATE cut a measured 2048-step run from 197.5 MB to
+    34.6 MB (5.7x) in 6 s. Readers accept either encoding, so the only reason to
+    opt out is wanting to eyeball the raw JSON.
+    """
+    parser.add_argument(
+        "--no-compress",
+        action="store_true",
+        help=(
+            "Write plain .json instead of the default gzipped .json.gz. "
+            "Bigger on disk; every token-heatmap reader accepts both."
+        ),
+    )
+
+
 def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
     """Build the top-level argument parser for the `token-heatmap` CLI.
 
@@ -159,7 +186,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         epilog=(
             "command groups:\n"
             "  generate & analyze   trace, diff, manifold\n"
-            "  develop & deploy     web build, hpc {setup,run}\n"
+            "  develop & deploy     hpc {setup,run}\n"
             "\n"
             "examples:\n"
             "  token-heatmap trace --config configs/example.yaml  # then open the JSON in the viewer\n"
@@ -245,6 +272,38 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         "--prompt",
         default=None,
         help="Input prompt string for generation.",
+    )
+    gen_grp.add_argument(
+        "--plots",
+        choices=("none", "summary", "all"),
+        default="summary",
+        help=(
+            "How many PNGs to write alongside the trace (default: summary). "
+            "'summary' writes only entropy.png — the one figure worth glancing at "
+            "before opening the trace in the viewer. 'all' additionally writes "
+            "adaptive_heatmap / selected_probability / logit_lens / "
+            "selected_rank_heatmap / attention_layer_head_grid; on a long "
+            "chain-of-thought adaptive_heatmap alone reached 7.6 MB. 'none' skips "
+            "plotting entirely — the trace file is the product."
+        ),
+    )
+    gen_grp.add_argument(
+        "--use-chat-template",
+        action="store_true",
+        help=(
+            "Wrap the prompt in the tokenizer's chat template "
+            "(add_generation_prompt=True) before generating. Required for reasoning "
+            "models — a Qwen3-Thinking / R1-Distill only enters its <think> mode when "
+            "it sees the template's assistant header. Off by default (raw completion)."
+        ),
+    )
+    gen_grp.add_argument(
+        "--system-prompt",
+        default=None,
+        help=(
+            "Optional system message, prepended when --use-chat-template is set. "
+            "Note: DeepSeek-R1-Distill model cards recommend NO system prompt."
+        ),
     )
     gen_grp.add_argument(
         "--max-new-tokens",
@@ -385,6 +444,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "manifold` analysis and per-head DLA / the Attribution Graph."
         ),
     )
+    _add_compress_flag(trace_parser)
     trace_parser.set_defaults(func=run_trace)
 
     diff_parser = subparsers.add_parser(
@@ -424,6 +484,20 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         default="l2",
         help="Per-layer metric to record / colour the heatmap by (default: l2).",
     )
+    diff_parser.add_argument(
+        "--allow-prompt-mismatch",
+        action="store_true",
+        help=(
+            "Diff two traces whose prompts differ. Off by default because the diff is "
+            "positional and mismatched prompts usually mean misaligned tokens. Use it "
+            "for a deliberate minimal pair (see configs/nqueens-verify.yaml and "
+            "configs/nqueens-conflict.yaml): same model and capture flags, prompts that "
+            "SUBSTITUTE a few tokens without changing the token count. The differing "
+            "positions are printed, and the run is still refused if the two prompts "
+            "tokenize to different lengths."
+        ),
+    )
+    _add_compress_flag(diff_parser)
     diff_parser.set_defaults(func=run_diff)
 
     manifold_parser = subparsers.add_parser(
@@ -494,6 +568,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
             "period sweep and inflate the helix R²."
         ),
     )
+    _add_compress_flag(manifold_parser)
     manifold_parser.set_defaults(func=run_manifold)
 
     causal_parser = subparsers.add_parser(
@@ -543,6 +618,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         default=None,
         help="Subset of layer indices to ablate (default: all layers).",
     )
+    _add_compress_flag(causal_parser)
     causal_parser.set_defaults(func=run_causal)
 
     tuned_parser = subparsers.add_parser(
@@ -584,16 +660,14 @@ def build_parser() -> tuple[argparse.ArgumentParser, argparse.ArgumentParser]:
         default=1.0,
         help="Ridge regularization for the affine probe fit (default: 1.0).",
     )
+    _add_compress_flag(tuned_parser)
     tuned_parser.set_defaults(func=run_tuned_lens)
 
-    # Operational sub-commands (web build / hpc …) live in
-    # `llm_token_heatmap.commands` so they replace scripts/*.sh without bloating
-    # this module. They import only stdlib, so registering them keeps `--help`
-    # cheap (no torch/numpy pulled in).
+    # Operational sub-commands (hpc …) live in `llm_token_heatmap.commands` so
+    # they replace scripts/*.sh without bloating this module. They import only
+    # stdlib, so registering them keeps `--help` cheap (no torch/numpy pulled in).
     from llm_token_heatmap.commands import hpc as _hpc_cmd
-    from llm_token_heatmap.commands import web as _web_cmd
 
-    _web_cmd.register(subparsers)
     _hpc_cmd.register(subparsers)
 
     return parser, trace_parser
@@ -729,6 +803,35 @@ def run_trace(args: argparse.Namespace) -> int:
     if not use_cuda:
         model = model.to(device)  # type: ignore[arg-type]
     model.eval()
+
+    # Chat template: render it to text ONCE and replace args.prompt with the
+    # result, so every downstream consumer (generation, the prompt-position logit
+    # lens, and tokens.prompt_token_ids in the payload) tokenizes the identical
+    # string. Threading a `use_chat_template` flag through each of those instead
+    # would let them disagree, and the Attention / Logit Lens views index by
+    # prompt position — a one-token offset silently mislabels every column.
+    raw_user_prompt = args.prompt
+    if getattr(args, "use_chat_template", False):
+        if getattr(tokenizer, "chat_template", None) is None:
+            print(
+                f"error: --use-chat-template given but {args.model} has no chat_template "
+                "(base model?). Drop the flag or use the instruct/reasoning variant.",
+                file=sys.stderr,
+            )
+            return 2
+        messages: list[dict[str, str]] = []
+        if args.system_prompt is not None:
+            messages.append({"role": "system", "content": args.system_prompt})
+        messages.append({"role": "user", "content": raw_user_prompt})
+        args.prompt = tokenizer.apply_chat_template(
+            messages, add_generation_prompt=True, tokenize=False
+        )
+        print(f"[token-heatmap] chat template applied ({len(args.prompt)} chars).")
+    elif getattr(tokenizer, "chat_template", None) is not None:
+        print(
+            "[token-heatmap] note: this tokenizer has a chat_template but "
+            "--use-chat-template was not set — generating as a raw completion."
+        )
 
     probe = AdaptiveTokenProbe(
         AdaptiveProbeConfig(
@@ -903,7 +1006,7 @@ def run_trace(args: argparse.Namespace) -> int:
                 _hd = _hs // _nh if _hs else 0
             # Direct logit attribution reuses the same captured tensors +
             # unembedding, folding the model's real final norm. See
-            # docs/epics/01-direct-logit-attribution.md.
+            # llm_token_heatmap/analysis/direct_logit_attribution.py.
             direct_logit_attribution = compute_direct_logit_attribution(
                 trace=trace,
                 target_token_ids=target_ids,
@@ -916,7 +1019,12 @@ def run_trace(args: argparse.Namespace) -> int:
 
     metadata = {
         "model": args.model,
-        "prompt": args.prompt,
+        # Schema contract: `prompt` is the user prompt BEFORE chat-template
+        # wrapping (it is display-only in the viewer). The wrapped text the model
+        # actually saw stays recoverable from tokens.prompt_token_ids.
+        "prompt": raw_user_prompt,
+        "system_prompt": args.system_prompt,
+        "use_chat_template": bool(getattr(args, "use_chat_template", False)),
         "generated_text": text,
         "device": device,
         "generation_params": {
@@ -975,22 +1083,33 @@ def run_trace(args: argparse.Namespace) -> int:
         prompt_logit_lens=prompt_logit_lens,
     )
     json_path = output_dir / "adaptive_token_trace.json"
-    json_path.write_text(_dump_trace_json(json_payload), encoding="utf-8")
+    json_path = _write_trace_json(
+        json_payload, json_path, compress=not args.no_compress
+    )
 
     # Plots are a secondary convenience — the JSON/CSV above are the product.
     # A single matplotlib hiccup (a '$' or an exotic glyph in a token label)
     # must never abort the run after the data is written, nor block the
     # downstream `manifold` step. Degrade to a warning instead.
     try:
-        plot_adaptive_heatmap(
-            df,
-            value_col="logprob",
-            save_path=output_dir / "adaptive_heatmap.png",
-        )
-        plot_selected_probability(df, save_path=output_dir / "selected_probability.png")
-        plot_entropy(df, save_path=output_dir / "entropy.png")
+        if args.plots != "none":
+            # entropy.png is the summary figure: on a chain-of-thought run it is
+            # the one plot that reads at a glance (spikes = where the
+            # distribution widened), and it stays ~40 KB where adaptive_heatmap
+            # grows with the step count.
+            plot_entropy(df, save_path=output_dir / "entropy.png")
 
-        if attention_probe is not None and trace:
+        if args.plots == "all":
+            plot_adaptive_heatmap(
+                df,
+                value_col="logprob",
+                save_path=output_dir / "adaptive_heatmap.png",
+            )
+            plot_selected_probability(
+                df, save_path=output_dir / "selected_probability.png"
+            )
+
+        if args.plots == "all" and attention_probe is not None and trace:
             first_with_stats = next(
                 (e for e in trace if e.get("_attention_stats") is not None), None
             )
@@ -1004,7 +1123,7 @@ def run_trace(args: argparse.Namespace) -> int:
                     save_path=output_dir / "attention_layer_head_grid.png",
                 )
 
-        if logit_lens is not None and trace:
+        if args.plots == "all" and logit_lens is not None and trace:
             first_with_lens = next((e for e in trace if "logit_lens" in e), None)
             if first_with_lens is not None:
                 plot_logit_lens(
@@ -1021,7 +1140,10 @@ def run_trace(args: argparse.Namespace) -> int:
         )
 
     print(f"Wrote outputs to {output_dir}/")
-    print("Open adaptive_token_trace.json in the viewer (drag it onto the web app, or open it in the desktop app).")
+    print(
+        f"Open {json_path.name} in the viewer "
+        "(drag it onto the app, or open it there)."
+    )
 
     return 0
 
@@ -1036,7 +1158,7 @@ def _load_activation_trace(path: Path) -> dict[str, Any]:
     """
 
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = _read_trace_json(path)
     except FileNotFoundError as exc:
         raise RuntimeError(f"trace file not found: {path}") from exc
     except json.JSONDecodeError as exc:
@@ -1064,6 +1186,9 @@ def _load_activation_trace(path: Path) -> dict[str, Any]:
         "activation_metadata": payload["activation_metadata"],
         "steps": projected_steps,
         "_source_metadata": payload.get("metadata", {}),
+        # Kept for --allow-prompt-mismatch, which has to prove the two prompts
+        # tokenize to the same length before a positional diff means anything.
+        "_prompt_token_ids": (payload.get("tokens") or {}).get("prompt_token_ids") or [],
     }
 
 
@@ -1089,12 +1214,43 @@ def run_diff(args: argparse.Namespace) -> int:
     prompt_a = trace_a["_source_metadata"].get("prompt")
     prompt_b = trace_b["_source_metadata"].get("prompt")
     if prompt_a is not None and prompt_b is not None and prompt_a != prompt_b:
+        if not getattr(args, "allow_prompt_mismatch", False):
+            print(
+                "[token-heatmap diff] refusing to diff: parent traces have mismatched "
+                f"generations — prompt_a={prompt_a!r} prompt_b={prompt_b!r}.\n"
+                "If this is a deliberate minimal pair (same model, two prompts that "
+                "differ in a few tokens at the same positions), pass "
+                "--allow-prompt-mismatch.",
+                file=sys.stderr,
+            )
+            return 2
+
+        # Opt-in taken. The diff is positional, so differing prompts are only
+        # comparable when they tokenize to the SAME length — otherwise every
+        # position after the first insertion refers to a different token in each
+        # trace and the delta is noise that looks like signal.
+        ids_a = trace_a.get("_prompt_token_ids") or []
+        ids_b = trace_b.get("_prompt_token_ids") or []
+        if not ids_a or not ids_b:
+            print(
+                "[token-heatmap diff] --allow-prompt-mismatch needs tokens.prompt_token_ids "
+                "in both traces to verify alignment; regenerate with a current build.",
+                file=sys.stderr,
+            )
+            return 2
+        if len(ids_a) != len(ids_b):
+            print(
+                "[token-heatmap diff] refusing to diff: prompts tokenize to different "
+                f"lengths ({len(ids_a)} vs {len(ids_b)}), so positions do not correspond. "
+                "A minimal pair must substitute tokens, not insert or delete them.",
+                file=sys.stderr,
+            )
+            return 2
+        differing = [i for i, (x, y) in enumerate(zip(ids_a, ids_b)) if x != y]
         print(
-            "[token-heatmap diff] refusing to diff: parent traces have mismatched "
-            f"generations — prompt_a={prompt_a!r} prompt_b={prompt_b!r}.",
-            file=sys.stderr,
+            f"[token-heatmap diff] prompt mismatch allowed: {len(differing)} of "
+            f"{len(ids_a)} prompt tokens differ, at positions {differing}."
         )
-        return 2
 
     diff = compare_activations(
         {k: v for k, v in trace_a.items() if not k.startswith("_")},
@@ -1115,7 +1271,11 @@ def run_diff(args: argparse.Namespace) -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     diff_path = output_dir / "activation_diff.json"
-    diff_path.write_text(_dump_trace_json(diff), encoding="utf-8")
+    diff_path = _write_trace_json(
+        diff,
+        diff_path,
+        compress=str(args.trace_a).endswith(".gz") and not args.no_compress,
+    )
 
     plot_activation_delta(
         diff,
@@ -1140,12 +1300,15 @@ def run_manifold(args: argparse.Namespace) -> int:
     from llm_token_heatmap.analysis.manifold import MANIFOLD_SCHEMA_VERSION, analyze_manifold
     from llm_token_heatmap.serialize.activation_serializer import read_sidecar
 
-    trace_path: Path = args.trace
+    trace_path: Path = _resolve_trace_path(args.trace)
     if not trace_path.is_file():
-        print(f"error: trace file not found: {trace_path}", file=sys.stderr)
+        print(
+            f"error: trace file not found: {args.trace} (nor its .json/.json.gz twin)",
+            file=sys.stderr,
+        )
         return 2
 
-    payload = json.loads(trace_path.read_text(encoding="utf-8"))
+    payload = _read_trace_json(trace_path)
     meta = payload.get("activation_metadata")
     if meta is None:
         print(
@@ -1184,9 +1347,19 @@ def run_manifold(args: argparse.Namespace) -> int:
         else (set(meta.get("captured_submodules") or []) or None)
     )
 
+    import numpy as _np
+
     base = trace_path.parent
     # (layer, submodule) -> (positions, list-of-vectors), accumulated in step order.
-    collected: dict[tuple[int, str], tuple[list[int], list[list[float]]]] = {}
+    #
+    # The vectors are stored as float32 numpy arrays, NOT the Python lists that
+    # `read_sidecar` hands back: a Python float costs ~32 B per element against
+    # numpy's 4, so a 2048-step run over 108 (layer, submodule) clouds holds
+    # ~566 M floats — ~18 GB as lists, ~2.3 GB as float32. Each transient list is
+    # freed on the next iteration; the float64 promotion happens per cloud below.
+    # (The 88 GB OOM that prompted this was a separate bug, in the TwoNN pairwise
+    # distance; see analysis/manifold.py. This is the smaller, second offender.)
+    collected: dict[tuple[int, str], tuple[list[int], list[Any]]] = {}
     for step_idx, ref in refs:
         sidecar = read_sidecar(base / ref)
         for layer_entry in sidecar.get("layers", []):
@@ -1198,7 +1371,7 @@ def run_manifold(args: argparse.Namespace) -> int:
                     continue
                 pos_list, vec_list = collected.setdefault((layer, submodule), ([], []))
                 pos_list.append(step_idx)
-                vec_list.append(vector)
+                vec_list.append(_np.asarray(vector, dtype=_np.float32))
 
     # Optional supervised probe: compute the per-position scalar once (in
     # generation order) and a step -> value lookup to align with each cloud.
@@ -1265,7 +1438,13 @@ def run_manifold(args: argparse.Namespace) -> int:
 
     out_path: Path = args.out if args.out is not None else trace_path
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(_dump_trace_json(payload), encoding="utf-8")
+    out_path = _write_trace_json(
+        payload,
+        out_path,
+        # Mirror the input encoding: an in-place augmentation must not
+        # rename the caller's file out from under them.
+        compress=str(trace_path).endswith(".gz") and not args.no_compress,
+    )
     print(
         f"Added manifold analysis ({len(layers_out)} layer/submodule "
         f"cloud{'s' if len(layers_out) != 1 else ''}) to {out_path}"
@@ -1280,12 +1459,15 @@ def run_causal(args: argparse.Namespace) -> int:
     from llm_token_heatmap.analysis.causal_grid import compute_causal_grid
     from llm_token_heatmap.tracing.runner import _load_model_and_tokenizer
 
-    trace_path: Path = args.trace
+    trace_path: Path = _resolve_trace_path(args.trace)
     if not trace_path.is_file():
-        print(f"error: trace file not found: {trace_path}", file=sys.stderr)
+        print(
+            f"error: trace file not found: {args.trace} (nor its .json/.json.gz twin)",
+            file=sys.stderr,
+        )
         return 2
 
-    payload = json.loads(trace_path.read_text(encoding="utf-8"))
+    payload = _read_trace_json(trace_path)
     tokens = payload.get("tokens") or {}
     if not payload.get("steps") or not tokens.get("prompt_token_ids"):
         print(
@@ -1319,7 +1501,13 @@ def run_causal(args: argparse.Namespace) -> int:
     )
     payload["causal_grid"] = grid
     out_path: Path = args.out or trace_path
-    out_path.write_text(_dump_trace_json(payload), encoding="utf-8")
+    out_path = _write_trace_json(
+        payload,
+        out_path,
+        # Mirror the input encoding: an in-place augmentation must not
+        # rename the caller's file out from under them.
+        compress=str(trace_path).endswith(".gz") and not args.no_compress,
+    )
     print(
         f"[causal] wrote causal_grid ({len(grid['steps'])} tokens × "
         f"{grid['num_layers']} layers) -> {out_path}"
@@ -1334,12 +1522,15 @@ def run_tuned_lens(args: argparse.Namespace) -> int:
     from llm_token_heatmap.probes.tuned_lens import compute_tuned_lens
     from llm_token_heatmap.tracing.runner import _load_model_and_tokenizer
 
-    trace_path: Path = args.trace
+    trace_path: Path = _resolve_trace_path(args.trace)
     if not trace_path.is_file():
-        print(f"error: trace file not found: {trace_path}", file=sys.stderr)
+        print(
+            f"error: trace file not found: {args.trace} (nor its .json/.json.gz twin)",
+            file=sys.stderr,
+        )
         return 2
 
-    payload = json.loads(trace_path.read_text(encoding="utf-8"))
+    payload = _read_trace_json(trace_path)
     tokens = payload.get("tokens") or {}
     if not payload.get("steps") or not tokens.get("prompt_token_ids"):
         print(
@@ -1363,7 +1554,13 @@ def run_tuned_lens(args: argparse.Namespace) -> int:
     tuned = compute_tuned_lens(model, tokenizer, payload, ridge=args.ridge)
     payload["tuned_logit_lens"] = tuned
     out_path: Path = args.out or trace_path
-    out_path.write_text(_dump_trace_json(payload), encoding="utf-8")
+    out_path = _write_trace_json(
+        payload,
+        out_path,
+        # Mirror the input encoding: an in-place augmentation must not
+        # rename the caller's file out from under them.
+        compress=str(trace_path).endswith(".gz") and not args.no_compress,
+    )
     print(
         f"[tuned-lens] wrote tuned_logit_lens ({len(tuned['steps'])} tokens × "
         f"{tuned['num_layers']} layers) -> {out_path}"

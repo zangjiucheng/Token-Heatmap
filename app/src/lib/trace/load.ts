@@ -14,9 +14,74 @@ function parseJson(text: string): unknown {
   }
 }
 
-/** Read, parse, and validate a user-dropped local JSON file. */
+/**
+ * True when the dropped file is a gzipped trace. The CLI writes
+ * `adaptive_token_trace.json.gz` by default — a 2048-step run is 197 MB of JSON
+ * and 34 MB gzipped — so the viewer has to accept both encodings. Sniffing the
+ * two-byte DEFLATE magic (0x1f 0x8b) rather than trusting the filename means a
+ * renamed or extension-less file still opens.
+ */
+async function isGzip(file: File): Promise<boolean> {
+  const slice = file.slice(0, 2);
+  // Not every Blob implementation exposes arrayBuffer() on a slice (jsdom does
+  // not). Fall back to the extension there rather than throwing.
+  if (typeof slice.arrayBuffer !== 'function') {
+    return /\.gz$/i.test(file.name);
+  }
+  const head = new Uint8Array(await slice.arrayBuffer());
+  return head.length === 2 && head[0] === 0x1f && head[1] === 0x8b;
+}
+
+/**
+ * Whole-file bytes. Blob.arrayBuffer() is the fast path; FileReader is the
+ * fallback for environments whose Blob lacks it (jsdom, so the tests below
+ * exercise the real decode path rather than a stub).
+ */
+function fileBytes(file: File): Promise<Uint8Array<ArrayBuffer>> {
+  if (typeof file.arrayBuffer === 'function') {
+    return file.arrayBuffer().then((b) => new Uint8Array(b));
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function gunzipToText(file: File): Promise<string> {
+  if (typeof DecompressionStream === 'undefined') {
+    throw TraceLoadError.parse(
+      'This trace is gzipped, but this browser has no DecompressionStream. ' +
+        'Re-run the trace with --no-compress, or open it in the desktop app.',
+    );
+  }
+  try {
+    const bytes = await fileBytes(file);
+    // Feed a stream we construct ourselves rather than file.stream(): the
+    // latter is missing on some Blob implementations, and we need the whole
+    // payload in memory to JSON.parse it regardless.
+    const source = new ReadableStream<BufferSource>({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    });
+    return await new Response(
+      source.pipeThrough(new DecompressionStream('gzip')),
+    ).text();
+  } catch (cause) {
+    if (cause instanceof TraceLoadError) throw cause;
+    throw TraceLoadError.parse(
+      'Could not decompress this .gz trace — the file may be truncated.',
+      cause,
+    );
+  }
+}
+
+/** Read, parse, and validate a user-dropped local trace (.json or .json.gz). */
 export async function loadTraceFromFile(file: File): Promise<Trace> {
-  const text = await file.text();
+  const text = (await isGzip(file)) ? await gunzipToText(file) : await file.text();
   const data = parseJson(text);
   return validateTrace(data);
 }

@@ -1,0 +1,76 @@
+# N-Queens verification — the NEGATIVE half of the minimal pair.
+# Positive half: `nqueens-verify.yaml`. Read that one first.
+#
+# Same board as nqueens-verify, with rows 3 and 4 swapping columns:
+#     row 1 -> col 2      . Q . .
+#     row 2 -> col 4      . . . Q     <-- these two queens are
+#     row 3 -> col 3      . . Q .     <-- adjacent on the / diagonal
+#     row 4 -> col 1      Q . . .
+#   columns  {2,4,3,1}    all distinct  -> no column conflict
+#   row-col  {-1,-2,0,3}  all distinct  -> no  \  diagonal conflict
+#   row+col  {3,6,6,5}    6 TWICE       -> ONE  /  diagonal conflict
+#   => INVALID, and invalid for exactly one reason.
+#
+# This is the point of the pair. The columns are still a permutation of
+# {1,2,3,4}, so every "one queen per row / per column" check still passes — the
+# board can only be rejected by a model that actually computes row+col. A model
+# that has learned "distinct columns => valid" answers Yes here and is wrong, and
+# the trace shows you that failure as a shape, not just a wrong string.
+#
+# The two prompts differ ONLY in the two digit tokens after "row 3 -> column" and
+# "row 4 -> column" (a 1/3 swap). Same token count, same positions, so:
+#
+#   token-heatmap diff \
+#     --trace-a outputs/nqueens-verify/adaptive_token_trace.json \
+#     --trace-b outputs/nqueens-conflict/adaptive_token_trace.json
+#
+# gives a per-(layer, position) delta in which almost everything cancels and what
+# survives is the diagonal computation itself.
+#
+# What to look for:
+#   - Does the answer token actually flip Yes -> No? If not, the model has no
+#     diagonal check and the rest of the analysis is about a circuit that isn't there.
+#   - Logit Lens: the depth at which "No" overtakes "Yes" should be LATER than the
+#     "Yes" resolution in the valid run — a rejection needs the constraint computed,
+#     an acceptance can be the default.
+#   - Diff: which layers light up. A localized mid-depth bump is a diagonal-check
+#     circuit; a smear across all layers means it is distributed (or absent).
+#
+# Reproduce (HPC):  token-heatmap hpc run configs/nqueens-conflict.yaml --gpu l40s
+#
+# IMPORTANT: keep model / max_new_tokens / temperature / capture flags byte-identical
+# to nqueens-verify.yaml. The diff is only meaningful between matched runs.
+
+model: Qwen/Qwen2.5-7B-Instruct
+use_chat_template: true
+
+prompt: |
+  A 4-queens placement puts exactly one queen in each row of a 4x4 board.
+  It is valid only if no two queens share a column, and no two queens share a diagonal.
+
+  Placement: row 1 -> column 2, row 2 -> column 4, row 3 -> column 3, row 4 -> column 1.
+
+  Is this placement valid? Reply with exactly one word: Yes or No.
+  Answer:
+
+max_new_tokens: 8
+
+temperature: 0.1
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/nqueens-conflict
+
+capture_logit_lens: true
+lens_layers: all
+lens_top_k: 8
+
+capture_attention: true
+capture_full_attention: true
+attention_layers: all
+
+capture_activations: true
+capture_full_activations: true
+activation_top_k: 8

@@ -1,0 +1,110 @@
+# N-Queens *solving* with a reasoning model — tracing a search, not an answer.
+#
+# The companion to nqueens-verify.yaml. That config studies one decision token;
+# this one studies the several-hundred-token chain of thought a reasoning model
+# emits while searching. Different question, and it needs different capture flags.
+#
+# Model: Qwen3-4B-Thinking-2507 is thinking-ONLY — its chat template has no
+# enable_thinking switch and `add_generation_prompt=True` appends
+# "<|im_start|>assistant\n<think>\n". So with use_chat_template below, step 0 of
+# the trace is already the first token INSIDE the think block. Without that flag
+# you get a raw completion and no reasoning mode at all, which is why the flag is
+# not optional here.
+#
+# ---------------------------------------------------------------------------
+# WHY capture_attention IS OFF — read before turning it back on
+# ---------------------------------------------------------------------------
+# Measured on outputs/reasoning (Qwen2.5-14B, 150 steps), per-step JSON bytes:
+#     attention   428 KB   (79% of the step)
+#     logit_lens   50 KB
+#     activations  61 KB
+# and the attention row grows with sequence position, so the cost over a run is
+# quadratic in the number of steps, not linear. A 150-step trace was already
+# 167 MB of JSON; a 1024-step chain of thought with attention on lands in the
+# multi-GB range and the file-based viewer will not open it.
+# With attention off, MEASURED on this config at 1024 steps (job 6026): 104 MB of
+# JSON plus the .npz activation sidecars — large, but it loads, and the sidecars
+# stay on the HPC until you need them. At the 2048 below, budget ~200 MB.
+# If you want per-head attention on a reasoning trace, do it on the SHORT
+# verification config instead, where it costs nothing.
+# ---------------------------------------------------------------------------
+#
+# What to look for:
+#   - Entropy timeline (generation spine): search is not uniform. Expect entropy
+#     spikes exactly where the model hits a dead end and backtracks ("wait", "no,
+#     that conflicts"), and low-entropy stretches while it writes out a committed
+#     partial solution. This is the clearest readout the toolkit gives on CoT.
+#   - Manifold: run the manifold pass afterwards. A backtracking search should
+#     RETURN NEAR A PREVIOUS POINT in activation space when it abandons a branch
+#     and restarts from an earlier partial board — a trajectory that loops rather
+#     than drifts. Compare against cyclic-days.yaml, where the loop is imposed by
+#     the token sequence rather than by a search.
+#   - Prediction-convergence curve: does the model resolve the next token earlier
+#     in depth during rote stretches than at decision points?
+#
+# CAVEAT worth keeping in front of you: the think block is text the model emits,
+# not a transcript of its computation. Entropy spiking at a token that reads like
+# backtracking tells you the next-token distribution widened there — it does not
+# prove an internal search backtracked. See docs/interpreting.md on
+# decodability != causality; the causal pass is what upgrades a correlation here
+# into a claim.
+#
+# Reproduce (HPC — this is not a laptop run):
+#   token-heatmap hpc run configs/nqueens-solve.yaml --gpu l40s
+# then, on the trace:
+#   token-heatmap manifold --trace outputs/nqueens-solve/adaptive_token_trace.json --components 6
+
+model: Qwen/Qwen3-4B-Thinking-2507
+use_chat_template: true
+
+# 6 queens, not 8: big enough that the model must genuinely backtrack (6x6 has
+# only 4 solutions), small enough that the chain of thought usually finishes
+# inside the token budget. 4 queens is often answered from memory — no search to
+# watch. 8 queens routinely blows past 2048 tokens.
+prompt: |
+  Place 6 queens on a 6x6 chessboard so that no two queens attack each other:
+  no two in the same row, no two in the same column, and no two on the same diagonal.
+
+  Work through it and give the final answer as one column number per row,
+  in the form: row 1 -> column _, row 2 -> column _, ... row 6 -> column _.
+
+# Reasoning models are verbose, and a hard search needs room. Measured on this
+# model and prompt:
+#   1024 (job 6026) — truncated mid-think, 104 MB of JSON
+#   2048 (job 6027) — still truncated, mid-verification of row 5, 207 MB
+# so 4096. Costs, all measured or derived from those runs:
+#   trace JSON  ~400 MB raw, ~70 MB gzipped (the file you actually move around)
+#   .npz sidecars ~2.4 GB, and they stay on the HPC
+#   manifold    the TwoNN pass is O(T^2 . d); it took 8:13 at 2048, and is capped
+#               at max_points=4096 rows so it cannot run away past this budget
+# Raise further if the search still truncates — nothing here breaks, it just
+# grows. The entropy and manifold read-outs do not need the final answer, so a
+# truncated search is still a usable trace.
+max_new_tokens: 4096
+
+# Qwen's own recommended sampling for the Thinking models — greedy decoding is
+# documented to cause repetition loops in thinking mode, which would give you a
+# degenerate trace rather than a search.
+temperature: 0.6
+top_p: 0.95
+min_k: 8
+max_k: 64
+mass_threshold: 0.95
+
+out: outputs/nqueens-solve
+
+# Depth-resolved decode at every step: the convergence curve and the decision map.
+# ~37 KB/step at 36 layers — ~150 MB across 4096 steps, ~25 MB gzipped.
+capture_logit_lens: true
+lens_layers: all
+lens_top_k: 8
+
+# OFF — see the sizing note above. This is the single most important flag here.
+capture_attention: false
+capture_full_attention: false
+
+# On: full activations feed the manifold pass, which is the lens that actually
+# has something to say about a long search trajectory.
+capture_activations: true
+capture_full_activations: true
+activation_top_k: 8

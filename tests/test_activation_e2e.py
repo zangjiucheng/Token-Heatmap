@@ -22,6 +22,11 @@ network-free. Three flows are covered:
 from __future__ import annotations
 
 import json
+
+from llm_token_heatmap.serialize.trace_payload import (
+    read_trace_json,
+    resolve_trace_path,
+)
 import os
 import subprocess
 import sys
@@ -479,13 +484,18 @@ def test_e2e_activation_capture_and_diff_via_cli(tmp_path: Path) -> None:
         cwd=REPO_ROOT,
     )
 
+    # `trace` gzips by default, so the artifact on disk is .json.gz. The plain
+    # name must still resolve to it — every downstream reader relies on that, so
+    # an existing `--trace .../adaptive_token_trace.json` keeps working.
     json_a_path = out_a / "adaptive_token_trace.json"
     json_b_path = out_b / "adaptive_token_trace.json"
-    assert json_a_path.exists()
-    assert json_b_path.exists()
+    assert (out_a / "adaptive_token_trace.json.gz").exists()
+    assert (out_b / "adaptive_token_trace.json.gz").exists()
+    assert not json_a_path.exists()
+    assert resolve_trace_path(json_a_path) == out_a / "adaptive_token_trace.json.gz"
 
-    payload_a = json.loads(json_a_path.read_text(encoding="utf-8"))
-    payload_b = json.loads(json_b_path.read_text(encoding="utf-8"))
+    payload_a = read_trace_json(json_a_path)
+    payload_b = read_trace_json(json_b_path)
     assert payload_a.get("schema_version") == SCHEMA_VERSION
     assert "activation_metadata" in payload_a
     assert "activation_metadata" in payload_b

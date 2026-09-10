@@ -20,6 +20,9 @@ Any key can be overridden on the CLI (`--model`, `--prompt`, `--max-new-tokens`,
 | `multihop.yaml` | Two-hop factual recall | 7B (GPU) | "capital of the state containing Dallas" → Dallas → Texas → Austin; Logit Lens shows "Texas" peak mid-depth before "Austin". Attribution-graph case study. |
 | `attention-demo.yaml` | Attention patterns | 0.5B | Few-shot table completion (capitals); readable per-head attention in the Attention lens. |
 | `reasoning.yaml` | Multi-step reasoning | 14B (GPU) | Algebra word problem; Logit Lens evolution + DLA on the answer tokens. |
+| `nqueens-verify.yaml` | Constraint check (valid) | 7B (GPU) | 4-queens board that *is* valid → one-token "Yes". Positive half of a minimal pair. |
+| `nqueens-conflict.yaml` | Constraint check (invalid) | 7B (GPU) | Same board, rows 3/4 swapped: columns still distinct, fails on **one** diagonal → "No". Diff against `nqueens-verify` to isolate the diagonal computation. |
+| `nqueens-solve.yaml` | Reasoning-model CoT | 4B thinking (GPU) | Qwen3-4B-Thinking solves 6-queens; entropy spikes at backtracks + manifold geometry of a search. Attention capture off by design. |
 | `wrap-text.yaml` | Manifold / helix (linear) | 7B–32B (GPU) | Fixed-width line-wrapping — the "When Models Manipulate Manifolds" counting-helix test. See `docs/manifold-reproduction.md`. |
 | `cyclic-days.yaml` | Manifold / ring (cyclic) | 7B (GPU) | Weekday cycle — does the day feature live on a *ring*? Manifold periodicity + a looping (not drifting) scatter. |
 
@@ -33,6 +36,22 @@ Any key can be overridden on the CLI (`--model`, `--prompt`, `--max-new-tokens`,
   `wrap-text`, `cyclic-days`) are meant for `token-heatmap hpc run` (or a local big
   GPU). The geometry runs (`wrap-text`, `cyclic-days`) deliberately capture
   activations only — no logit lens.
+- **Reasoning models need `use_chat_template: true`.** A Qwen3-Thinking or
+  DeepSeek-R1-Distill only enters its `<think>` mode when it sees the chat
+  template's assistant header — `Qwen3-4B-Thinking-2507` has no `enable_thinking`
+  switch at all, its template just appends `<|im_start|>assistant\n<think>\n`.
+  Without the flag you get a raw completion and no reasoning. Applies to the
+  `nqueens-*` configs; the older configs above predate the flag and run raw.
+- **Long chains of thought: turn `capture_attention` off.** Measured on
+  `outputs/reasoning` (14B, 150 steps), attention was 428 KB of the 542 KB
+  per-step JSON — 79% — and the per-step cost grows with sequence position, so
+  it is quadratic over a run. A 1024-token CoT with attention on will not open in
+  the viewer. Capture attention on short prompts (`nqueens-verify`), not on CoT.
+- **Minimal pairs beat single runs.** `nqueens-verify` / `nqueens-conflict`
+  differ by two digit tokens and are identical in everything else, so
+  `token-heatmap diff` cancels the shared computation and leaves the constraint
+  being tested. Same trick as `recall-probe`, applied to a decision instead of a
+  recall.
 - **Per-head circuits stay crisp on small models** — see the scaling caveat in
   [`docs/interpreting.md`](../docs/interpreting.md). That's why the crispest circuit
   demos (`induction`, `ioi`, `recall-probe`) use Qwen2.5-0.5B. `successor`,

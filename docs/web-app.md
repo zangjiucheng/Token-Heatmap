@@ -112,20 +112,12 @@ cd app && npm run dev          # http://localhost:5173
 # then drag outputs/<name>/adaptive_token_trace.json onto the page
 ```
 
-### Hosting the viewer without Node.js
+### Viewing without Node.js
 
-The viewer is a static SPA, so you can build it once (on any machine with
-Node.js) and serve the resulting `dist/` from any static file server — no Node.js
-ever needed on the host:
-
-```bash
-# On a machine with Node.js — build the static viewer
-token-heatmap web build
-
-# Serve dist/ with any static file server
-python -m http.server -d app/dist 8080
-# open http://localhost:8080/ and drag a trace JSON onto the page
-```
+Install the desktop app — it bundles the viewer, so the viewing machine needs
+neither Node.js nor a GPU. Download an installer from
+[Releases](https://github.com/zangjiucheng/Token-Heatmap/releases), or build one
+with `cd app && npm run build:app`.
 
 ## Architecture
 

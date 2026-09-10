@@ -47,18 +47,38 @@ Output directory:
 outputs/
 ├── generated.txt
 ├── adaptive_token_trace.csv
-├── adaptive_token_trace.json
-├── adaptive_heatmap.png
-├── entropy.png
-└── selected_probability.png
+├── adaptive_token_trace.json.gz
+└── entropy.png
 ```
+
+### Compression (`--no-compress`)
+
+The trace is gzipped by default. The payload is numeric arrays under highly
+repetitive keys, which DEFLATE removes almost entirely: a measured 2048-step
+chain-of-thought run went **197.5 MB → 34.6 MB (5.7x)** in 6 seconds.
+
+Every reader — `manifold`, `causal`, `tuned-lens`, `diff`, and the viewer —
+accepts either encoding, and the plain name resolves to the `.gz` file, so
+`--trace out/adaptive_token_trace.json` keeps working. Pass `--no-compress` when
+you want to read the raw JSON by eye. The derived sub-commands augment a trace
+**in place** and mirror whatever encoding they were handed, so they never rename
+your file.
+
+### Plots (`--plots {none,summary,all}`)
+
+Default `summary` writes one figure, `entropy.png` — the plot worth a glance
+before opening the trace, and one that stays ~40 KB regardless of length. `all`
+adds `adaptive_heatmap` / `selected_probability` / `logit_lens` /
+`selected_rank_heatmap` / `attention_layer_head_grid`; on a long run
+`adaptive_heatmap.png` alone reached 7.6 MB. `none` skips plotting — the trace
+file is the product.
 
 Run `token-heatmap trace --help` for the full flag list.
 
 ## Viewing the result
 
 `trace` only writes the bundle to disk. To explore it, drag
-`adaptive_token_trace.json` onto the web viewer (`cd app && npm run dev`),
+`adaptive_token_trace.json.gz` onto the viewer — it decompresses in the browser —
 or open it in the desktop app. See [`web-app.md`](web-app.md).
 
 ## Inspecting attention and the logit lens
@@ -245,18 +265,19 @@ Tuned** toggle on the Logit Lens tab's decision map and convergence curve.
 | `--out`     | _overwrite `--trace`_ | Write the augmented trace elsewhere instead of in place.   |
 | `--ridge`   | `1.0`                 | Ridge regularization strength for the affine probe fit.    |
 
-## Building the frontend (`web build`)
+## Building the viewer
 
-Run `npm install` + `npm run build` in `app` to produce a static
-`dist/`. The viewer is backend-free, so you can serve `dist/` from any static
-file server on a host with no Node.js.
+The viewer ships as the Tauri desktop app — that is the only supported build.
 
 ```bash
-token-heatmap web build                 # output: app/dist/
-# then serve it anywhere, e.g.:
-python -m http.server -d app/dist 8080
-# open http://localhost:8080/ and drag a trace JSON onto the page
+cd app && npm install
+npm run dev:app      # develop against a live-reloading window
+npm run build:app    # produce a native installer
 ```
+
+Grab a prebuilt installer from
+[Releases](https://github.com/zangjiucheng/Token-Heatmap/releases) instead if you
+just want to view traces. See [web-app.md](web-app.md#desktop-app-tauri).
 
 ## HPC: build the GPU venv (`hpc setup`)
 
