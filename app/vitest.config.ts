@@ -1,5 +1,7 @@
 import { defineConfig, mergeConfig } from 'vitest/config';
-import viteConfig from './vite.config';
+// Explicit extension: the native config loader resolves specifiers the way
+// Node does, and Node does not guess extensions.
+import viteConfig from './vite.config.ts';
 
 export default mergeConfig(
   viteConfig({ mode: 'test', command: 'serve' }),

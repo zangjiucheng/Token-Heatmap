@@ -4,6 +4,9 @@
     "lib": ["ES2022"],
     "module": "ESNext",
     "moduleResolution": "bundler",
+    // vitest.config.ts imports ./vite.config.ts with its extension, which the
+    // native config loader needs. Mirrors the root tsconfig.
+    "allowImportingTsExtensions": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
