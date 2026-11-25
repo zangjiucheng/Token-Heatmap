@@ -20,8 +20,8 @@ Any key can be overridden on the CLI (`--model`, `--prompt`, `--max-new-tokens`,
 | `multihop.yaml` | Two-hop factual recall | 7B (GPU) | "capital of the state containing Dallas" → Dallas → Texas → Austin; Logit Lens shows "Texas" peak mid-depth before "Austin". Attribution-graph case study. |
 | `attention-demo.yaml` | Attention patterns | 0.5B | Few-shot table completion (capitals); readable per-head attention in the Attention lens. |
 | `reasoning.yaml` | Multi-step reasoning | 14B (GPU) | Algebra word problem; Logit Lens evolution + DLA on the answer tokens. |
-| `nqueens-verify.yaml` | Constraint check (valid) | 7B (GPU) | 4-queens board that *is* valid → one-token "Yes". Positive half of a minimal pair. |
-| `nqueens-conflict.yaml` | Constraint check (invalid) | 7B (GPU) | Same board, rows 3/4 swapped: columns still distinct, fails on **one** diagonal → "No". Diff against `nqueens-verify` to isolate the diagonal computation. |
+| `nqueens-verify.yaml` | Constraint check (valid) | 7B (GPU) | 4-queens board that *is* valid. ~250 tokens of step-by-step checking, ending on an attributable "Answer: Yes". Positive half of a minimal pair. |
+| `nqueens-conflict.yaml` | Constraint check (invalid) | 7B (GPU) | Same board, rows 3/4 swapped: columns still distinct, fails on **one** diagonal. Does the reasoning actually reach that pair? |
 | `nqueens-solve.yaml` | Reasoning-model CoT | 4B thinking (GPU) | Qwen3-4B-Thinking solves 6-queens; entropy spikes at backtracks + manifold geometry of a search. Attention capture off by design. |
 | `wrap-text.yaml` | Manifold / helix (linear) | 7B–32B (GPU) | Fixed-width line-wrapping — the "When Models Manipulate Manifolds" counting-helix test. See `docs/manifold-reproduction.md`. |
 | `cyclic-days.yaml` | Manifold / ring (cyclic) | 7B (GPU) | Weekday cycle — does the day feature live on a *ring*? Manifold periodicity + a looping (not drifting) scatter. |

@@ -1,5 +1,6 @@
 import type { Trace } from '@/types/trace';
 import { TraceLoadError } from './errors';
+import type { GunzipResponse } from './gunzip.worker';
 import { validateTrace } from './validate';
 
 function parseJson(text: string): unknown {
@@ -49,6 +50,45 @@ function fileBytes(file: File): Promise<Uint8Array<ArrayBuffer>> {
   });
 }
 
+/**
+ * Decompress in a worker so the main thread keeps painting. Only the raw bytes
+ * cross the boundary, and they cross as a transferable (zero copy) — see
+ * gunzip.worker.ts for the measurements that forced this shape. Resolves to
+ * null when a worker cannot be used, so the caller falls back to inline.
+ */
+function gunzipInWorker(bytes: Uint8Array<ArrayBuffer>): Promise<string | null> {
+  if (typeof Worker === 'undefined') return Promise.resolve(null);
+  let worker: Worker;
+  try {
+    worker = new Worker(new URL('./gunzip.worker.ts', import.meta.url), {
+      type: 'module',
+    });
+  } catch {
+    return Promise.resolve(null);
+  }
+  return new Promise((resolve) => {
+    worker.onmessage = (event: MessageEvent<GunzipResponse>) => {
+      worker.terminate();
+      const data = event.data;
+      resolve(data.ok ? new TextDecoder().decode(data.buffer) : null);
+    };
+    // A worker that fails to boot (bundler quirk, CSP) must not wedge the load;
+    // fall back rather than hang.
+    const fallBack = () => {
+      worker.terminate();
+      resolve(null);
+    };
+    worker.onerror = fallBack;
+    worker.onmessageerror = fallBack;
+    const buffer = bytes.buffer;
+    try {
+      worker.postMessage({ buffer }, [buffer]);
+    } catch {
+      fallBack();
+    }
+  });
+}
+
 async function gunzipToText(file: File): Promise<string> {
   if (typeof DecompressionStream === 'undefined') {
     throw TraceLoadError.parse(
@@ -58,12 +98,20 @@ async function gunzipToText(file: File): Promise<string> {
   }
   try {
     const bytes = await fileBytes(file);
-    // Feed a stream we construct ourselves rather than file.stream(): the
-    // latter is missing on some Blob implementations, and we need the whole
-    // payload in memory to JSON.parse it regardless.
+
+    const offThread = await gunzipInWorker(bytes);
+    if (offThread !== null) return offThread;
+
+    // A successful transfer detaches the original buffer even if the worker
+    // fails afterward. Read the file again before trying inline decompression.
+    const fallbackBytes = bytes.byteLength === 0 ? await fileBytes(file) : bytes;
+    // Fallback: same work, on this thread. Feed a stream we construct ourselves
+    // rather than file.stream() — the latter is missing on some Blob
+    // implementations, and we need the whole payload in memory to JSON.parse it
+    // regardless.
     const source = new ReadableStream<BufferSource>({
       start(controller) {
-        controller.enqueue(bytes);
+        controller.enqueue(fallbackBytes);
         controller.close();
       },
     });

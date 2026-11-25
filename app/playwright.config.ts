@@ -58,7 +58,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
+    // --host 127.0.0.1 is required, not cosmetic: `vite preview` otherwise binds
+    // IPv6-only ([::1]) on machines where localhost resolves to ::1 first, while
+    // BASE_URL above probes 127.0.0.1 — so the readiness check never succeeds and
+    // the whole suite dies with "Timed out waiting 180000ms from config.webServer".
+    command: `npm run build && npm run preview -- --port ${PORT} --strictPort --host 127.0.0.1`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

@@ -155,6 +155,11 @@ export function TokenHeatmap({
 }: TokenHeatmapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  // Horizontal scroll offset, mirrored into state so the windowed canvases can
+  // re-place and repaint themselves. rAF-coalesced: a scroll fires far more
+  // often than we need to repaint.
+  const [scrollX, setScrollX] = useState(0);
+  const scrollRaf = useRef<number | null>(null);
   const axisCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const dataCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -302,12 +307,18 @@ export function TokenHeatmap({
 
     const dpr =
       typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-    const w = plot.contentW;
+    // WINDOWED: the canvas covers the visible viewport, not the full grid.
+    // Sizing it to the grid meant 4096 steps x 16px = 65536 px, which is past
+    // the browser's maximum canvas side (65535) — the canvas then allocates but
+    // silently draws nothing, so the heatmap came up blank. It also allocated
+    // ~53 MB per canvas per dpr^2, which is what made it crawl.
+    const w = Math.min(plot.scrollW, plot.contentW);
     const h = plot.plotH;
     canvas.width = Math.max(1, Math.floor(w * dpr));
     canvas.height = Math.max(1, Math.floor(h * dpr));
     canvas.style.width = `${w}px`;
     canvas.style.height = `${h}px`;
+    canvas.style.left = `${scrollX}px`;
 
     const start =
       typeof performance !== 'undefined' &&
@@ -358,7 +369,7 @@ export function TokenHeatmap({
 
     for (let step = stepStart; step <= stepEnd; step += 1) {
       const col = step - stepStart;
-      const x = col * cellW;
+      const x = col * cellW - scrollX;
       if (x + cellW < 0) continue;
       if (x > w) break;
 
@@ -420,6 +431,7 @@ export function TokenHeatmap({
   }, [
     grid,
     plot,
+    scrollX,
     stepStart,
     stepEnd,
     visibleStepCount,
@@ -484,12 +496,14 @@ export function TokenHeatmap({
 
     const dpr =
       typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-    const w = plot.contentW;
+    // Windowed to match the data canvas — see the note there.
+    const w = Math.min(plot.scrollW, plot.contentW);
     const h = plot.plotH;
     canvas.width = Math.max(1, Math.floor(w * dpr));
     canvas.height = Math.max(1, Math.floor(h * dpr));
     canvas.style.width = `${w}px`;
     canvas.style.height = `${h}px`;
+    canvas.style.left = `${scrollX}px`;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
@@ -509,7 +523,7 @@ export function TokenHeatmap({
       externalHoveredStep !== selectedStep
     ) {
       const col = externalHoveredStep - stepStart;
-      const x = col * plot.cellW;
+      const x = col * plot.cellW - scrollX;
       ctx.fillStyle = 'rgba(213, 94, 0, 0.12)';
       ctx.fillRect(x, 0, plot.cellW, plot.cellAreaH);
       ctx.strokeStyle = '#d55e00';
@@ -525,7 +539,7 @@ export function TokenHeatmap({
       selectedStep <= stepEnd
     ) {
       const col = selectedStep - stepStart;
-      const x = col * plot.cellW;
+      const x = col * plot.cellW - scrollX;
       ctx.fillStyle = 'rgba(0, 114, 178, 0.18)';
       ctx.fillRect(x, 0, plot.cellW, plot.cellAreaH);
       ctx.strokeStyle = 'rgb(0, 114, 178)';
@@ -535,7 +549,7 @@ export function TokenHeatmap({
 
     if (hover && !tooltipDismissed) {
       const col = hover.cell.step - stepStart;
-      const hx = col * plot.cellW;
+      const hx = col * plot.cellW - scrollX;
       const hy = plot.originY + hover.cell.rank * plot.cellH;
       // Theme text colour so the hover outline stays visible on warm-charcoal
       // dark mode (a hardcoded near-black vanished against the dark surface).
@@ -553,18 +567,19 @@ export function TokenHeatmap({
     stepStart,
     stepEnd,
     plot,
+    scrollX,
     tk.text,
   ]);
 
-  // Translate a pointer event into a grid cell. Hit-testing uses the data
-  // canvas's bounding rect, which moves with horizontal scroll, so the
-  // scroll offset is already baked into `clientX - canvasRect.left`.
+  // Translate a pointer event into a grid cell. The data canvas is windowed to
+  // the viewport and re-placed at the scroll offset, so `clientX - rect.left`
+  // is viewport-relative and the offset has to be added back.
   const cellAtPointer = useCallback(
     (clientX: number, clientY: number): CellDescriptor | null => {
       const canvas = dataCanvasRef.current;
       if (!canvas) return null;
       const rect = canvas.getBoundingClientRect();
-      const x = clientX - rect.left;
+      const x = clientX - rect.left + scrollX;
       const y = clientY - rect.top;
       if (x < 0 || x > plot.contentW) return null;
       if (y < 0 || y > plot.cellAreaH) return null;
@@ -576,7 +591,7 @@ export function TokenHeatmap({
       if (step < stepStart || step > stepEnd) return null;
       return { step, rank };
     },
-    [grid.ranks, plot, stepStart, stepEnd, visibleStepCount],
+    [grid.ranks, plot, scrollX, stepStart, stepEnd, visibleStepCount],
   );
 
   const tooltipDatum = useMemo<HeatmapTooltipDatum | null>(() => {
@@ -596,9 +611,23 @@ export function TokenHeatmap({
     };
   }, [hover, tooltipDismissed, grid]);
 
+  useEffect(() => {
+    return () => {
+      if (scrollRaf.current != null) cancelAnimationFrame(scrollRaf.current);
+    };
+  }, []);
+
   const handleScroll = useCallback(
     (event: ReactUIEvent<HTMLDivElement>) => {
-      onScrollChange?.(event.currentTarget.scrollLeft);
+      const left = event.currentTarget.scrollLeft;
+      onScrollChange?.(left);
+      // Coalesce to one repaint per frame: scroll fires far more often than
+      // the windowed canvases need to be re-placed.
+      if (scrollRaf.current != null) return;
+      scrollRaf.current = requestAnimationFrame(() => {
+        scrollRaf.current = null;
+        setScrollX(scrollRef.current?.scrollLeft ?? left);
+      });
     },
     [onScrollChange],
   );

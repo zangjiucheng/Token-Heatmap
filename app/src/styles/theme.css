@@ -41,6 +41,17 @@
   --space-5: 24px;
   --space-6: 32px;
 
+  /* Control heights. Interactive chrome had drifted to nine different heights
+     (23/24/26/27/30/31/32/35/36px), which reads as untidy wherever two controls
+     sit side by side. Three tiers instead:
+       sm  dense, in-content controls that sit inline with data
+       md  standard chrome — toggles, icon buttons, selects, inputs
+       lg  navigation and primary actions
+     Use these rather than an ad-hoc padding that happens to land near them. */
+  --control-h-sm: 24px;
+  --control-h-md: 32px;
+  --control-h-lg: 36px;
+
   /* Radii — modest; an instrument, not a pill-shaped SaaS card. */
   --radius-xs: 3px;
   --radius-sm: 5px;

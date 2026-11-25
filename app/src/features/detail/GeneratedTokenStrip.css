@@ -14,6 +14,7 @@
 }
 
 .generated-token-strip__token {
+  min-height: var(--control-h-sm);
   flex: 0 0 auto;
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: 12px;

@@ -149,7 +149,7 @@ export function ActivationHeatmap({
       data-selected-step={selectedStep ?? ''}
       data-hovered-step={hoveredStep ?? ''}
     >
-      <div className="viz-frame">
+      <div className="activation-heatmap__plot">
         <svg
           role="img"
           aria-label={`Layer by step activation heatmap, colored by ${ACTIVATION_METRIC_LABELS[metric]} for submodule ${submodule}`}

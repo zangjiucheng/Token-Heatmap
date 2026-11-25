@@ -21,15 +21,29 @@
 # "row 4 -> column" (a 1/3 swap). Same token count, same positions, so:
 #
 #   token-heatmap diff \
-#     --trace-a outputs/nqueens-verify/adaptive_token_trace.json \
-#     --trace-b outputs/nqueens-conflict/adaptive_token_trace.json
+#     outputs/nqueens-verify/adaptive_token_trace.json \
+#     outputs/nqueens-conflict/adaptive_token_trace.json \
+#     --out outputs/nqueens-diff --metric cosine --allow-prompt-mismatch
 #
 # gives a per-(layer, position) delta in which almost everything cancels and what
 # survives is the diagonal computation itself.
 #
+# NOTE since these runs became reasoning traces: the PROMPTS still differ by only
+# two tokens at fixed positions, which is what --allow-prompt-mismatch checks. The
+# GENERATIONS, however, are two different arguments and diverge after the first
+# few tokens, so the diff's step alignment (by token id) will report mismatches
+# once the wordings part company. The early aligned steps are the meaningful part;
+# for a strictly position-aligned comparison, use the 8-token variant instead —
+# set max_new_tokens: 8 in both files and end the prompt at "Answer:".
+#
 # What to look for:
-#   - Does the answer token actually flip Yes -> No? If not, the model has no
-#     diagonal check and the rest of the analysis is about a circuit that isn't there.
+#   - Read generated.txt. Does the argument reach the conflicting pair at all —
+#     (2,4) and (3,3), which share row+col = 6 — or does it check columns, declare
+#     victory, and never do the diagonal arithmetic? That text is the clearest
+#     evidence of whether a diagonal check exists.
+#   - Does the verdict actually flip Yes -> No versus the valid run? If not, the
+#     model has no diagonal check and the rest is analysis of a circuit that
+#     isn't there.
 #   - Logit Lens: the depth at which "No" overtakes "Yes" should be LATER than the
 #     "Yes" resolution in the valid run — a rejection needs the constraint computed,
 #     an acceptance can be the default.
@@ -50,10 +64,19 @@ prompt: |
 
   Placement: row 1 -> column 2, row 2 -> column 4, row 3 -> column 3, row 4 -> column 1.
 
-  Is this placement valid? Reply with exactly one word: Yes or No.
-  Answer:
+  Work through it step by step:
+  1. List the four (row, column) pairs.
+  2. Check the columns are all distinct.
+  3. For every pair of queens, compare row-column and row+column — a match on
+     either means those two share a diagonal.
+  Then end your reply with a final line of exactly "Answer: Yes" or "Answer: No".
 
-max_new_tokens: 8
+# Length: enough to watch the model reason, short enough that full capture stays
+# cheap and the trace stays readable. The earlier 8-token version answered in a
+# single word — crisp for attribution, but there was no reasoning to observe,
+# which is the point of this config. ~250 tokens covers listing four queens and
+# checking six pairs.
+max_new_tokens: 320
 
 temperature: 0.1
 top_p: 0.95

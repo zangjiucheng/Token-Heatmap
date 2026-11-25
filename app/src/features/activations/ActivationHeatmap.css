@@ -45,3 +45,26 @@
   font-size: 0.8rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
+
+/* Render the grid at its intrinsic, readable size and scroll horizontally when
+   there are many steps, rather than scaling the whole thing down to fit the
+   pane width. .viz-frame does the latter, and on a long trace that crushed a
+   36-layer grid to ~34px tall inside a 529px pane — unreadable. The logit-lens
+   decision map already avoids .viz-frame for exactly this reason; this mirrors
+   it, so both layer x step grids behave the same way. */
+.activation-heatmap__plot {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  max-width: 100%;
+}
+
+/* Intrinsic width from the viewBox; fill the pane's height so the cells are as
+   tall as the space allows. */
+.activation-heatmap__plot > svg {
+  display: block;
+  width: auto;
+  height: 100%;
+  min-height: 240px;
+}

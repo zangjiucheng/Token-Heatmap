@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import sampleTrace from '@/lib/sample/trace.json';
 import { loadSampleTrace, loadTraceFromFile } from './load';
@@ -31,6 +31,37 @@ describe('loadTraceFromFile', () => {
     });
     const trace = await loadTraceFromFile(file);
     expect(trace.steps).toHaveLength(5);
+  });
+
+  it('reloads the compressed bytes if the worker fails after transfer', async () => {
+    const { gzipSync } = await import('node:zlib');
+    const file = new File(
+      [new Uint8Array(gzipSync(sampleJson()))],
+      'trace.json.gz',
+    );
+    const transfer = vi.fn((buffer: ArrayBuffer) => {
+      // Transfer ownership using Node's implementation on the jsdom test runner.
+      structuredClone(buffer, { transfer: [buffer] });
+      return buffer.byteLength;
+    });
+    class FailingWorker {
+      onerror?: () => void;
+      postMessage({ buffer }: { buffer: ArrayBuffer }) {
+        transfer(buffer);
+        queueMicrotask(() => this.onerror?.());
+      }
+      terminate() {}
+    }
+
+    vi.stubGlobal('Worker', FailingWorker);
+    try {
+      const trace = await loadTraceFromFile(file);
+      expect(transfer).toHaveBeenCalledOnce();
+      expect(transfer).toHaveReturnedWith(0);
+      expect(trace.steps).toHaveLength(5);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('rejects malformed JSON with kind=parse', async () => {

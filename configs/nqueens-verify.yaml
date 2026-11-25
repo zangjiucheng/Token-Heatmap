@@ -1,10 +1,15 @@
-# N-Queens *verification* — a constraint-satisfaction decision in one token.
+# N-Queens *verification* — watch a model reason, then commit to a verdict.
 #
-# Why verification and not "solve it": solving N-Queens makes a model emit
-# hundreds of chain-of-thought tokens, and every lens here is per-token — the
-# answer smears across the trace and nothing lines up. Verification collapses the
-# whole problem onto a SINGLE decision token after "Answer:", which is exactly
-# the shape the Logit Lens and Direct Logit Attribution are built to read.
+# Why verification and not "solve it": solving N-Queens sends a model off for
+# thousands of chain-of-thought tokens with no ground truth to check it against
+# until the very end (see nqueens-solve.yaml for that). Verification gives you a
+# bounded ~250-token argument you can actually read line by line, against a board
+# whose answer is known exactly — and it still ends on a single "Yes"/"No" token
+# that Direct Logit Attribution and the causal grid can target.
+#
+# So this config gives you both halves of the picture:
+#   the REASONING  — the step-by-step text, and the entropy timeline over it
+#   the VERDICT    — one attributable decision token on the final line
 #
 # The board (4x4, one queen per row, 1-indexed columns):
 #     row 1 -> col 2      . Q . .
@@ -23,14 +28,24 @@
 # carry "diagonal conflict" and nothing else.
 #
 # What to look for:
-#   - Logit Lens on step 0: at which depth does "Yes" overtake "No"? A model that
-#     genuinely checks diagonals should flip late (the constraint has to be
-#     computed); a model pattern-matching on "looks like a puzzle answer" commits
-#     early and never moves.
-#   - Direct Logit Attribution on step 0: which layers/heads write the answer
-#     token. Expand to per-head and compare against the conflict run.
+#   - Read generated.txt first. Does the argument actually check all six pairs,
+#     or does it assert "no two share a diagonal" without doing the arithmetic?
+#     A model can reach the right verdict through a wrong argument, and the text
+#     is the only place that shows.
+#   - Entropy timeline: where does the model hesitate? Expect low entropy while
+#     it restates the board and spikes at the points where it commits to a
+#     comparison — those are the tokens worth opening in the step detail.
+#   - Logit Lens on the verdict token: at which depth does "Yes" overtake "No"?
+#     A model that genuinely computed the constraint should flip late; one
+#     pattern-matching on "looks like a puzzle answer" commits early and coasts.
+#   - Direct Logit Attribution on the verdict token: which layers/heads write it.
+#     Expand to per-head and compare against the conflict run.
 #   - Causal grid: ablate each (layer, prompt token). If a real diagonal check
 #     exists, ablating the row-3 / row-4 column tokens should flip the answer.
+#
+# Caveat worth holding onto: the reasoning text is output, not a transcript of
+# the computation. It can be fluent and post-hoc. The causal pass is what turns
+# "it said it checked the diagonals" into evidence that it did.
 #
 # Reproduce (HPC):   token-heatmap hpc run configs/nqueens-verify.yaml --gpu l40s
 # Local big GPU:     token-heatmap trace --config configs/nqueens-verify.yaml --serve --frontend
@@ -48,13 +63,19 @@ prompt: |
 
   Placement: row 1 -> column 2, row 2 -> column 4, row 3 -> column 1, row 4 -> column 3.
 
-  Is this placement valid? Reply with exactly one word: Yes or No.
-  Answer:
+  Work through it step by step:
+  1. List the four (row, column) pairs.
+  2. Check the columns are all distinct.
+  3. For every pair of queens, compare row-column and row+column — a match on
+     either means those two share a diagonal.
+  Then end your reply with a final line of exactly "Answer: Yes" or "Answer: No".
 
-# Short on purpose: step 0 IS the experiment. The remaining tokens only confirm
-# the model committed to the word it started. Full capture is affordable precisely
-# because the generation is this short.
-max_new_tokens: 8
+# Length: enough to watch the model reason, short enough that full capture stays
+# cheap and the trace stays readable. The earlier 8-token version answered in a
+# single word — crisp for attribution, but there was no reasoning to observe,
+# which is the point of this config. ~250 tokens covers listing four queens and
+# checking six pairs.
+max_new_tokens: 320
 
 # Near-greedy: this is a decision, not a sample. Temperature exists only so the
 # probe still records a non-degenerate distribution to read entropy off.

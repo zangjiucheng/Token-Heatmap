@@ -8,11 +8,11 @@
 /* Primary transport: the play / pause toggle. Accent-filled so it reads as the
    one action in the spine. */
 .playback-controls__play {
+  min-height: var(--control-h-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 30px;
-  height: 30px;
   padding: 0;
   border: none;
   border-radius: 999px;
@@ -40,8 +40,8 @@
 
 /* Speed chip — secondary, monospace, cycles on click. */
 .playback-controls__speed {
+  min-height: var(--control-h-md);
   min-width: 34px;
-  height: 24px;
   padding: 0 6px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);

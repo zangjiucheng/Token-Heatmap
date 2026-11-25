@@ -58,7 +58,11 @@
 .activations-tab__heatmap {
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 0;
+  /* Not min-height: 0. The siblings in this column (controls, detail) have
+     intrinsic heights and win every time the pane is short, which left the
+     heatmap 66px of a 256px tab and the grid inside it 34px tall — unreadable.
+     Give the plot a floor and let the pane scroll instead of collapsing it. */
+  min-height: 280px;
   display: flex;
   flex-direction: column;
   padding: 16px;

@@ -19,6 +19,7 @@
 }
 
 .export-controls__button {
+  min-height: var(--control-h-lg);
   flex: 1 1 0;
   padding: 7px 10px;
   border: 1px solid var(--color-border);

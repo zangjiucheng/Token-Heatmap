@@ -196,6 +196,7 @@
 }
 
 .trace-workspace__overview-toggle {
+  min-height: var(--control-h-md);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -265,6 +266,7 @@
 }
 
 .trace-workspace__inspector-toggle {
+  min-height: var(--control-h-md);
   padding: 4px;
 }
 
